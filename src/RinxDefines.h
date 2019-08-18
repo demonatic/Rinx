@@ -1,0 +1,10 @@
+#ifndef RINXDEFINES_H
+#define RINXDEFINES_H
+
+
+#define RX_BUFFER_SIZE_LARGE 65536
+
+#define Rx_BUFFER_CHUNK_SIZE 4096
+
+
+#endif // RINXDEFINES_H
