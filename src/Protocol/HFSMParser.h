@@ -5,27 +5,11 @@
 #include <any>
 #include <tuple>
 #include <memory>
-#include <unordered_map>
+#include <map>
 #include <functional>
 #include "../Util/Util.h"
+#include "../Util/FunctionTraits.h"
 #include <iostream>
-
-/**
-struct RxParseRes{
-    using Request=std::any;
-
-    bool has_error() const{ return _parse_res.first; }
-    bool request_received() const{ return _parse_res.second.has_value(); }
-
-    template<typename RequestType>
-    RequestType get_request(){
-        return std::any_cast<RequestType>(_parse_res.second.value());
-    }
-
-private:
-    std::pair<bool,std::optional<Request>> _parse_res;
-};
-**/
 
 template<class T>
 using elm_handler=std::function<bool(T)>;
@@ -43,18 +27,23 @@ struct ConsumeRes
 };
 
 class SuperState{
-    using SubState=uint8_t;
 public:
-    SuperState(uint8_t state_id):id(state_id){ }
+    using SubState=uint8_t;
+    static constexpr bool ExitConsume=false;
+    static constexpr bool InConsuming=true;
 
-    virtual ~SuperState(){}
+public:
+    SuperState(uint8_t state_id):_id(state_id){ }
+
+    virtual ~SuperState();
 
     virtual ConsumeRes consume(iterable_bytes iterable,std::any &request)=0;
     virtual void on_entry(const std::any &context)=0;
     virtual void on_exit()=0;
 
-    uint8_t id;
-    SubState sub_state; //the current substate
+protected:
+    uint8_t _id;
+    SubState _sub_state; //the current substate
 
     char padding[6];
 };
@@ -77,9 +66,9 @@ public:
                     if(unlikely(!f(*it))){++it; break;}
                 }
             },request);
-            std::cout<<"consume ret"<<std::endl;
+
             if(ret.event.has_value()){
-                this->emit_event(*ret.event);
+                this->emit_event(*ret.event,request);
             }
             if(ret.next_super_state.has_value()){
                 const size_t &event=(*ret.next_super_state).first;
@@ -87,17 +76,33 @@ public:
                 this->transit_super_state(event,context);
             }
         }
-        std::cout<<"done!!"<<std::endl;
     }
 
     template<typename Fun>
-    void register_event(const char *event,const Fun &fun){
-
+    void register_event(const int event,const Fun &fun){
+        static_assert(std::is_same<typename function_traits<Fun>::return_type,void>::value,
+                      "event callback return type must be void");
+        using stl_func_type=std::function<typename function_traits<Fun>::function_type>;
+        _event_map[event]=std::make_shared<stl_func_type>(fun);
     }
 
     template<typename ...Args>
-    bool emit_event(int,Args &&...args){
+    bool emit_event(const int event,Args &&...args){
+        auto it=_event_map.find(event);
+        if(it==_event_map.end())
+            return false;
 
+        typedef std::function<void(decltype(std::forward<Args>(args))...)> fun_type;
+        fun_type &f=*static_cast<fun_type*>(it->second.get());
+
+        f(std::forward<Args>(args)...);
+        return true;
+    }
+
+
+    template<typename SuperStateType>
+    static constexpr auto get_state_id(){
+        return Util::GetTupleIndex<std::unique_ptr<SuperStateType>,decltype(_super_states)>::value;
     }
 
 private:
@@ -116,11 +121,6 @@ private:
         return std::get<get_state_id<SuperStateType>>(_super_states);
     }
 
-    template<typename SuperStateType>
-    static constexpr auto get_state_id(){
-        return Util::GetTupleIndex<std::unique_ptr<SuperStateType>,decltype(_super_states)>::value;
-    }
-
     void transit_super_state(const size_t id,const std::any &context){
         _curr_state->on_exit();
         Util::get_tuple_at(_super_states,id,[this,&context](SuperState *next_state){
@@ -133,8 +133,9 @@ private:
     std::tuple<std::unique_ptr<SuperStateTypes>...> _super_states;
     SuperState *_curr_state; //always points to an item in _super_states
 
-    ///<event,func_ptr>
-    std::unordered_map<int,std::shared_ptr<void>> _event_map;
+    ///<event,std::function>
+    std::map<int,std::shared_ptr<void>> _event_map;
 };
+
 
 #endif // HFSMPARSER_H

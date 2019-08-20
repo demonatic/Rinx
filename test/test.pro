@@ -3,7 +3,9 @@ TEMPLATE=subdirs
 CONFIG(debug,debug|release){
 SUBDIRS += \
     UnitTest/BufferTest \
+    UnitTest/HFSMParserTest\
 
 }
 
-#CONFIG += ordered
+SUBDIRS += \
+    UnitTest/HttpParseTest

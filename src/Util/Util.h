@@ -80,6 +80,14 @@ tuple_for_each(std::tuple<Tp...>& t,F &&f)
     tuple_for_each<I + 1, F, Tp...>(t,f);
 }
 
+inline void to_lower(std::string &str) noexcept{
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+}
+
+inline void to_upper(std::string &str) noexcept{
+    std::transform(str.begin(),str.end(),str.begin(),::toupper);
+}
+
 template<typename T>
 struct TypeErasedIterator:std::iterator<
         std::input_iterator_tag,T,
@@ -144,6 +152,29 @@ struct TypeErasedIterator:std::iterator<
 private:
     std::unique_ptr<IErase> _erased_it;
 };
+
+template<typename T>
+class ErasedDeleter:std::function<void(T*)>{
+public:
+    ErasedDeleter():std::function<void(T*)>(
+        [](T* t){delete t;}
+    ){}
+};
+
+template<typename T>
+using ErasedUptr=std::unique_ptr<T,ErasedDeleter<T>>;
+
+using unique_void_ptr = std::unique_ptr<void, void(*)(void const*)>;
+
+template<typename T>
+auto unique_void(T * ptr) -> unique_void_ptr
+{
+    return unique_void_ptr(ptr, [](void const * data) {
+         T const * p = static_cast<T const*>(data);
+         std::cout << "{" << *p << "} located at [" << p <<  "] is being deleted.\n";
+         delete p;
+    });
+}
 
 }
 #endif // UTIL_H

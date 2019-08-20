@@ -51,6 +51,7 @@ HEADERS += \
         RinxDefines.h \
         Server/ReactorThreadGroup.h \
         Server/Server.h \
+        Util/FunctionTraits.h \
         Util/ObjectAllocator.hpp \
         Util/ThreadPool.h \
         Util/Util.h

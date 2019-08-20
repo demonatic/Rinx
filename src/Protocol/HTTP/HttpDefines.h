@@ -1,7 +1,9 @@
 #ifndef HTTPDEFINES_H
 #define HTTPDEFINES_H
 
-
+#include <vector>
+#include <string>
+#include <algorithm>
 
 enum class HttpStatusCode
 {
@@ -63,11 +65,100 @@ enum class HttpMethod{
 };
 
 enum class HttpVersion{
+    UNKNOWN=0,
     VERSION_1_0,
     VERSION_1_1,
     VERSION_2,
 };
 
+using HttpHeaderFields=std::vector<std::pair<std::string, std::string>>;
+
+
+inline HttpMethod to_http_method(const std::string &str_method){
+    HttpMethod method;
+    if(str_method=="GET"){
+        method=HttpMethod::GET;
+    }
+    else if(str_method=="POST"){
+        method=HttpMethod::POST;
+    }
+    else if(str_method=="HEAD"){
+        method=HttpMethod::HEAD;
+    }
+    else if(str_method=="PUT"){
+        method=HttpMethod::PUT;
+    }
+    else if(str_method=="PATCH"){
+        method=HttpMethod::PATCH;
+    }
+    else if(str_method=="DELETE"){
+        method=HttpMethod::DELETE;
+    }
+    else{
+        method=HttpMethod::UNDEFINED;
+    }
+    return method;
+}
+
+inline std::string to_http_method_str(const HttpMethod method){
+    std::string str_method;
+    if(method==HttpMethod::GET){
+        str_method="GET";
+    }
+    else if(method==HttpMethod::POST){
+        str_method="POST";
+    }
+    else if(method==HttpMethod::HEAD){
+        str_method="HEAD";
+    }
+    else if(method==HttpMethod::PUT){
+        str_method="PUT";
+    }
+    else if(method==HttpMethod::PATCH){
+        str_method="PATCH";
+    }
+    else if(method==HttpMethod::DELETE){
+        str_method="DELETE";
+    }
+    else{
+        str_method="UNDEFINED";
+    }
+    return str_method;
+}
+
+inline HttpVersion to_http_version(const std::string &str_version){
+    HttpVersion version;
+    if(str_version=="HTTP/1.0"){
+        version=HttpVersion::VERSION_1_0;
+    }
+    else if(str_version=="HTTP/1.1"){
+        version=HttpVersion::VERSION_1_1;
+    }
+    else if(str_version=="HTTP/2"){
+        version=HttpVersion::VERSION_2;
+    }
+    else{
+        version=HttpVersion::UNKNOWN;
+    }
+    return version;
+}
+
+inline std::string to_http_version_str(HttpVersion version){
+    std::string str_version;
+    if(version==HttpVersion::VERSION_1_0){
+        str_version="HTTP/1.0";
+    }
+    else if(version==HttpVersion::VERSION_1_1){
+        str_version="HTTP/1.1";
+    }
+    else if(version==HttpVersion::VERSION_2){
+        str_version="HTTP/2";
+    }
+    else{
+        str_version="UNKNOWN";
+    }
+    return str_version;
+}
 
 inline const char *CRLF="\r\n";
 
