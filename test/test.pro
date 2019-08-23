@@ -8,4 +8,5 @@ SUBDIRS += \
 }
 
 SUBDIRS += \
-    UnitTest/HttpParseTest
+    UnitTest/HttpParseTest \
+    UnitTest/TimerTest

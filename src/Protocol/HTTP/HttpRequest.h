@@ -23,6 +23,7 @@ struct HttpRequest
         for(auto field:header_fields){
             std::cout<<"<"<<field.first<<">:<"<<field.second<<">"<<std::endl;
         }
+        std::cout<<"----------------------"<<std::endl;
     }
 
 };

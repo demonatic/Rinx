@@ -8,14 +8,14 @@ enum RxEventType:uint32_t{
     Rx_EVENT_WRITE,
     Rx_EVENT_ERROR,
 
-    Rx_MAX_EVENT_TYPE
+    Rx_EVENT_TYPE_MAX
 };
 
 enum RxFDType:uint32_t{
     Rx_FD_LISTEN=0,
     Rx_FD_TCP_STREAM,
 
-    Rx_MAX_FD_TYPE,
+    Rx_FD_TYPE_MAX,
 };
 
 struct RxFD{

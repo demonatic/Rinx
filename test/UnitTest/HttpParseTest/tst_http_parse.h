@@ -10,7 +10,6 @@
 
 using namespace testing;
 
-
 class ParserCallback{
 public:
     virtual ~ParserCallback()=default;

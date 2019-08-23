@@ -6,6 +6,7 @@
 #include <vector>
 #include <list>
 #include "ReactorEpoll.h"
+#include "TimerHeap.h"
 
 ///
 /// \brief The RxReactor class is used to manage handles,it includes:
@@ -18,11 +19,13 @@ class RxReactor
 {
 public:
     RxReactor(uint8_t id);
+
     uint8_t get_id() const noexcept;
+    RxTimerHeap& get_timer_queue() noexcept;
 
     bool init();
 
-    bool monitor_fd_event(const RxFD Fd,const std::list<RxEventType> &event_types);
+    bool monitor_fd_event(const RxFD Fd,const std::vector<RxEventType> &rx_events);
     bool unmonitor_fd_event(const RxFD Fd);
 
     bool set_event_handler(RxFDType fd_type,RxEventType event_type,EventHandler handler) noexcept;
@@ -37,7 +40,9 @@ private:
 private:
     RxReactorEpoll _reactor_epoll;
 
-    EventHandler _event_handlers[RxEventType::Rx_MAX_EVENT_TYPE][RxFDType::Rx_MAX_FD_TYPE];
+    EventHandler _event_handlers[RxEventType::Rx_EVENT_TYPE_MAX][RxFDType::Rx_FD_TYPE_MAX];
+
+    RxTimerHeap _timer_queue;
 
     std::function<void(RxReactor*)> _on_timeout;
 

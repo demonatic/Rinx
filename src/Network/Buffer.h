@@ -127,6 +127,10 @@ public:
     }
 
     self_type& operator++(){
+        if(_cur==nullptr){
+            throw std::runtime_error("index out of range");
+        }
+
         _cur++;
         if(_cur==_chunk_end){
             ++_it_chunk;
@@ -156,6 +160,9 @@ public:
                 _chunk_end=_chunk_start+static_cast<chunk_ptr>(*_it_chunk)->readable_size();
                 _cur=_chunk_end-1;
             }
+            else{
+                throw std::runtime_error("index out of range");
+            }
         }
         else {
             _cur--;
@@ -168,10 +175,65 @@ public:
         --(*this);
         return tmp;
     }
-    typename BufferReadableIterator::difference_type t;
-    self_type& operator+=(difference_type n){
-        //TODO
 
+    self_type& operator+=(difference_type step){
+        if(_cur==nullptr){
+            throw std::runtime_error("index out of range");
+        }
+
+        difference_type offset=step+_cur-_chunk_start;
+        if(offset>=0&&offset<_chunk_end-_chunk_start){
+            _cur+=step;
+        }
+        else if(step>0){
+            do{
+                difference_type chunk_advance_room=_chunk_end-_cur-1;
+                if(step<=chunk_advance_room){
+                    _cur+=step;
+                    step=0;
+                }
+                else{
+                    step-=chunk_advance_room;
+                    ++_it_chunk;
+                    if(_it_chunk==_chain_buf->chunk_end()){
+                        if(step>1){
+                            throw std::runtime_error("index out of range");
+                        }
+                        else{
+                            _chunk_start=_chunk_end=_cur=nullptr;
+                            step=0;
+                        }
+                    }
+                    else{
+                        _chunk_start=static_cast<chunk_ptr>(*_it_chunk)->read_pos();
+                        _chunk_end=_chunk_start+static_cast<chunk_ptr>(*_it_chunk)->readable_size();
+                        _cur=_chunk_start;
+                        --step;
+                    }
+                }
+
+            }while(step!=0);
+
+        }
+        else if(step<0){
+            do{
+                difference_type chunk_advance_room=_cur-_chunk_start;
+                if(-step<=chunk_advance_room){
+                    _cur-=step;
+                    step=0;
+                }
+                else{
+                    if(_it_chunk==_chain_buf->chunk_begin()){
+                        throw std::runtime_error("index out of range");
+                    }
+                    step+=chunk_advance_room+1;
+                    --_it_chunk;
+                    _chunk_start=static_cast<chunk_ptr>(*_it_chunk)->read_pos();
+                    _chunk_end=_chunk_start+static_cast<chunk_ptr>(*_it_chunk)->readable_size();
+                    _cur=_chunk_end-1;
+                }
+            }while(step!=0);
+        }
     }
 
     self_type operator+(difference_type n) const{

@@ -70,7 +70,7 @@ epoll_event *RxReactorEpoll::get_epoll_events() const noexcept
     return _events;
 }
 
-bool RxReactorEpoll::add_fd_event(const RxFD Fd,const RxEventType event_type)
+bool RxReactorEpoll::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &event_type)
 {
     struct epoll_event epoll_event;
     bzero(&epoll_event,sizeof(struct epoll_event));
@@ -113,12 +113,15 @@ std::vector<RxEventType> RxReactorEpoll::get_rx_event_types(const epoll_event &e
     return rx_event_types;
 }
 
-void RxReactorEpoll::set_ep_event(epoll_event &ep_event,const RxEventType event_type) noexcept
+void RxReactorEpoll::set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) noexcept
 {
-    if(event_type==Rx_EVENT_READ){
-        ep_event.events=EPOLLIN|EPOLLET;
+    for(RxEventType rx_event:rx_events){
+        if(rx_event==Rx_EVENT_READ){
+            ep_event.events|=EPOLLIN|EPOLLET;
+        }
+        else if(rx_event==Rx_EVENT_WRITE){
+            ep_event.events|=EPOLLOUT|EPOLLET;
+        }
     }
-    else if(event_type==Rx_EVENT_WRITE){
-        ep_event.events=EPOLLOUT|EPOLLET;
-    }
+
 }

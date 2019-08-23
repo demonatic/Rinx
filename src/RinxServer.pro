@@ -15,6 +15,7 @@ SOURCES += \
         Network/ReactorEpoll.cpp \
         Network/Socket.cpp \
         Network/Timer.cpp \
+        Network/TimerHeap.cpp \
         Protocol/HFSMParser.cpp \
         Protocol/HTTP/HttpParser.cpp \
         Protocol/HTTP/HttpReqHandlerEngine.cpp \
@@ -26,6 +27,7 @@ SOURCES += \
         RinxDefines.cpp \
         Server/ReactorThreadGroup.cpp \
         Server/Server.cpp \
+        Util/Clock.cpp \
         Util/ThreadPool.cpp \
         Util/Util.cpp \
         main.cpp
@@ -39,6 +41,7 @@ HEADERS += \
         Network/ReactorEpoll.h \
         Network/Socket.h \
         Network/Timer.h \
+        Network/TimerHeap.h \
         Protocol/HFSMParser.h \
         Protocol/HTTP/HttpDefines.h \
         Protocol/HTTP/HttpParser.h \
@@ -51,6 +54,7 @@ HEADERS += \
         RinxDefines.h \
         Server/ReactorThreadGroup.h \
         Server/Server.h \
+        Util/Clock.h \
         Util/FunctionTraits.h \
         Util/ObjectAllocator.hpp \
         Util/ThreadPool.h \

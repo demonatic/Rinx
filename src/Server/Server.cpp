@@ -35,7 +35,7 @@ bool RxServer::start(const std::string &address, uint16_t port)
         RxSock::close(ls_port.serv_fd);
         return false;
     }
-    if(!_main_reactor.monitor_fd_event(RxFD{Rx_FD_LISTEN,ls_port.serv_fd},{Rx_EVENT_READ})||
+    if(!_main_reactor.monitor_fd_event(RxFD{Rx_FD_LISTEN,ls_port.serv_fd},{Rx_EVENT_READ,Rx_EVENT_WRITE})||
             !_main_reactor.set_event_handler(Rx_FD_LISTEN,Rx_EVENT_READ,
                 std::bind(&RxServer::on_accept,this,std::placeholders::_1)))
     {

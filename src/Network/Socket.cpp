@@ -8,7 +8,6 @@
 #include <assert.h>
 #include "../Util/Util.h"
 
-#include <iostream>
 int RxSock::create() noexcept
 {
     int fd=::socket(AF_INET,SOCK_STREAM,0);

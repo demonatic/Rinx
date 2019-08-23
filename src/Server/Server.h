@@ -32,6 +32,7 @@ public:
     RxConnection *incoming_connection(const RxFD rx_fd);
     RxConnection *get_connection(const RxFD rx_fd);
     void close_connection(RxConnection &conn);
+
     void proto_handle(RxConnection &conn);
 
 private:

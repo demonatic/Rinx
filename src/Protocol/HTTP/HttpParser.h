@@ -8,6 +8,10 @@
 enum HttpEvent{
     RequestLineReceived,
     HttpHeaderReceived,
+    RecvPartofContent,
+    RecvWholeContent,
+    RecvChunk,
+    ChunkEnd,
     ParseError,
 };
 
@@ -65,6 +69,29 @@ private:
 
     std::string _header_field_key;
     std::string _header_field_val;
+};
+
+class StateContentLength:public SuperState{
+public:
+    StateContentLength(uint8_t state_id):SuperState(state_id){}
+
+    virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override;
+
+    virtual void on_entry(const std::any &context) override{
+        _sub_state=S_EXPECT_METHOD;
+    }
+    virtual void on_exit() override{
+
+    }
+
+private:
+
+    enum SubStates{
+        S_EXPECT_METHOD,
+        S_EXPECT_URI,
+        S_EXPECT_VERSION,
+        S_EXPECT_CRLF
+    };
 };
 
 using HttpParser=HFSMParser<StateRequestLine,StateHeader>;

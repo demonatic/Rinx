@@ -25,11 +25,11 @@ public:
     epoll_event *get_epoll_events() const noexcept;
 
     /// @brief add fd to monitor the specific event(s) on it
-    bool add_fd_event(const RxFD Fd,const RxEventType event_type);
+    bool add_fd_event(const RxFD Fd,const std::vector<RxEventType> &event_type);
     bool del_fd_event(const RxFD Fd);
 
     static std::vector<RxEventType> get_rx_event_types(const epoll_event &ep_event) noexcept;
-    static void set_ep_event(epoll_event &ep_event,const RxEventType event_type) noexcept;
+    static void set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) noexcept;
 
 private:
     int _epoll_fd;

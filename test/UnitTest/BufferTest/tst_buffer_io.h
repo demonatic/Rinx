@@ -15,18 +15,44 @@ TEST(buffer_test, dataset)
     EXPECT_EQ(read_res, Rx_Read_Res::OK);
     std::cout<<"chunk num="<<buf->chunk_num()<<std::endl;
 
-    std::cout<<"print"<<std::endl;
+    std::cout<<"[print ++]"<<std::endl;
+    std::vector<int> read_plus_plus,read_plus_equal,read_reverse_minus_minus,read_reverse_minus_equal;
     for(auto it=buf->readable_begin();it!=buf->readable_end();++it){
+        read_plus_plus.push_back(*it);
         std::cout<<*it<<" ";
     }
-    std::cout<<std::endl<<"reverse print:"<<std::endl;
+
+    std::cout<<"[print +=1]"<<std::endl;
+    for(auto it=buf->readable_begin();it!=buf->readable_end();){
+        read_plus_equal.push_back(*it);
+        std::cout<<*it<<" ";
+        it+=1;
+    }
+
+    std::cout<<std::endl<<"[print --]"<<std::endl;
     for(auto it=--buf->readable_end();;--it){
+        read_reverse_minus_minus.push_back(*it);
         std::cout<<*it<<" ";
         if(it==buf->readable_begin()){
             break;
         }
     }
 
+    std::cout<<std::endl<<"[print -=1]"<<std::endl;
+    for(auto it=--buf->readable_end();;){
+        read_reverse_minus_equal.push_back(*it);
+        std::cout<<*it<<" ";
+        if(it==buf->readable_begin()){
+            break;
+        }
+        it-=1;
+    }
+
+    EXPECT_EQ(read_plus_plus,read_plus_equal);
+    std::reverse(read_reverse_minus_minus.begin(),read_reverse_minus_minus.end());
+    std::reverse(read_reverse_minus_equal.begin(),read_reverse_minus_equal.end());
+    EXPECT_EQ(read_plus_equal,read_reverse_minus_minus);
+    EXPECT_EQ(read_reverse_minus_minus,read_reverse_minus_equal);
 
     Rx_Write_Res write_res;
     std::cout<<std::endl<<"about to write fd------"<<std::endl;
