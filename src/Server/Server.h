@@ -29,16 +29,15 @@ public:
     bool start(const std::string &address,uint16_t port);
     bool destroy();
 
-    RxConnection *incoming_connection(const RxFD rx_fd);
+    RxConnection *incoming_connection(const RxFD rx_fd,RxReactor *reactor);
     RxConnection *get_connection(const RxFD rx_fd);
-    void close_connection(RxConnection &conn);
 
     void proto_handle(RxConnection &conn);
 
 private:
-    int on_accept(const RxEvent &event);
-    int on_tcp_read(const RxEvent &event);
-    int on_tcp_send(const RxEvent &event);
+    RxHandlerRes on_accept(const RxEvent &event);
+    RxHandlerRes on_tcp_read(const RxEvent &event);
+    RxHandlerRes on_tcp_send(const RxEvent &event);
 
     void disable_accept();
 

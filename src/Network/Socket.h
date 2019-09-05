@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/unistd.h>
+#include <sys/eventfd.h>
 #include <vector>
 
 enum class Rx_Accept_Res{
@@ -30,7 +31,9 @@ class RxSock
 public:
     RxSock()=delete;
 
-    static int create() noexcept;
+    ///for stream
+    static int create_stream() noexcept;
+
     static bool shutdown_both(int fd) noexcept;
     static bool close(int fd) noexcept;
     static bool is_open(int fd) noexcept;
@@ -47,6 +50,13 @@ public:
 
     static ssize_t write(int fd,void *buffer,size_t n,Rx_Write_Res &write_res);
     static ssize_t writev(int fd,std::vector<struct iovec> &io_vec,Rx_Write_Res &write_res);
+
+    ///for event fd
+    static int create_event_fd() noexcept;
+    static bool read_event_fd(int fd);
+    static bool write_event_fd(int fd);
 };
+
+
 
 #endif // SOCKET_H

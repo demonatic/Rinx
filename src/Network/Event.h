@@ -14,7 +14,7 @@ enum RxEventType:uint32_t{
 enum RxFDType:uint32_t{
     Rx_FD_LISTEN=0,
     Rx_FD_TCP_STREAM,
-
+    Rx_FD_EVENT,
     Rx_FD_TYPE_MAX,
 };
 
@@ -29,11 +29,12 @@ struct RxEvent{
     RxReactor *reactor;
 };
 
-using EventHandler=std::function<int(const RxEvent &event_data)>;
-enum class HandlerRes{
-    Rx_HANDLER_OK,
+enum RxHandlerRes{
+    Rx_HANDLER_OK=0,
     RX_HANDLER_ERR
 };
+using EventHandler=std::function<RxHandlerRes(const RxEvent &event_data)>;
+
 
 
 #endif // EVENT_H

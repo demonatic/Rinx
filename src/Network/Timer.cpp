@@ -14,7 +14,7 @@ RxTimer::RxTimer(RxReactor *reactor):_reactor_belongs(reactor),
 TimerID RxTimer::start_timer(uint64_t milliseconds, TimerCallback expiry_action,bool repeat)
 {
     uint64_t expire_time=Clock::get_now_tick()+milliseconds;
-    RxTimerHeap &timer_queue=_reactor_belongs->get_timer_queue();
+    RxTimerHeap &timer_heap=_reactor_belongs->get_timer_heap();
     if(_is_active){
         this->stop();
     }
@@ -22,15 +22,15 @@ TimerID RxTimer::start_timer(uint64_t milliseconds, TimerCallback expiry_action,
     _is_repeat=repeat;
     _duration=milliseconds;
     _cb=expiry_action;
-    _id=timer_queue.add_timer(expire_time,this);
+    _id=timer_heap.add_timer(expire_time,this);
 
     return _id;
 }
 
 void RxTimer::stop()
 {
-    RxTimerHeap &timer_queue=_reactor_belongs->get_timer_queue();
-    timer_queue.remove_timer(this->_id);
+    RxTimerHeap &timer_heap=_reactor_belongs->get_timer_heap();
+    timer_heap.remove_timer(this->_id);
 }
 
 bool RxTimer::is_active() const noexcept

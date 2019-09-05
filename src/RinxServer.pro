@@ -28,6 +28,7 @@ SOURCES += \
         Server/ReactorThreadGroup.cpp \
         Server/Server.cpp \
         Util/Clock.cpp \
+        Util/Mutex.cpp \
         Util/ThreadPool.cpp \
         Util/Util.cpp \
         main.cpp
@@ -56,6 +57,9 @@ HEADERS += \
         Server/Server.h \
         Util/Clock.h \
         Util/FunctionTraits.h \
+        Util/Mutex.h \
+        Util/Noncopyable.h \
         Util/ObjectAllocator.hpp \
+        Util/Singeleton.h \
         Util/ThreadPool.h \
         Util/Util.h

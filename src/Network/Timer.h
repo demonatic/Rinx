@@ -15,7 +15,7 @@ class RxTimer
 public:
     RxTimer(RxReactor *reactor);
 
-    TimerID start_timer(uint64_t milliseconds,TimerCallback expiry_action,bool repeat);
+    TimerID start_timer(uint64_t milliseconds,TimerCallback expiry_action,bool repeat=false);
     void stop();
 
     bool is_active() const noexcept;
@@ -24,11 +24,11 @@ public:
     TimerID get_id() const noexcept;
     uint64_t get_duration() const noexcept;
 
-private:
+private:    
+    friend class RxTimerHeap;
+
     void expired();
     void set_active(bool active) noexcept;
-
-    friend class RxTimerHeap;
 
     RxReactor *_reactor_belongs;
 
@@ -41,7 +41,6 @@ private:
     bool _is_repeat;
 
     TimerCallback _cb;
-
 };
 
 #endif // TIMER_H

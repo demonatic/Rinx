@@ -43,7 +43,7 @@ size_t RxReactorThreadGroup::get_thread_num() const noexcept
 
 RxReactor* RxReactorThreadGroup::get_reactor(size_t index)
 {
-    return _reactor_threads[index].reactor.get();
+    return index<_reactor_threads.size()?_reactor_threads[index].reactor.get():nullptr;
 }
 
 void RxReactorThreadGroup::set_each_reactor_handler(RxFDType fd_type, RxEventType event_type, EventHandler handler)

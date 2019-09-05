@@ -17,8 +17,29 @@ void RxProtoHttp1Processor::init()
 ProcessStatus RxProtoHttp1Processor::process(RxConnection &conn, RxChainBuffer &buf)
 {
     std::cout<<"process http1"<<std::endl;
-    std::vector<uint8_t> v;
-    _request_parser.parse_from_array(buf.readable_begin(),buf.readable_end(),conn.data);
+    RxReactor &reactor=conn.get_reactor();
+    reactor.async([](int i){
+        std::cout<<"in async task i="<<i<<" thread id="<<std::this_thread::get_id()<<std::endl;
+        return std::string("hello world");
+    },[&](std::string &async_res){
+        std::cout<<"in defer cb thread id="<<std::this_thread::get_id()<<std::endl;
+
+        for(auto it=async_res.begin();it!=async_res.end();it++){
+            std::cout<<*it;
+        }
+        std::swap(conn.get_input_buf(),conn.get_output_buf());
+        Rx_Write_Res write_res;
+        conn.send(write_res);
+        assert(write_res==Rx_Write_Res::OK);
+    },1);
+    reactor.async([](){
+        std::cout<<"in async task thread id="<<std::this_thread::get_id()<<std::endl;
+    },[&](){
+        std::cout<<"in defer cb thread id="<<std::this_thread::get_id()<<std::endl;
+        conn.close();
+    });
+
+//    _request_parser.parse_from_array(buf.readable_begin(),buf.readable_end(),conn.data);
     return ProcessStatus::OK;
 }
 

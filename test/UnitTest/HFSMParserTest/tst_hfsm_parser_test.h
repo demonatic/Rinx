@@ -67,6 +67,11 @@ using TestParser=HFSMParser<State0,State1>;
 
 TEST(hfsm_parser_test, dataset)
 {
+    std::function<void()> func=nullptr;
+    if(!func){
+        std::cout<<"!!!"<<std::endl;
+    }
+
     TestParser parser;
     TRequest request;
     std::any any=request;

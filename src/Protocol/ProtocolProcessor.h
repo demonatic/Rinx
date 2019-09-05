@@ -2,6 +2,7 @@
 #define SERVERPROTOCOL_H
 
 #include "../Network/Buffer.h"
+#include "../Network/Reactor.h"
 #include "HFSMParser.h"
 
 class RxConnection;

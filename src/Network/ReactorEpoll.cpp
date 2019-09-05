@@ -78,7 +78,7 @@ bool RxReactorEpoll::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &
     epoll_event.data.u64=(static_cast<uint64_t>(Fd.fd_type)<<32)|static_cast<uint64_t>(Fd.raw_fd);
 
     if(::epoll_ctl(_epoll_fd,EPOLL_CTL_ADD,Fd.raw_fd,&epoll_event)==-1){
-        LOG_WARN<<"epoll_ctl add error: "<<errno<<strerror(errno);
+        LOG_WARN<<"epoll_ctl add error: "<<errno<<" "<<strerror(errno);
         return false;
     }
     return true;
@@ -87,7 +87,7 @@ bool RxReactorEpoll::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &
 bool RxReactorEpoll::del_fd_event(const RxFD Fd)
 {
     if(::epoll_ctl(_epoll_fd,EPOLL_CTL_DEL,Fd.raw_fd,nullptr)<0){
-        LOG_WARN<<"epoll_ctl del error"<<errno<<strerror(errno);
+        LOG_WARN<<"epoll_ctl del error"<<errno<<" "<<strerror(errno);
         return false;
     }
     return true;

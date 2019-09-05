@@ -64,6 +64,8 @@ constexpr size_t BufferChunk<N>::get_length()
     return N;
 }
 
+template class BufferChunk<ChainBuffer::chunk_size>;
+
 size_t ChainBuffer::chunk_num() const
 {
     return _chunk_list.size();

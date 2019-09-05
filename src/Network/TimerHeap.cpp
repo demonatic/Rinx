@@ -36,7 +36,7 @@ void RxTimerHeap::remove_timer(RxTimer *timer)
     timer->set_active(false);
     size_t timer_index=timer->_heap_index;
 
-    if(get_timer_num()!=0&&timer_index<_timer_heap.size()){
+    if(timer_index==get_timer_num()){
         timer->_heap_index=std::numeric_limits<size_t>::max();
         _timer_heap.pop_back();
     }
@@ -53,7 +53,7 @@ void RxTimerHeap::remove_timer(RxTimer *timer)
 
 int RxTimerHeap::check_timer_expiry()
 {
-    if(_timer_heap.empty())
+    if(!get_timer_num())
         return 0;
 
     int expired_num=0;

@@ -8,10 +8,9 @@
 #include <assert.h>
 #include "../Util/Util.h"
 
-int RxSock::create() noexcept
+int RxSock::create_stream() noexcept
 {
-    int fd=::socket(AF_INET,SOCK_STREAM,0);
-    return fd;
+    return ::socket(AF_INET,SOCK_STREAM,0);
 }
 
 bool RxSock::shutdown_both(int fd) noexcept
@@ -165,8 +164,21 @@ ssize_t RxSock::writev(int fd,std::vector<struct iovec> &io_vec,Rx_Write_Res &wr
     if(unlikely(write_bytes<0)){
         write_res=(errno==EAGAIN)?Rx_Write_Res::SOCK_BUFF_FULL:Rx_Write_Res::ERROR;
     }
-
     return write_bytes;
 }
 
+int RxSock::create_event_fd() noexcept
+{
+    return ::eventfd(0,EFD_NONBLOCK);
+}
 
+bool RxSock::write_event_fd(int fd)
+{
+    return ::eventfd_write(fd,1)!=-1;
+}
+
+bool RxSock::read_event_fd(int fd){
+    uint64_t data;
+    int ret=::eventfd_read(fd,&data);
+    return ret!=-1&&data!=0;
+}

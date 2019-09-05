@@ -9,7 +9,7 @@ RxServer::RxServer(uint32_t max_connection):_max_connection(max_connection),_max
 bool RxServer::start(const std::string &address, uint16_t port)
 {
     RxListenPort ls_port(port);
-    ls_port.serv_fd=RxSock::create();
+    ls_port.serv_fd=RxSock::create_stream();
 
     if(!RxSock::is_open(ls_port.serv_fd)||!RxSock::set_nonblock(ls_port.serv_fd,true)){
         LOG_WARN<<"create serv sock failed";
@@ -56,11 +56,11 @@ bool RxServer::start(const std::string &address, uint16_t port)
     return true;
 }
 
-RxConnection *RxServer::incoming_connection(const RxFD rx_fd)
+RxConnection *RxServer::incoming_connection(const RxFD rx_fd,RxReactor *reactor)
 {
     size_t conn_index=static_cast<size_t>(rx_fd.raw_fd);
     RxConnection *conn=&_connection_list[conn_index];
-    conn->init(rx_fd);
+    conn->init(rx_fd,reactor);
     return conn;
 }
 
@@ -73,17 +73,12 @@ RxConnection *RxServer::get_connection(const RxFD rx_fd)
     return &_connection_list.at(static_cast<size_t>(rx_fd.raw_fd));
 }
 
-void RxServer::close_connection(RxConnection &conn)
-{
-    conn.close();
-}
-
 void RxServer::proto_handle(RxConnection &conn)
 {
      conn.get_proto_processor().process(conn,conn.get_input_buf());
 }
 
-int RxServer::on_accept(const RxEvent &event)
+RxHandlerRes RxServer::on_accept(const RxEvent &event)
 {
     assert(event.Fd.fd_type==Rx_FD_LISTEN);
     for(int i=0;i<_max_once_accept_count;i++){
@@ -92,13 +87,13 @@ int RxServer::on_accept(const RxEvent &event)
         int new_fd=RxSock::accept(event.Fd.raw_fd,accept_res);
         switch (accept_res){
             case Rx_Accept_Res::ALL_ACCEPTED:
-                return 0;
+                return Rx_HANDLER_OK;
             case Rx_Accept_Res::FAILED:
-                return 0;
+                return Rx_HANDLER_OK;
             case Rx_Accept_Res::ERROR:
                 LOG_WARN<<"accept error";
                 disable_accept();
-                return -1;
+                return RX_HANDLER_ERR;
             default: break;
         }
 
@@ -116,17 +111,17 @@ int RxServer::on_accept(const RxEvent &event)
         RxReactor *sub_reactor=_sub_reactor_threads.get_reactor(sub_reactor_index);
         _reactor_round_index++;
 
-        RxConnection *conn=this->incoming_connection(client_rx_fd);
+        RxConnection *conn=this->incoming_connection(client_rx_fd,sub_reactor);
         conn->set_proto_processor(std::move(proto_processor));
 
         if(!sub_reactor->monitor_fd_event(client_rx_fd,{Rx_EVENT_READ})){
             RxSock::close(new_fd);
             LOG_WARN<<"watch fd "<<new_fd<<" failed";
-            return -1;
+            return RX_HANDLER_ERR;
         }
     }
 
-    return 0;
+    return Rx_HANDLER_OK;
 }
 
 void RxServer::disable_accept()
@@ -135,13 +130,10 @@ void RxServer::disable_accept()
 }
 
 
-int RxServer::on_tcp_read(const RxEvent &event)
+RxHandlerRes RxServer::on_tcp_read(const RxEvent &event)
 {
     //std::cout<<"on_stream_read reactor_id="<<(int)event.reactor->get_id()<<" fd="<<event.Fd.raw_fd<<std::endl;
     RxConnection *conn=this->get_connection(event.Fd);
-    if(!conn){
-        assert(false);
-    }
 
     Rx_Read_Res read_res;
     conn->recv(read_res);
@@ -149,21 +141,23 @@ int RxServer::on_tcp_read(const RxEvent &event)
     switch(read_res) {
         case Rx_Read_Res::OK:
             this->proto_handle(*conn);
-        break;
+            break;
 
         case Rx_Read_Res::ERROR:
             LOG_WARN<<"fd "<<event.Fd.raw_fd<<" encounter fatal error";
+            conn->close();
+            return RX_HANDLER_ERR;
 
         case Rx_Read_Res::CLOSED:
-            event.reactor->unmonitor_fd_event(event.Fd);
-            this->close_connection(*conn);
-            return false;
+            LOG_INFO<<"connection close";
+            conn->close();
+            break;
     }
 
-    return true;
+    return Rx_HANDLER_OK;
 }
 
-int RxServer::on_tcp_send(const RxEvent &event)
+RxHandlerRes RxServer::on_tcp_send(const RxEvent &event)
 {
     RxConnection *conn=this->get_connection(event.Fd);
     if(!conn){
@@ -173,9 +167,8 @@ int RxServer::on_tcp_send(const RxEvent &event)
     Rx_Write_Res write_res;
     conn->send(write_res);
     if(write_res==Rx_Write_Res::ERROR){
-        event.reactor->unmonitor_fd_event(event.Fd);
-        this->close_connection(*conn);
-        return false;
+        conn->close();
+        return RX_HANDLER_ERR;
     }
-    return true;
+    return Rx_HANDLER_OK;
 }

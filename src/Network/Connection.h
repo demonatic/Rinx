@@ -14,7 +14,7 @@ class RxConnection
 {
 public:
     RxConnection();
-    void init(const RxFD fd) noexcept;
+    void init(const RxFD fd,RxReactor *reactor);
 
     ssize_t recv(Rx_Read_Res &read_res);
     ssize_t send(Rx_Write_Res &write_res);
@@ -22,8 +22,12 @@ public:
     void close();
 
     RxChainBuffer &get_input_buf();
+    RxChainBuffer &get_output_buf();
 
     RxProtoProcessor &get_proto_processor() const;
+    RxReactor &get_reactor() const;
+    RxFD get_rx_fd() const;
+
     void set_proto_processor(std::unique_ptr<RxProtoProcessor> &&processor) noexcept;
 
 public:
@@ -36,6 +40,7 @@ private:
     std::unique_ptr<RxChainBuffer> _output_buf;
 
     std::unique_ptr<RxProtoProcessor> _proto_processor;
+    RxReactor *_reactor_belongs;
 
 };
 
