@@ -6,7 +6,9 @@
 
 #define RX_BUFFER_SIZE_LARGE 65536
 
-#define Rx_BUFFER_CHUNK_SIZE 4096
+#define RX_BUFFER_CHUNK_SIZE 4096
+
+#define RX_SIGNO_MAX 128
 
 using g_threadpool=RxSingeleton<RxThreadPool>;
 

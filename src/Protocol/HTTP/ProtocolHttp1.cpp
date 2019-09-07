@@ -17,8 +17,9 @@ void RxProtoHttp1Processor::init()
 ProcessStatus RxProtoHttp1Processor::process(RxConnection &conn, RxChainBuffer &buf)
 {
     std::cout<<"process http1"<<std::endl;
-    RxReactor &reactor=conn.get_reactor();
-    reactor.async([](int i){
+
+    ///test start
+    conn.get_reactor().async([](int i){
         std::cout<<"in async task i="<<i<<" thread id="<<std::this_thread::get_id()<<std::endl;
         return std::string("hello world");
     },[&](std::string &async_res){
@@ -32,13 +33,13 @@ ProcessStatus RxProtoHttp1Processor::process(RxConnection &conn, RxChainBuffer &
         conn.send(write_res);
         assert(write_res==Rx_Write_Res::OK);
     },1);
-    reactor.async([](){
+    conn.get_reactor().async([](){
         std::cout<<"in async task thread id="<<std::this_thread::get_id()<<std::endl;
     },[&](){
         std::cout<<"in defer cb thread id="<<std::this_thread::get_id()<<std::endl;
         conn.close();
     });
-
+    ///test end
 //    _request_parser.parse_from_array(buf.readable_begin(),buf.readable_end(),conn.data);
     return ProcessStatus::OK;
 }

@@ -12,12 +12,11 @@
 #include "../Util/Mutex.h"
 
 ///
-/// \brief The RxReactor class is used to manage handles,it includes:
+/// \brief The RxReactor class is an EventLoop that manage handles,it includes:
 ///     1.handles: to represents sockets or fds
 ///     2.Synchronous Event Demultiplexer: Epoll Object
 ///     3.Event handler: interface to handle events
-///     4.Concrete Event handler: implement some logic of an application to handle specific event
-///
+///     4.Timers management
 class RxReactor
 {
 public:

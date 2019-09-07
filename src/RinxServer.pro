@@ -24,9 +24,9 @@ SOURCES += \
         Protocol/HTTP/ProtocolHttp1.cpp \
         Protocol/ProtocolProcessorFactory.cpp \
         Protocol/ProtocolProcessor.cpp \
-        RinxDefines.cpp \
         Server/ReactorThreadGroup.cpp \
         Server/Server.cpp \
+        Server/Signal.cpp \
         Util/Clock.cpp \
         Util/Mutex.cpp \
         Util/ThreadPool.cpp \
@@ -55,6 +55,7 @@ HEADERS += \
         RinxDefines.h \
         Server/ReactorThreadGroup.h \
         Server/Server.h \
+        Server/Signal.h \
         Util/Clock.h \
         Util/FunctionTraits.h \
         Util/Mutex.h \

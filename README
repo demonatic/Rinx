@@ -1,2 +1,7 @@
+Brief: The server employs reactor pattern to register and dispatch io handlers. It has a main reactor mainly to accept client connections, using round robin to make client connections evenly distributed on several sub reactor threads. The reactor on the other hand supports timers using heap managemnt, as well as async task post using a global work steal thread pool singleton. The input and output buffer of each connection is a chain of fixed size chunk allocated by an object pool to increase flexibility and performance.
+  Each port of server is bound to a protocol processor factory. The factory will spawn a new protocol processor for each new incoming connection on this port. Since the protocol parse process is usually stateful, a hierarchy finite state machine is implemented to handle protocol parsing. 
+
 TODO:
-1. Bug FIx:BufferTest failed in release mode
+1. implement Http protocol processor
+2. implement signal handler, e.g SIGINT SIGKILL SIGQUIT
+3. Bug FIx:BufferTest failed in release mode

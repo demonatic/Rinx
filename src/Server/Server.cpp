@@ -37,22 +37,21 @@ bool RxServer::start(const std::string &address, uint16_t port)
     }
     if(!_main_reactor.monitor_fd_event(RxFD{Rx_FD_LISTEN,ls_port.serv_fd},{Rx_EVENT_READ,Rx_EVENT_WRITE})||
             !_main_reactor.set_event_handler(Rx_FD_LISTEN,Rx_EVENT_READ,
-                std::bind(&RxServer::on_accept,this,std::placeholders::_1)))
+                std::bind(&RxServer::on_acceptable,this,std::placeholders::_1)))
     {
         LOG_WARN<<"monitor serv sock failed, fd="<<ls_port.serv_fd;
         return false;
     }
 
-    std::cout<<"server listen on port "<<ls_port.port<<std::endl;
+    LOG_INFO<<"server listen on port "<<ls_port.port;
 
     _sub_reactor_threads.start();
     _sub_reactor_threads.set_each_reactor_handler(Rx_FD_TCP_STREAM,Rx_EVENT_READ,
-        std::bind(&RxServer::on_tcp_read,this,std::placeholders::_1));
+        std::bind(&RxServer::on_tcp_readable,this,std::placeholders::_1));
 
     if(!_main_reactor.start_event_loop()){
         LOG_INFO<<"server stopped";
     }
-    std::cout<<"start return"<<std::endl;
     return true;
 }
 
@@ -78,7 +77,7 @@ void RxServer::proto_handle(RxConnection &conn)
      conn.get_proto_processor().process(conn,conn.get_input_buf());
 }
 
-RxHandlerRes RxServer::on_accept(const RxEvent &event)
+RxHandlerRes RxServer::on_acceptable(const RxEvent &event)
 {
     assert(event.Fd.fd_type==Rx_FD_LISTEN);
     for(int i=0;i<_max_once_accept_count;i++){
@@ -130,9 +129,8 @@ void RxServer::disable_accept()
 }
 
 
-RxHandlerRes RxServer::on_tcp_read(const RxEvent &event)
+RxHandlerRes RxServer::on_tcp_readable(const RxEvent &event)
 {
-    //std::cout<<"on_stream_read reactor_id="<<(int)event.reactor->get_id()<<" fd="<<event.Fd.raw_fd<<std::endl;
     RxConnection *conn=this->get_connection(event.Fd);
 
     Rx_Read_Res read_res;
@@ -157,12 +155,10 @@ RxHandlerRes RxServer::on_tcp_read(const RxEvent &event)
     return Rx_HANDLER_OK;
 }
 
-RxHandlerRes RxServer::on_tcp_send(const RxEvent &event)
+RxHandlerRes RxServer::on_tcp_writable(const RxEvent &event)
 {
     RxConnection *conn=this->get_connection(event.Fd);
-    if(!conn){
-        assert(false);
-    }
+    assert(conn);
 
     Rx_Write_Res write_res;
     conn->send(write_res);

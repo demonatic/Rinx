@@ -35,9 +35,9 @@ public:
     void proto_handle(RxConnection &conn);
 
 private:
-    RxHandlerRes on_accept(const RxEvent &event);
-    RxHandlerRes on_tcp_read(const RxEvent &event);
-    RxHandlerRes on_tcp_send(const RxEvent &event);
+    RxHandlerRes on_acceptable(const RxEvent &event);
+    RxHandlerRes on_tcp_readable(const RxEvent &event);
+    RxHandlerRes on_tcp_writable(const RxEvent &event);
 
     void disable_accept();
 
