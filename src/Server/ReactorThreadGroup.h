@@ -24,7 +24,7 @@ public:
     size_t get_thread_num() const noexcept;
     RxReactor* get_reactor(size_t index);
 
-    void set_each_reactor_handler(RxFDType fd_type,RxEventType event_type,EventHandler handler);
+    void reactor_for_each(std::function<void(RxReactor&)> f);
 
 private:
     static void *reactor_thread_loop(void *reactor_obj);

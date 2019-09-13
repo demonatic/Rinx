@@ -46,11 +46,12 @@ RxReactor* RxReactorThreadGroup::get_reactor(size_t index)
     return index<_reactor_threads.size()?_reactor_threads[index].reactor.get():nullptr;
 }
 
-void RxReactorThreadGroup::set_each_reactor_handler(RxFDType fd_type, RxEventType event_type, EventHandler handler)
+
+void RxReactorThreadGroup::reactor_for_each(std::function<void (RxReactor&)> f)
 {
-    for(auto &reactor_thd:_reactor_threads){
-        if(reactor_thd.reactor){
-            reactor_thd.reactor->set_event_handler(fd_type,event_type,handler);
+    for(auto &reactor_thread:_reactor_threads){
+        if(reactor_thread.reactor){
+            f(*reactor_thread.reactor);
         }
     }
 }

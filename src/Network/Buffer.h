@@ -43,7 +43,7 @@ class BufferReadableIterator;
 ///buffer最后一块writeable_size可为0
 class ChainBuffer{
 public:
-    static constexpr size_t chunk_size=Rx_BUFFER_CHUNK_SIZE;
+    static constexpr size_t chunk_size=RX_BUFFER_CHUNK_SIZE;
     using chunk_type=BufferChunk<chunk_size>;
     using chunk_ptr=std::shared_ptr<chunk_type>;
     using chunk_iterator=std::list<chunk_ptr>::iterator;

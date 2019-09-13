@@ -41,6 +41,9 @@ private:
 
     void disable_accept();
 
+    static void signal_setup();
+    static void signal_handler(const int signo);
+
 private:
     uint32_t _max_connection;
     uint16_t _max_once_accept_count;

@@ -7,6 +7,10 @@
 #include "Event.h"
 
 
+#define Epoll_Timeout 0
+#define Epoll_Interrupted -1
+#define Epoll_Error -2
+
 class RxReactor;
 class RxReactorEpoll
 {
@@ -20,7 +24,7 @@ public:
     bool is_initialized() const noexcept;
     void destroy() noexcept;
 
-    int wait(const struct timeval *timeout);
+    int wait(const int timeout_millsec=-1);
 
     epoll_event *get_epoll_events() const noexcept;
 

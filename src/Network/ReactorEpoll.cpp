@@ -54,16 +54,18 @@ void RxReactorEpoll::destroy() noexcept
     }
 }
 
-int RxReactorEpoll::wait(const struct timeval *timeout)
+int RxReactorEpoll::wait(const int timeout_millsec)
 {
-    int timeo_millsec=timeout==nullptr?0:timeout->tv_sec*1000+timeout->tv_usec/1000;
-    int nfds;
-    do{
-        nfds=::epoll_wait(_epoll_fd,_events,_max_event_num,timeo_millsec);
-    }while(nfds<0&&errno==EINTR);
-
+    int nfds=::epoll_wait(_epoll_fd,_events,_max_event_num,timeout_millsec);
+    if(nfds==0){
+        nfds=Epoll_Timeout;
+    }
+    else if(nfds<0){
+        nfds=errno==EINTR?Epoll_Interrupted:Epoll_Error;
+    }
     return nfds;
 }
+
 
 epoll_event *RxReactorEpoll::get_epoll_events() const noexcept
 {

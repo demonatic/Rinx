@@ -1,18 +1,18 @@
 #ifndef SIGNAL_H
 #define SIGNAL_H
 
-#include <functional>
-#include <array>
 #include <sys/signal.h>
 #include "../RinxDefines.h"
 
 typedef void (*RxSignalHandler)(int);
+const RxSignalHandler RxSigHandlerDefault=SIG_DFL;
+const RxSignalHandler RxSigHandlerIgnore=SIG_IGN;
 
 struct RxSignal
 {
-    int signal_no;
-    RxSignalHandler handler;
-    bool is_active;
+    bool setted=false;
+    int signal_no=0;
+    RxSignalHandler handler=nullptr;
 };
 
 //To Implement
@@ -21,16 +21,24 @@ struct RxSignal
 class RxReactor;
 class RxSignalManager{
 public:
-    void bind_reactor(RxReactor *reactor);
-    void set_signal(int signo,RxSignalHandler handler,int mask);
+    static volatile sig_atomic_t signo;
 
-    void disable_current_thread_signal();
+public:
+    static void add_signal(int signo,RxSignalHandler handler);
 
-    int on_signal(int signo);
+    /// @brief block all signals of the caller thread
+    static bool disable_current_thread_signal();
+    static bool enable_current_thread_signal();
+
+    static void trigger_signal(int signo);
+private:
+    static void async_sig_handler(int signo);
 
 private:
-    std::array<RxSignal,RX_SIGNO_MAX> signals;
+    static RxSignal _signals[RX_SIGNO_MAX];
+
 };
+
 
 
 #endif // SIGNAL_H

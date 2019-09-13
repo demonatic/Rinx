@@ -1,4 +1,5 @@
 #include "Server.h"
+#include "Signal.h"
 #include <iostream>
 RxServer::RxServer(uint32_t max_connection):_max_connection(max_connection),_max_once_accept_count(128),
     _main_reactor(0),_sub_reactor_threads(4),_connection_list(_max_connection)
@@ -8,6 +9,8 @@ RxServer::RxServer(uint32_t max_connection):_max_connection(max_connection),_max
 
 bool RxServer::start(const std::string &address, uint16_t port)
 {
+    signal_setup();
+
     RxListenPort ls_port(port);
     ls_port.serv_fd=RxSock::create_stream();
 
@@ -29,6 +32,7 @@ bool RxServer::start(const std::string &address, uint16_t port)
     }
 
     _listen_ports.emplace_back(std::make_pair(ls_port,std::make_unique<RxProtoProcHttp1Factory>()));
+    g_threadpool::instantiate(4);
 
     if(!_main_reactor.init()){
         LOG_WARN<<"main reactor start failed";
@@ -45,13 +49,22 @@ bool RxServer::start(const std::string &address, uint16_t port)
 
     LOG_INFO<<"server listen on port "<<ls_port.port;
 
+    _sub_reactor_threads.reactor_for_each([this](RxReactor &reactor){
+        reactor.set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_READ,
+            std::bind(&RxServer::on_tcp_readable,this,std::placeholders::_1));
+    });
     _sub_reactor_threads.start();
-    _sub_reactor_threads.set_each_reactor_handler(Rx_FD_TCP_STREAM,Rx_EVENT_READ,
-        std::bind(&RxServer::on_tcp_readable,this,std::placeholders::_1));
 
-    if(!_main_reactor.start_event_loop()){
-        LOG_INFO<<"server stopped";
-    }
+    _main_reactor.set_loop_each_begin([](){
+        if(RxSignalManager::signo){
+            RxSignalManager::trigger_signal(RxSignalManager::signo);
+            RxSignalManager::signo=0;
+        }
+    });
+
+    RxSignalManager::enable_current_thread_signal();
+    _main_reactor.start_event_loop();
+
     return true;
 }
 
@@ -79,7 +92,6 @@ void RxServer::proto_handle(RxConnection &conn)
 
 RxHandlerRes RxServer::on_acceptable(const RxEvent &event)
 {
-    assert(event.Fd.fd_type==Rx_FD_LISTEN);
     for(int i=0;i<_max_once_accept_count;i++){
         Rx_Accept_Res accept_res;
 
@@ -126,6 +138,23 @@ RxHandlerRes RxServer::on_acceptable(const RxEvent &event)
 void RxServer::disable_accept()
 {
 
+}
+
+void RxServer::signal_setup()
+{
+    RxSignalManager::add_signal(SIGPIPE,RxSigHandlerIgnore);
+    RxSignalManager::add_signal(SIGINT,&RxServer::signal_handler);
+}
+
+void RxServer::signal_handler(const int signo)
+{
+    switch(signo) {
+        case SIGINT:
+            std::cout<<"server recv sig int thread_id="<<std::this_thread::get_id()<<std::endl;
+        break;
+        default:
+            std::cout<<"server recv other sig"<<std::endl;
+    }
 }
 
 

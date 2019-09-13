@@ -1,5 +1,6 @@
 #include "Reactor.h"
 #include "Socket.h"
+#include "../Util/Util.h"
 #include "../3rd/NanoLog/NanoLog.h"
 
 RxReactor::RxReactor(uint8_t id):_id(id),_is_running(false),
@@ -15,13 +16,13 @@ bool RxReactor::init()
         return false;
     }
 
-    int evfd=RxSock::create_event_fd();
-    if(evfd==-1){
+    _event_fd={Rx_FD_EVENT,RxSock::create_event_fd()};
+    if(_event_fd.raw_fd==-1){
         LOG_WARN<<"create event fd failed";
         return false;
     }
 
-    _event_fd={Rx_FD_EVENT,evfd};
+    //register event fd read handler
     set_event_handler(_event_fd.fd_type,Rx_EVENT_READ,[this](const RxEvent &event_data)->RxHandlerRes{
         if(!RxSock::read_event_fd(event_data.Fd.raw_fd)){
             LOG_WARN<<"read event fd failed, reactor_id="<<_id;
@@ -70,13 +71,15 @@ int RxReactor::start_event_loop()
     LOG_INFO<<"start event loop";
 
     while(_is_running){
-
+        loop_each_begin();
         check_timers();
         poll_and_dispatch_io();
         run_defers();
+        loop_each_end();
     }
     return 0;
 }
+
 
 void RxReactor::queue_work(RxReactor::DeferCallback cb)
 {
@@ -84,8 +87,17 @@ void RxReactor::queue_work(RxReactor::DeferCallback cb)
         RxMutexLockGuard lock(_defer_mutex);
         _defer_functors.push_back(std::move(cb));
     }
-    //TODO
     wake_up_loop();
+}
+
+void RxReactor::set_loop_each_begin(std::function<void()> loop_each_begin)
+{
+    this->_on_loop_each_begin=loop_each_begin;
+}
+
+void RxReactor::set_loop_each_end(std::function<void()> loop_each_end)
+{
+    this->_on_loop_each_end=loop_each_end;
 }
 
 void RxReactor::wake_up_loop()
@@ -95,17 +107,34 @@ void RxReactor::wake_up_loop()
     }
 }
 
+void RxReactor::loop_each_begin()
+{
+    if(this->_on_loop_each_begin){
+        _on_loop_each_begin();
+    }
+}
+
+void RxReactor::loop_each_end()
+{
+    if(_on_loop_each_end){
+        _on_loop_each_end();
+    }
+}
+
 int RxReactor::poll_and_dispatch_io()
 {
-    int nfds=_reactor_epoll.wait(nullptr);
-
-    if(nfds<0){
-        LOG_WARN<<"reactor_epoll wait failed, reactor_id="<<_id;
-        return -1;
-    }
-    if(nfds==0&&this->_on_timeout){
-        _on_timeout(this);
-        return 0;
+    int nfds=_reactor_epoll.wait();
+    std::cout<<"nfds="<<nfds<<std::endl;
+    switch(nfds){
+        case Epoll_Error:
+            LOG_WARN<<"reactor_epoll wait failed, reactor_id="<<_id;
+            return -1;
+        case Epoll_Timeout:
+            if(_on_timeout)
+                _on_timeout(this);
+            return 0;
+        case Epoll_Interrupted:
+            return 0;
     }
 
     int dispatched=0;
@@ -120,14 +149,12 @@ int RxReactor::poll_and_dispatch_io()
         std::vector<RxEventType> rx_event_types=RxReactorEpoll::get_rx_event_types(ep_events[i]);
         for(auto rx_ev_type:rx_event_types){
             EventHandler &ev_handler=_event_handlers[rx_ev_type][rx_event.Fd.fd_type];
-            if(!ev_handler)
-                continue;
 
-            if(ev_handler(rx_event)==Rx_HANDLER_OK){
+            if(ev_handler&&ev_handler(rx_event)==Rx_HANDLER_OK){
                  ++dispatched;
             }
             else{
-                LOG_WARN<<"exec io_poll handler failed. "
+                LOG_WARN<<"io_poll handler doesn't exist or exec failed. "
                 "event_type="<<rx_ev_type<<" fd_type="<<rx_event.Fd.fd_type<<" fd="<<rx_event.Fd.raw_fd;
             }
         }

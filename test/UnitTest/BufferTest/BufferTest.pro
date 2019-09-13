@@ -16,4 +16,3 @@ SOURCES += \
         main.cpp\
         ../../../src/Network/Buffer.cpp\
         ../../../src/Network/Socket.cpp\
-        ../../../src/RinxDefines.cpp\
