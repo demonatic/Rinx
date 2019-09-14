@@ -63,4 +63,16 @@ TEST(buffer_test, dataset)
     EXPECT_EQ(read_bytes,write_bytes);
 }
 
+TEST(write_data_test,testset){
+    std::unique_ptr<ChainBuffer> buf=ChainBuffer::create_chain_buffer();
+    std::string str="std::string";
+    const char *p=new char(10);
+    int i=65;
+    float d=888;
+    p="c_str_ptr";
+    *buf<<"string_literal"<<"|"<<str<<"|"<<p<<"|"<<i<<"|"<<d;
+    Rx_Write_Res write_res;
+    buf->write_fd(STDOUT_FILENO,write_res);
+}
+
 #endif // TST_BUFFER_TEST_H

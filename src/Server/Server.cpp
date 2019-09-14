@@ -55,7 +55,9 @@ bool RxServer::start(const std::string &address, uint16_t port)
     });
     _sub_reactor_threads.start();
 
-    _main_reactor.set_loop_each_begin([](){
+    /// only let the main reactor thread handle signal asynchronously
+    /// and let other threads block all signals
+    _main_reactor.set_loop_each_begin([](RxReactor *){
         if(RxSignalManager::signo){
             RxSignalManager::trigger_signal(RxSignalManager::signo);
             RxSignalManager::signo=0;
@@ -151,6 +153,9 @@ void RxServer::signal_handler(const int signo)
     switch(signo) {
         case SIGINT:
             std::cout<<"server recv sig int thread_id="<<std::this_thread::get_id()<<std::endl;
+        break;
+        case SIGTERM:
+
         break;
         default:
             std::cout<<"server recv other sig"<<std::endl;

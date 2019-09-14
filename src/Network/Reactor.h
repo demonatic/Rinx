@@ -21,7 +21,7 @@
 class RxReactor
 {
 public:
-    using PollTimeOutCallback=std::function<void(RxReactor *)>;
+    using ReactorCallback=std::function<void(RxReactor*)>;
     using DeferCallback=std::function<void()>;
 
 public:
@@ -42,8 +42,8 @@ public:
 
     void queue_work(DeferCallback cb);
 
-    void set_loop_each_begin(std::function<void()> loop_each_begin);
-    void set_loop_each_end(std::function<void()> loop_each_end);
+    void set_loop_each_begin(ReactorCallback loop_each_begin);
+    void set_loop_each_end(ReactorCallback loop_each_end);
 
     template<typename F1,typename F2,typename ...Args>
     std::enable_if_t<false==std::is_same_v<void,std::invoke_result_t<F1,Args...>>>
@@ -83,7 +83,7 @@ private:
     bool _is_running;
 
     RxReactorEpoll _reactor_epoll;
-    PollTimeOutCallback _on_timeout;
+    ReactorCallback _on_timeout;
     EventHandler _event_handlers[RxEventType::Rx_EVENT_TYPE_MAX][RxFDType::Rx_FD_TYPE_MAX];
 
     RxFD _event_fd;
@@ -93,8 +93,8 @@ private:
     RxMutex _defer_mutex;
     std::vector<DeferCallback> _defer_functors;
 
-    std::function<void()> _on_loop_each_begin;
-    std::function<void()> _on_loop_each_end;
+    ReactorCallback _on_loop_each_begin;
+    ReactorCallback _on_loop_each_end;
 };
 
 

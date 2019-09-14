@@ -15,10 +15,6 @@ struct RxSignal
     RxSignalHandler handler=nullptr;
 };
 
-//To Implement
-/// the idea is to only let the main reactor thread handle signal asynchronously
-/// and let other threads ignore signals' handle
-class RxReactor;
 class RxSignalManager{
 public:
     static volatile sig_atomic_t signo;

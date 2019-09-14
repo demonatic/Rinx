@@ -31,6 +31,7 @@ public:
     }
 
 private:
+    //TODO reserve space
     std::string _stored_method;
     std::string _stored_uri;
     std::string _stored_version;

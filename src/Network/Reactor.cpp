@@ -90,12 +90,12 @@ void RxReactor::queue_work(RxReactor::DeferCallback cb)
     wake_up_loop();
 }
 
-void RxReactor::set_loop_each_begin(std::function<void()> loop_each_begin)
+void RxReactor::set_loop_each_begin(ReactorCallback loop_each_begin)
 {
     this->_on_loop_each_begin=loop_each_begin;
 }
 
-void RxReactor::set_loop_each_end(std::function<void()> loop_each_end)
+void RxReactor::set_loop_each_end(ReactorCallback loop_each_end)
 {
     this->_on_loop_each_end=loop_each_end;
 }
@@ -110,21 +110,21 @@ void RxReactor::wake_up_loop()
 void RxReactor::loop_each_begin()
 {
     if(this->_on_loop_each_begin){
-        _on_loop_each_begin();
+        _on_loop_each_begin(this);
     }
 }
 
 void RxReactor::loop_each_end()
 {
     if(_on_loop_each_end){
-        _on_loop_each_end();
+        _on_loop_each_end(this);
     }
 }
 
 int RxReactor::poll_and_dispatch_io()
 {
     int nfds=_reactor_epoll.wait();
-    std::cout<<"nfds="<<nfds<<std::endl;
+
     switch(nfds){
         case Epoll_Error:
             LOG_WARN<<"reactor_epoll wait failed, reactor_id="<<_id;

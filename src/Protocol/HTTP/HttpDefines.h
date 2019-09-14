@@ -2,7 +2,7 @@
 #define HTTPDEFINES_H
 
 #include <vector>
-#include <string>
+#include <string_view>
 #include <algorithm>
 
 enum class HttpStatusCode
@@ -74,7 +74,7 @@ enum class HttpVersion{
 using HttpHeaderFields=std::vector<std::pair<std::string, std::string>>;
 
 
-inline HttpMethod to_http_method(const std::string &str_method){
+inline HttpMethod to_http_method(std::string_view str_method){
     HttpMethod method;
     if(str_method=="GET"){
         method=HttpMethod::GET;
@@ -126,7 +126,7 @@ inline std::string to_http_method_str(const HttpMethod method){
     return str_method;
 }
 
-inline HttpVersion to_http_version(const std::string &str_version){
+inline HttpVersion to_http_version(std::string_view str_version){
     HttpVersion version;
     if(str_version=="HTTP/1.0"){
         version=HttpVersion::VERSION_1_0;

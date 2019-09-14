@@ -147,9 +147,9 @@ ChainBuffer::chunk_iterator ChainBuffer::chunk_end()
     return _chunk_list.end();
 }
 
-void ChainBuffer::append(char *data, size_t length)
+void ChainBuffer::append(const char *data, size_t length)
 {
-    char *pos=data;
+    const char *pos=data;
     size_t bytes_left=length;
     while(bytes_left>0){
         if(get_tail()->writable_size()==0){
@@ -193,22 +193,6 @@ ChainBuffer::chunk_ptr ChainBuffer::new_chunk()
     return rx_pool_make_shared<chunk_type>();
 }
 
-void ChainBuffer::advance_write(std::list<chunk_ptr>::iterator it_from, size_t bytes)
-{
-    while(bytes>0&&it_from!=_chunk_list.end()){
-        size_t write_space=(*it_from)->writable_size();
-        if(write_space<bytes){
-            (*it_from)->advance_write(write_space);
-            bytes-=write_space;
-            it_from++;
-        }
-        else{
-            (*it_from)->advance_write(bytes);
-            bytes=0;
-        }
-    }
-}
-
 void ChainBuffer::advance_read(size_t bytes)
 {
     auto it_head=_chunk_list.begin();
@@ -242,3 +226,10 @@ bool ChainBuffer::head_pop_unused_chunk(bool force)
     _chunk_list.pop_front();
     return true;
 }
+
+ChainBuffer &ChainBuffer::operator<<(const std::string &arg)
+{
+    append(arg.c_str(),arg.length());
+    return *this;
+}
+

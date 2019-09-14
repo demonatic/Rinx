@@ -25,7 +25,7 @@ public:
     void advance_write(size_t bytes);
 
     value_type *data();
-    constexpr size_t get_length();
+    constexpr size_t get_length(); 
 
 private:
     std::array<uint8_t,N> _data;
@@ -50,6 +50,7 @@ public:
     using read_iterator=BufferReadableIterator<chunk_iterator,chunk_type::value_type,chunk_size>;
 
     ChainBuffer()=default;
+    static std::unique_ptr<ChainBuffer> create_chain_buffer();
 
     size_t chunk_num() const;
     size_t total_size() const;
@@ -64,16 +65,42 @@ public:
     chunk_iterator chunk_begin();
     chunk_iterator chunk_end();
 
-    void append(char *data,size_t length);
+    void append(const char *data,size_t length);
 
     chunk_ptr get_head() const;
     chunk_ptr get_tail() const;
 
-    static std::unique_ptr<ChainBuffer> create_chain_buffer();
-    static chunk_ptr new_chunk();
-
     void advance_read(size_t bytes);
-    void advance_write(std::list<chunk_ptr>::iterator it_from,size_t bytes);
+
+    ChainBuffer& operator<<(const std::string &arg);
+
+    template<typename Arg>
+    typename std::enable_if_t<
+        std::is_integral_v<Arg>||std::is_floating_point_v<Arg>,ChainBuffer&> operator<<(Arg arg)
+    {
+        append(reinterpret_cast<char*>(&arg),sizeof(arg));
+        return *this;
+    }
+
+    template<size_t N>
+    ChainBuffer &operator<<(const char (&arg)[N]){
+        const char *p=arg;
+        append(p,N-1);
+        return *this;
+    }
+
+    template<typename Arg>
+    typename std::enable_if_t<std::is_same_v<char *,std::decay_t<Arg>>,ChainBuffer&>
+    operator<<(const Arg arg){
+        size_t str_len=strlen(arg);
+        if(str_len!=0){
+           append(arg,str_len);
+        }
+        return *this;
+    }
+
+private:
+    static chunk_ptr new_chunk();
 
     void tail_push_new_chunk();
     bool head_pop_unused_chunk(bool force);
