@@ -1,11 +1,13 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
+
 #include <array>
 #include <memory>
 #include <list>
-#include "../RinxDefines.h"
+#include <cstring>
 #include "Socket.h"
+#include "../RinxDefines.h"
 #include <iostream>
 
 template<size_t N>
@@ -15,8 +17,8 @@ public:
     using value_type=uint8_t;
 
     BufferChunk();
-    value_type* read_pos() const;
-    value_type* write_pos() const;
+    value_type* read_pos();
+    value_type* write_pos();
 
     size_t readable_size() const;
     size_t writable_size() const;
@@ -30,11 +32,9 @@ public:
 private:
     std::array<uint8_t,N> _data;
     ///next position of the last bytes processed
-    value_type* _read_pos;
+    size_t _read_pos;
     ///next position of the last bytes unprocessed
-    value_type* _write_pos;
-
-    bool _recycle;
+    size_t _write_pos;
 };
 
 template<class ChunkIteratorType,class ByteType,size_t N>
@@ -45,8 +45,9 @@ class ChainBuffer{
 public:
     static constexpr size_t chunk_size=RX_BUFFER_CHUNK_SIZE;
     using chunk_type=BufferChunk<chunk_size>;
-    using chunk_ptr=std::shared_ptr<chunk_type>;
-    using chunk_iterator=std::list<chunk_ptr>::iterator;
+    using chunk_rptr=chunk_type*;
+    using chunk_sptr=std::shared_ptr<chunk_type>;
+    using chunk_iterator=std::list<chunk_sptr>::iterator;
     using read_iterator=BufferReadableIterator<chunk_iterator,chunk_type::value_type,chunk_size>;
 
     ChainBuffer()=default;
@@ -65,12 +66,18 @@ public:
     chunk_iterator chunk_begin();
     chunk_iterator chunk_end();
 
+    chunk_type::value_type* writable_pos() const;
+
     void append(const char *data,size_t length);
 
-    chunk_ptr get_head() const;
-    chunk_ptr get_tail() const;
+    chunk_rptr get_head() const;
+    chunk_rptr get_tail() const;
 
     void advance_read(size_t bytes);
+
+    static chunk_sptr alloc_chunk();
+    void tail_push_new_chunk(chunk_sptr chunk=nullptr);
+    bool head_pop_unused_chunk(bool force=false);
 
     ChainBuffer& operator<<(const std::string &arg);
 
@@ -84,13 +91,14 @@ public:
 
     template<size_t N>
     ChainBuffer &operator<<(const char (&arg)[N]){
-        const char *p=arg;
-        append(p,N-1);
+        append(arg,N-1);
         return *this;
     }
 
     template<typename Arg>
-    typename std::enable_if_t<std::is_same_v<char *,std::decay_t<Arg>>,ChainBuffer&>
+    typename std::enable_if_t<
+        std::is_same_v<char *,std::decay_t<Arg>>||
+        std::is_same_v<const char *,std::decay_t<Arg>>, ChainBuffer&>
     operator<<(const Arg arg){
         size_t str_len=strlen(arg);
         if(str_len!=0){
@@ -100,17 +108,10 @@ public:
     }
 
 private:
-    static chunk_ptr new_chunk();
-
-    void tail_push_new_chunk();
-    bool head_pop_unused_chunk(bool force);
-
-private:
-    std::list<chunk_ptr> _chunk_list;
+    std::list<chunk_sptr> _chunk_list;
 };
 
 using RxChainBuffer=ChainBuffer;
-
 
 template<class ChunkIteratorType,class ByteType,size_t N>
 class BufferReadableIterator:public std::iterator<
@@ -122,7 +123,7 @@ class BufferReadableIterator:public std::iterator<
       >{
 public:
     using chunk_type=ChainBuffer::chunk_type;
-    using chunk_ptr=ChainBuffer::chunk_ptr;
+    using chunk_ptr=ChainBuffer::chunk_sptr;
     using self_type=BufferReadableIterator<ChunkIteratorType,ByteType,N>;
 
     using difference_type=typename BufferReadableIterator::difference_type;
@@ -161,6 +162,8 @@ public:
         _cur++;
         if(_cur==_chunk_end){
             ++_it_chunk;
+            _chain_buf->head_pop_unused_chunk(true); //TODO TEMPORARY
+
             if(_it_chunk!=_chain_buf->chunk_end()){
                 _chunk_start=static_cast<chunk_ptr>(*_it_chunk)->read_pos();
                 _chunk_end=_chunk_start+static_cast<chunk_ptr>(*_it_chunk)->readable_size();
@@ -226,10 +229,9 @@ public:
                         if(step>1){
                             throw std::runtime_error("index out of range");
                         }
-                        else{
-                            _chunk_start=_chunk_end=_cur=nullptr;
-                            step=0;
-                        }
+                        _chunk_start=_chunk_end=_cur=nullptr;
+                        step=0;
+
                     }
                     else{
                         _chunk_start=static_cast<chunk_ptr>(*_it_chunk)->read_pos();
@@ -286,5 +288,33 @@ private:
     value_type *_cur;
 
 };
+
+//template<class ChunkIteratorType,class ByteType,size_t N>
+//class OneShotReadIterator:public BufferReadableIterator<ChunkIteratorType,ByteType,N>{
+//public:
+//    using parent_type=BufferReadableIterator<ChunkIteratorType,ByteType,N>;
+//    using self_type=OneShotReadIterator;
+
+
+//    self_type& operator++(){
+//        if(this->_cur==nullptr){
+//            throw std::runtime_error("index out of range");
+//        }
+
+//        this->_cur++;
+//        if(this->_cur==this->_chunk_end){
+//            ++this->_it_chunk;
+//            if(this->_it_chunk!=this->_chain_buf->chunk_end()){
+//                this->_chunk_start=static_cast<parent_type::chunk_ptr>(*this->_it_chunk)->read_pos();
+//                this->_chunk_end=this->_chunk_start+static_cast<chunk_ptr>(*this->_it_chunk)->readable_size();
+//                this->_cur=this->_chunk_start;
+//            }
+//            else{
+//                this->_chunk_start=this->_chunk_end=this->_cur=nullptr;
+//            }
+//        }
+//        return *this;
+//    }
+//};
 
 #endif // BUFFERCHUNK_H

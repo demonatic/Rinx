@@ -9,11 +9,11 @@
 #include <future>
 #include <atomic>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 
 #include "Mutex.h"
 
-class RxThreadPool
+class RxThreadPool:public RxNoncopyable
 {
     using Task=std::function<void()>;
 

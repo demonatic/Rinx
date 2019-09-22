@@ -36,8 +36,10 @@ public:
 
 private:
     RxHandlerRes on_acceptable(const RxEvent &event);
-    RxHandlerRes on_tcp_readable(const RxEvent &event);
-    RxHandlerRes on_tcp_writable(const RxEvent &event);
+    RxHandlerRes on_stream_readable(const RxEvent &event);
+    RxHandlerRes on_stream_writable(const RxEvent &event);
+    //TODO
+    RxHandlerRes on_stream_error(const RxEvent &event);
 
     void disable_accept();
 

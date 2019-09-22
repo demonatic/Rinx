@@ -3,7 +3,7 @@
 
 #include "../Network/Buffer.h"
 #include "../Network/Reactor.h"
-#include "HFSMParser.h"
+#include "HFSMParser.hpp"
 
 class RxConnection;
 
@@ -20,7 +20,7 @@ public:
     RxProtoProcessor()=default;
     virtual ~RxProtoProcessor()=default;
 
-    virtual void init()=0;
+    virtual void init(RxConnection &conn)=0;
     virtual ProcessStatus process(RxConnection &conn,RxChainBuffer &buf)=0;
 };
 

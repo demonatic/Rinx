@@ -3,7 +3,7 @@
 
 
 RxSignal RxSignalManager::_signals[RX_SIGNO_MAX];
-volatile sig_atomic_t RxSignalManager::signo=0;
+volatile sig_atomic_t RxSignalManager::_signo=0;
 
 
 void RxSignalManager::add_signal(int signo, RxSignalHandler handler)
@@ -34,6 +34,14 @@ bool RxSignalManager::enable_current_thread_signal()
     return pthread_sigmask(SIG_UNBLOCK,&mask,nullptr)>=0;
 }
 
+void RxSignalManager::check_and_handle_async_signal()
+{
+    if(_signo){
+        trigger_signal(_signo);
+        _signo=0;
+    }
+}
+
 void RxSignalManager::trigger_signal(int signo)
 {
     if(_signals[signo].setted){
@@ -46,5 +54,5 @@ void RxSignalManager::trigger_signal(int signo)
 
 void RxSignalManager::async_sig_handler(int signo)
 {
-    RxSignalManager::signo=signo;
+    RxSignalManager::_signo=signo;
 }

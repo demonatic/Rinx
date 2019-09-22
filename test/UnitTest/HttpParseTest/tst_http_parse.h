@@ -20,13 +20,17 @@ public:
     virtual void parse_error_callback(HttpRequest &request){(void)request;}
 
     void parse(std::vector<uint8_t> &buf){
-        parser.register_event(HttpEvent::RequestLineReceived,[this](HttpRequest &request){
+        parser.register_event(HttpEvent::RequestLineReceived,[this](std::any &request){
             std::cout<<"@recv request line cb"<<std::endl;
-            this->recv_request_line_callback(request);
+            HttpRequest &processed_req=std::any_cast<HttpRequest&>(request);
+            this->recv_request_line_callback(processed_req);
         });
-        parser.register_event(HttpEvent::HttpHeaderReceived,[this](HttpRequest &request){
+        parser.register_event(HttpEvent::HttpHeaderReceived,[this](std::any &request){
             std::cout<<"@recv header cb"<<std::endl;
-            this->recv_header_callback(request);
+            HttpRequest &processed_req=std::any_cast<HttpRequest&>(request);
+            processed_req.debug_print();
+            this->recv_header_callback(processed_req);
+            processed_req.reset();
         });
         parser.register_event(HttpEvent::ParseError,[this](HttpRequest &request){
             std::cout<<"@parse error cb"<<std::endl;
@@ -35,8 +39,7 @@ public:
 
         std::any req=HttpRequest{};
         parser.parse_from_array(buf.begin(),buf.end(),req);
-        HttpRequest &processed_req=std::any_cast<HttpRequest&>(req);
-        processed_req.debug_print();
+
     }
 
     HttpParser parser;
@@ -60,9 +63,20 @@ TEST(http_parse, dataset)
                                 "Keep-Alive: 300\r\n"
                                 "Connection: keep-alive\r\n"
                                 "Transfer-Encoding: chunked\r\n"
-                                "\r\n";
+                                "\r\n"
+                        "GET /favicon.ico HTTP/1.1\r\n"
+                                     "Host: 0.0.0.0=5000\r\n"
+                                     "User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9) Gecko/2008061015 Firefox/3.0\r\n"
+                                     "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+                                     "Accept-Language: en-us,en;q=0.5\r\n"
+                                     "Accept-Encoding: gzip,deflate\r\n"
+                                     "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n"
+                                     "Keep-Alive: 300\r\n"
+                                     "Connection: keep-alive\r\n"
+                                     "Transfer-Encoding: chunked\r\n"
+                                     "\r\n";
 
-    std::vector<uint8_t> buf(request,request+sizeof(request));
+    std::vector<uint8_t> buf(request,request+sizeof(request)-1);
     MockParserCallBack moc_cb;
     moc_cb.parse(buf);
 }

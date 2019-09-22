@@ -35,7 +35,7 @@ public:
 public:
     SuperState(uint8_t state_id):_id(state_id){ }
 
-    virtual ~SuperState();
+    virtual ~SuperState()=default;
 
     virtual ConsumeRes consume(iterable_bytes iterable,std::any &request)=0;
     virtual void on_entry(const std::any &context)=0;

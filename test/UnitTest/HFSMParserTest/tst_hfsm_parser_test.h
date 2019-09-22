@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
-#include "../../../src/Protocol/HFSMParser.h"
+#include "../../../src/Protocol/HFSMParser.hpp"
 
 using namespace testing;
 

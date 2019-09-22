@@ -1,10 +1,10 @@
-#include <string.h>
+#include <cstring>
 #include <unistd.h>
 #include "ReactorEpoll.h"
 #include "Reactor.h"
 #include "../3rd/NanoLog/NanoLog.h"
 
-RxReactorEpoll::RxReactorEpoll():_epoll_fd(-1),_events(nullptr)
+RxReactorEpoll::RxReactorEpoll():_epoll_fd(-1),_events(nullptr),_max_event_num(0)
 {
 
 }

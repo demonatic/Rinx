@@ -2,7 +2,7 @@
 #define CLOCK_H
 
 #include <string>
-#include <time.h>
+#include <ctime>
 
 class Clock
 {

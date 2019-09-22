@@ -13,4 +13,4 @@ HEADERS += \
 
 SOURCES += \
         main.cpp\
-        ../../../src/Protocol/HFSMParser.cpp
+        ../../../src/Protocol/HFSMParser.hpp

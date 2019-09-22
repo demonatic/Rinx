@@ -2,7 +2,7 @@
 #define HTTPPARSER_H
 
 #include <string>
-#include "../HFSMParser.h"
+#include "../HFSMParser.hpp"
 #include <iostream>
 
 enum HttpEvent{
@@ -17,7 +17,11 @@ enum HttpEvent{
 
 class StateRequestLine:public SuperState{
 public:
-    StateRequestLine(uint8_t state_id):SuperState(state_id){}
+    StateRequestLine(uint8_t state_id):SuperState(state_id){
+        _stored_method.reserve(10);
+        _stored_uri.reserve(100);
+        _stored_version.reserve(12);
+    }
 
     virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override;
 

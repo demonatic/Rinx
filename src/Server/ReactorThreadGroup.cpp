@@ -2,16 +2,16 @@
 
 RxReactorThreadGroup::RxReactorThreadGroup(size_t num):_reactor_threads(num)
 {
-
-}
-
-bool RxReactorThreadGroup::start()
-{
     for(size_t i=0;i<_reactor_threads.size();i++){
         RxReactorThread &reactor_thd=_reactor_threads[i];
         reactor_thd.reactor=std::make_unique<RxReactor>(i+1);
         reactor_thd.reactor->init();
+    }
+}
 
+bool RxReactorThreadGroup::start()
+{
+    for(auto &reactor_thd:_reactor_threads){
         pthread_t ptid;
         if(pthread_create(&ptid,nullptr,&RxReactorThreadGroup::reactor_thread_loop,reactor_thd.reactor.get())<0)
         {
@@ -47,7 +47,7 @@ RxReactor* RxReactorThreadGroup::get_reactor(size_t index)
 }
 
 
-void RxReactorThreadGroup::reactor_for_each(std::function<void (RxReactor&)> f)
+void RxReactorThreadGroup::reactor_for_each(std::function<void(RxReactor&)> f)
 {
     for(auto &reactor_thread:_reactor_threads){
         if(reactor_thread.reactor){

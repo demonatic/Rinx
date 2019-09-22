@@ -16,11 +16,11 @@ SOURCES += \
         Network/Socket.cpp \
         Network/Timer.cpp \
         Network/TimerHeap.cpp \
-        Protocol/HFSMParser.cpp \
         Protocol/HTTP/HttpParser.cpp \
         Protocol/HTTP/HttpReqHandlerEngine.cpp \
         Protocol/HTTP/HttpRequest.cpp \
         Protocol/HTTP/HttpRequestHandler.cpp \
+        Protocol/HTTP/HttpResponseWriter.cpp \
         Protocol/HTTP/ProtocolHttp1.cpp \
         Protocol/ProtocolProcessorFactory.cpp \
         Protocol/ProtocolProcessor.cpp \
@@ -43,12 +43,13 @@ HEADERS += \
         Network/Socket.h \
         Network/Timer.h \
         Network/TimerHeap.h \
-        Protocol/HFSMParser.h \
+        Protocol/HFSMParser.hpp \
         Protocol/HTTP/HttpDefines.h \
         Protocol/HTTP/HttpParser.h \
         Protocol/HTTP/HttpReqHandlerEngine.h \
         Protocol/HTTP/HttpRequest.h \
         Protocol/HTTP/HttpRequestHandler.h \
+        Protocol/HTTP/HttpResponseWriter.h \
         Protocol/HTTP/ProtocolHttp1.h \
         Protocol/ProtocolProcessorFactory.h \
         Protocol/ProtocolProcessor.h \

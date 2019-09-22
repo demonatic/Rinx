@@ -4,6 +4,7 @@
 #include <vector>
 #include <string_view>
 #include <algorithm>
+#include "../../Util/Util.h"
 
 enum class HttpStatusCode
 {
@@ -53,15 +54,16 @@ enum class HttpStatusCode
     HTTP_versionNOT_SUPPORTED = 505,
 };
 
-enum class HttpMethod{
-    UNDEFINED = 0,
-    ANY,
+enum HttpMethod{
     GET,
     POST,
     HEAD,
     PUT,
     PATCH,
     DELETE,
+    ANY,
+    UNDEFINED,
+    HttpMethodCount
 };
 
 enum class HttpVersion{
@@ -73,9 +75,8 @@ enum class HttpVersion{
 
 using HttpHeaderFields=std::vector<std::pair<std::string, std::string>>;
 
-
-inline HttpMethod to_http_method(std::string_view str_method){
-    HttpMethod method;
+inline HttpMethod to_http_method(const std::string &str_method){
+    HttpMethod method=HttpMethod::UNDEFINED;
     if(str_method=="GET"){
         method=HttpMethod::GET;
     }
@@ -93,9 +94,6 @@ inline HttpMethod to_http_method(std::string_view str_method){
     }
     else if(str_method=="DELETE"){
         method=HttpMethod::DELETE;
-    }
-    else{
-        method=HttpMethod::UNDEFINED;
     }
     return method;
 }
@@ -126,7 +124,7 @@ inline std::string to_http_method_str(const HttpMethod method){
     return str_method;
 }
 
-inline HttpVersion to_http_version(std::string_view str_version){
+inline HttpVersion to_http_version(const std::string &str_version){
     HttpVersion version;
     if(str_version=="HTTP/1.0"){
         version=HttpVersion::VERSION_1_0;
@@ -161,5 +159,25 @@ inline std::string to_http_version_str(HttpVersion version){
 }
 
 inline const char *CRLF="\r\n";
+
+inline std::string get_mimetype_by_filename(const std::string &filename)
+{
+    static const std::unordered_map<std::string, std::string> mime_types{
+        {"png","image/png"},
+        {"html","text/html"},
+        {"txt","text/plain"},
+    };
+
+    const size_t extension_pos=filename.find_last_of('.');
+
+    std::string file_extension;
+    if(extension_pos!=std::string::npos){
+        file_extension=filename.substr(extension_pos+1);
+        Util::to_lower(file_extension);
+    }
+
+    auto const it_mime=mime_types.find(file_extension);
+    return it_mime==mime_types.end()?std::string("application/octet-stream"):it_mime->second;
+}
 
 #endif // HTTPDEFINES_H

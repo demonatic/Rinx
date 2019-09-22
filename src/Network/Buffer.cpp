@@ -3,10 +3,10 @@
 #include <iostream>
 
 #define assert_chunk_index()\
-assert(_read_pos>=data()&&_read_pos<=_write_pos&&_write_pos<=_data.data()+N)
+assert(_read_pos>=0&&_read_pos<=_write_pos&&_write_pos<=N)
 
 template<size_t N>
-BufferChunk<N>::BufferChunk():_read_pos(_data.data()),_write_pos(_read_pos),_recycle(false)
+BufferChunk<N>::BufferChunk():_read_pos(0),_write_pos(_read_pos)
 {
 
 }
@@ -20,7 +20,7 @@ size_t BufferChunk<N>::readable_size() const
 template<size_t N>
 size_t BufferChunk<N>::writable_size() const
 {
-    return N-(_write_pos-_data.data());
+    return N-_write_pos;
 }
 
 template<size_t N>
@@ -29,7 +29,7 @@ void BufferChunk<N>::advance_read(size_t bytes)
     _read_pos+=bytes;
     assert_chunk_index();
     if(_read_pos==_write_pos){
-        _read_pos=_write_pos=_data.data();
+        _read_pos=_write_pos=0;
     }
 }
 
@@ -47,15 +47,15 @@ typename BufferChunk<N>::value_type *BufferChunk<N>::data()
 }
 
 template<size_t N>
-uint8_t* BufferChunk<N>::read_pos() const
+typename BufferChunk<N>::value_type* BufferChunk<N>::read_pos()
 {
-    return _read_pos;
+    return data()+_read_pos;
 }
 
 template<size_t N>
-uint8_t* BufferChunk<N>::write_pos() const
+typename BufferChunk<N>::value_type* BufferChunk<N>::write_pos()
 {
-    return _write_pos;
+    return data()+_write_pos;
 }
 
 template<size_t N>
@@ -80,13 +80,10 @@ ssize_t ChainBuffer::read_fd(int fd,Rx_Read_Res &res)
 {
     char extra_buff[65535];
     std::vector<struct iovec> io_vecs(2);
-    if(_chunk_list.empty()){
+    if(_chunk_list.empty()||get_tail()->writable_size()==0){
         tail_push_new_chunk();
     }
-    auto tail=get_tail();
-    if(tail->writable_size()==0){
-        tail_push_new_chunk();
-    }
+    auto tail=get_tail(); // auto tail=get_tail();
     io_vecs[0].iov_base=tail->write_pos();
     io_vecs[0].iov_len=tail->writable_size();
     io_vecs[1].iov_base=extra_buff;
@@ -147,23 +144,29 @@ ChainBuffer::chunk_iterator ChainBuffer::chunk_end()
     return _chunk_list.end();
 }
 
+ChainBuffer::chunk_type::value_type *ChainBuffer::writable_pos() const
+{
+    return this->get_tail()->write_pos();
+}
+
 void ChainBuffer::append(const char *data, size_t length)
 {
     const char *pos=data;
     size_t bytes_left=length;
+
     while(bytes_left>0){
-        if(get_tail()->writable_size()==0){
+        if(!chunk_num()||get_tail()->writable_size()==0){
             tail_push_new_chunk();
         }
 
         if(get_tail()->writable_size()>bytes_left){
-            std::copy(pos,pos+bytes_left,get_tail()->write_pos());
+            std::copy(pos,pos+bytes_left,writable_pos());
             get_tail()->advance_write(bytes_left);
             bytes_left=0;
         }
         else{
             size_t write_size=get_tail()->writable_size();
-            std::copy(pos,pos+write_size,get_tail()->write_pos());
+            std::copy(pos,pos+write_size,writable_pos());
             get_tail()->advance_write(write_size);
             pos+=write_size;
             bytes_left-=write_size;
@@ -171,14 +174,14 @@ void ChainBuffer::append(const char *data, size_t length)
     }
 }
 
-ChainBuffer::chunk_ptr ChainBuffer::get_head() const
+ChainBuffer::chunk_rptr ChainBuffer::get_head() const
 {
-    return _chunk_list.front();
+    return _chunk_list.front().get();
 }
 
-ChainBuffer::chunk_ptr ChainBuffer::get_tail() const
+ChainBuffer::chunk_rptr ChainBuffer::get_tail() const
 {
-    return _chunk_list.back();
+    return _chunk_list.back().get();
 }
 
 std::unique_ptr<ChainBuffer> ChainBuffer::create_chain_buffer()
@@ -188,7 +191,7 @@ std::unique_ptr<ChainBuffer> ChainBuffer::create_chain_buffer()
     return buff;
 }
 
-ChainBuffer::chunk_ptr ChainBuffer::new_chunk()
+ChainBuffer::chunk_sptr ChainBuffer::alloc_chunk()
 {
     return rx_pool_make_shared<chunk_type>();
 }
@@ -205,7 +208,7 @@ void ChainBuffer::advance_read(size_t bytes)
             size_t read_space=(*it_head)->readable_size();
             (*it_head)->advance_read(read_space);
             //TODO add low chunk num thresh
-            if(this->head_pop_unused_chunk(false)){
+            if(this->head_pop_unused_chunk()){
                 it_head=_chunk_list.begin();
             }
             bytes-=read_space;
@@ -213,14 +216,17 @@ void ChainBuffer::advance_read(size_t bytes)
     }
 }
 
-void ChainBuffer::tail_push_new_chunk()
+void ChainBuffer::tail_push_new_chunk(chunk_sptr chunk)
 {
-    _chunk_list.emplace_back(new_chunk());
+    if(!chunk)
+        chunk=alloc_chunk();
+
+    _chunk_list.emplace_back(chunk);
 }
 
 bool ChainBuffer::head_pop_unused_chunk(bool force)
 {
-    if(this->get_head()->readable_size()!=0&&!force){
+    if(this->chunk_num()&&this->get_head()->readable_size()!=0&&!force){
         return false;
     }
     _chunk_list.pop_front();

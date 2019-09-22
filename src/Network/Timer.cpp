@@ -4,9 +4,9 @@
 
 
 RxTimer::RxTimer(RxReactor *reactor):_reactor_belongs(reactor),
-    _id(std::numeric_limits<uint64_t>::max()),
+    _id(std::numeric_limits<uint64_t>::max()),_duration(0),
     _heap_index(std::numeric_limits<size_t>::max()),
-    _is_active(false),_cb{}
+    _is_active(false),_is_repeat(false)
 {
 
 }

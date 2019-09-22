@@ -26,9 +26,9 @@ ssize_t RxConnection::send(Rx_Write_Res &write_res)
 void RxConnection::close()
 {
     _reactor_belongs->unmonitor_fd_event(_rx_fd);
-    RxSock::close(_rx_fd.raw_fd);
     _input_buf.release();
     _output_buf.release();
+    RxSock::close(_rx_fd.raw_fd);
 }
 
 RxProtoProcessor &RxConnection::get_proto_processor() const

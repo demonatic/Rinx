@@ -70,7 +70,8 @@ TEST(write_data_test,testset){
     int i=65;
     float d=888;
     p="c_str_ptr";
-    *buf<<"string_literal"<<"|"<<str<<"|"<<p<<"|"<<i<<"|"<<d;
+    char array[]="c_array";
+    *buf<<"string_literal"<<"|"<<str<<"|"<<array<<"|"<<p<<"|"<<i<<"|"<<d;
     Rx_Write_Res write_res;
     buf->write_fd(STDOUT_FILENO,write_res);
 }

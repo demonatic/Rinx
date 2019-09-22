@@ -39,6 +39,8 @@ bool RxSock::bind(int fd,const char *host,const int port) noexcept
     if(host&&1!=inet_pton(AF_INET,host,&(sock_addr.sin_addr))){
        return false;
     }
+//    bool dont_linger=true;
+//    ::setsockopt(fd,SOL_SOCKET,SO_LINGER,&(dont_linger),sizeof(dont_linger));
     return 0==::bind(fd,reinterpret_cast<const ::sockaddr*>(&sock_addr),sizeof(::sockaddr_in));
 }
 
