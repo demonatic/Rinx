@@ -41,7 +41,7 @@ template<class ChunkIteratorType,class ByteType,size_t N>
 class BufferReadableIterator;
 
 ///buffer最后一块writeable_size可为0
-class ChainBuffer{
+class ChainBuffer:RxNoncopyable{
 public:
     static constexpr size_t chunk_size=RX_BUFFER_CHUNK_SIZE;
     using chunk_type=BufferChunk<chunk_size>;
@@ -49,16 +49,19 @@ public:
     using chunk_sptr=std::shared_ptr<chunk_type>;
     using chunk_iterator=std::list<chunk_sptr>::iterator;
     using read_iterator=BufferReadableIterator<chunk_iterator,chunk_type::value_type,chunk_size>;
+    friend read_iterator;
 
     ChainBuffer()=default;
+    ~ChainBuffer()=default;
+
     static std::unique_ptr<ChainBuffer> create_chain_buffer();
 
     size_t chunk_num() const;
     size_t total_size() const;
 
-    ssize_t read_fd(int fd,Rx_Read_Res &res);
+    ssize_t read_fd(int fd,RxReadRc &res);
     /// write all data in the buffer to fd
-    ssize_t write_fd(int fd,Rx_Write_Res &res);
+    ssize_t write_fd(int fd,RxWriteRc &res);
 
     read_iterator readable_begin();
     read_iterator readable_end();
@@ -66,18 +69,17 @@ public:
     chunk_iterator chunk_begin();
     chunk_iterator chunk_end();
 
-    chunk_type::value_type* writable_pos() const;
-
-    void append(const char *data,size_t length);
-
     chunk_rptr get_head() const;
     chunk_rptr get_tail() const;
 
     void advance_read(size_t bytes);
 
-    static chunk_sptr alloc_chunk();
-    void tail_push_new_chunk(chunk_sptr chunk=nullptr);
-    bool head_pop_unused_chunk(bool force=false);
+    ///** functions for write data to the buffer **///
+
+    void append(const char *data,size_t length);
+
+    /// @brief read count bytes from istream to the buffer
+    long write_istream(std::istream &istream,long count);
 
     ChainBuffer& operator<<(const std::string &arg);
 
@@ -106,6 +108,14 @@ public:
         }
         return *this;
     }
+
+private:
+    static chunk_sptr alloc_chunk();
+
+    void tail_push_new_chunk(chunk_sptr chunk=nullptr);
+    bool head_pop_unused_chunk(bool force=false);
+
+    void check_need_expand();
 
 private:
     std::list<chunk_sptr> _chunk_list;

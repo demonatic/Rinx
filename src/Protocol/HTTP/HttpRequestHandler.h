@@ -37,6 +37,7 @@ class StaticHttpRequestHandler:public HttpRequestHandler{
 public:
     StaticHttpRequestHandler();
     ~StaticHttpRequestHandler() override;
+
     virtual void on_header_fetched(HttpRequest &request) override;
     virtual void on_part_of_body(HttpRequest &request) override;
     virtual void on_body_finished(HttpRequest &request) override;

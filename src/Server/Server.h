@@ -27,7 +27,7 @@ class RxServer
 public:
     RxServer(uint32_t max_connection);
     bool start(const std::string &address,uint16_t port);
-    bool destroy();
+    void shutdown();
 
     RxConnection *incoming_connection(const RxFD rx_fd,RxReactor *reactor);
     RxConnection *get_connection(const RxFD rx_fd);
@@ -35,11 +35,12 @@ public:
     void proto_handle(RxConnection &conn);
 
 private:
-    RxHandlerRes on_acceptable(const RxEvent &event);
-    RxHandlerRes on_stream_readable(const RxEvent &event);
-    RxHandlerRes on_stream_writable(const RxEvent &event);
-    //TODO
-    RxHandlerRes on_stream_error(const RxEvent &event);
+    RxHandlerRc on_acceptable(const RxEvent &event);
+    RxHandlerRc on_stream_readable(const RxEvent &event);
+    RxHandlerRc on_stream_writable(const RxEvent &event);
+
+    /// @brief remote shutdown RW or RD, or send RST will lead to stream error
+    RxHandlerRc on_stream_error(const RxEvent &event);
 
     void disable_accept();
 

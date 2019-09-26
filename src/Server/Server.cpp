@@ -2,7 +2,7 @@
 #include "Signal.h"
 #include <iostream>
 RxServer::RxServer(uint32_t max_connection):_max_connection(max_connection),_max_once_accept_count(128),
-    _main_reactor(0),_sub_reactor_threads(8),_connection_list(_max_connection)
+    _main_reactor(0),_sub_reactor_threads(4),_connection_list(_max_connection)
 {
 
 }
@@ -52,6 +52,8 @@ bool RxServer::start(const std::string &address, uint16_t port)
     _sub_reactor_threads.reactor_for_each([this](RxReactor &reactor){
         reactor.set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_READ,
             std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
+        reactor.set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_ERROR,
+            std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
     });
     _sub_reactor_threads.start();
 
@@ -62,9 +64,17 @@ bool RxServer::start(const std::string &address, uint16_t port)
     });
 
     RxSignalManager::enable_current_thread_signal();
-    _main_reactor.start_event_loop();
-
+//    std::thread t([this](){sleep(8); this->shutdown();});
+    this->_main_reactor.start_event_loop();
+//    t.join();
     return true;
+}
+
+void RxServer::shutdown()
+{
+    std::cout<<"@shutdown"<<std::endl;
+     _sub_reactor_threads.shutdown();
+    _main_reactor.stop();
 }
 
 RxConnection *RxServer::incoming_connection(const RxFD rx_fd,RxReactor *reactor)
@@ -72,6 +82,7 @@ RxConnection *RxServer::incoming_connection(const RxFD rx_fd,RxReactor *reactor)
     size_t conn_index=static_cast<size_t>(rx_fd.raw_fd);
     RxConnection *conn=&_connection_list[conn_index];
     conn->init(rx_fd,reactor);
+//    std::cout<<"@incoming conn fd="<<rx_fd.raw_fd<<std::endl;
     return conn;
 }
 
@@ -89,21 +100,24 @@ void RxServer::proto_handle(RxConnection &conn)
      conn.get_proto_processor().process(conn,conn.get_input_buf());
 }
 
-RxHandlerRes RxServer::on_acceptable(const RxEvent &event)
+RxHandlerRc RxServer::on_acceptable(const RxEvent &event)
 {
     for(int i=0;i<_max_once_accept_count;i++){
-        Rx_Accept_Res accept_res;
-
+        RxAcceptRc accept_res;
         int new_fd=RxSock::accept(event.Fd.raw_fd,accept_res);
+
         switch (accept_res){
-            case Rx_Accept_Res::ALL_ACCEPTED:
+            case RxAcceptRc::ALL_ACCEPTED:
                 return Rx_HANDLER_OK;
-            case Rx_Accept_Res::FAILED:
+
+            case RxAcceptRc::FAILED:
                 return Rx_HANDLER_OK;
-            case Rx_Accept_Res::ERROR:
-                LOG_WARN<<"accept error";
+
+            case RxAcceptRc::ERROR:
+                LOG_WARN<<"Accept Error";
                 disable_accept();
                 return RX_HANDLER_ERR;
+
             default: break;
         }
 
@@ -150,7 +164,7 @@ void RxServer::signal_handler(const int signo)
 {
     switch(signo) {
         case SIGINT:
-            std::cout<<"server recv sig int thread_id="<<std::this_thread::get_id()<<std::endl;
+            std::cout<<"server recv sig int, shutdown server..."<<std::endl;
         break;
         case SIGTERM:
 
@@ -165,47 +179,49 @@ void RxServer::signal_handler(const int signo)
 }
 
 
-RxHandlerRes RxServer::on_stream_readable(const RxEvent &event)
+RxHandlerRc RxServer::on_stream_readable(const RxEvent &event)
 {
     RxConnection *conn=this->get_connection(event.Fd);
 
-    Rx_Read_Res read_res;
+    RxReadRc read_res;
     conn->recv(read_res);
 
     switch(read_res) {
-        case Rx_Read_Res::OK:
+        case RxReadRc::OK:
             this->proto_handle(*conn);
             break;
 
-        case Rx_Read_Res::ERROR:
+        case RxReadRc::CLOSED:
+            conn->close();
+            break;
+
+        case RxReadRc::ERROR:
             LOG_WARN<<"encounter error when read from fd "<<event.Fd.raw_fd
                     <<" errno="<<errno<<" description: "<<strerror(errno);
             conn->close();
-            return RX_HANDLER_ERR;
-
-        case Rx_Read_Res::CLOSED:
-            conn->close();
-            break;
+            return Rx_HANDLER_EXIT_ALL;
     }
 
     return Rx_HANDLER_OK;
 }
 
-RxHandlerRes RxServer::on_stream_writable(const RxEvent &event)
+RxHandlerRc RxServer::on_stream_writable(const RxEvent &event)
 {
     RxConnection *conn=this->get_connection(event.Fd);
     assert(conn);
 
-    Rx_Write_Res write_res;
+    RxWriteRc write_res;
     conn->send(write_res);
-    if(write_res==Rx_Write_Res::ERROR){
+    if(write_res==RxWriteRc::ERROR){
         conn->close();
-        return RX_HANDLER_ERR;
+        return Rx_HANDLER_EXIT_ALL;
     }
     return Rx_HANDLER_OK;
 }
 
-RxHandlerRes RxServer::on_stream_error(const RxEvent &event)
+RxHandlerRc RxServer::on_stream_error(const RxEvent &event)
 {
-
+    RxConnection *conn=this->get_connection(event.Fd);
+    conn->close();
+    return Rx_HANDLER_EXIT_ALL;
 }

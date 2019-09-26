@@ -76,14 +76,13 @@ size_t ChainBuffer::total_size() const
     return chunk_size*_chunk_list.size();
 }
 
-ssize_t ChainBuffer::read_fd(int fd,Rx_Read_Res &res)
+ssize_t ChainBuffer::read_fd(int fd,RxReadRc &res)
 {
+    this->check_need_expand();
+
     char extra_buff[65535];
     std::vector<struct iovec> io_vecs(2);
-    if(_chunk_list.empty()||get_tail()->writable_size()==0){
-        tail_push_new_chunk();
-    }
-    auto tail=get_tail(); // auto tail=get_tail();
+    auto tail=get_tail();
     io_vecs[0].iov_base=tail->write_pos();
     io_vecs[0].iov_len=tail->writable_size();
     io_vecs[1].iov_base=extra_buff;
@@ -104,8 +103,9 @@ ssize_t ChainBuffer::read_fd(int fd,Rx_Read_Res &res)
     return read_bytes;
 }
 
-ssize_t ChainBuffer::write_fd(int fd,Rx_Write_Res &res)
+ssize_t ChainBuffer::write_fd(int fd,RxWriteRc &res)
 {
+    assert(chunk_num()<10);
     std::vector<struct iovec> io_vecs;
     for(auto it_chunk=_chunk_list.begin();it_chunk!=_chunk_list.end();it_chunk++){
         if((*it_chunk)->readable_size()==0){
@@ -144,10 +144,6 @@ ChainBuffer::chunk_iterator ChainBuffer::chunk_end()
     return _chunk_list.end();
 }
 
-ChainBuffer::chunk_type::value_type *ChainBuffer::writable_pos() const
-{
-    return this->get_tail()->write_pos();
-}
 
 void ChainBuffer::append(const char *data, size_t length)
 {
@@ -155,23 +151,41 @@ void ChainBuffer::append(const char *data, size_t length)
     size_t bytes_left=length;
 
     while(bytes_left>0){
-        if(!chunk_num()||get_tail()->writable_size()==0){
-            tail_push_new_chunk();
-        }
+        this->check_need_expand();
 
-        if(get_tail()->writable_size()>bytes_left){
-            std::copy(pos,pos+bytes_left,writable_pos());
-            get_tail()->advance_write(bytes_left);
+        chunk_rptr tail=this->get_tail();
+        if(tail->writable_size()>bytes_left){
+            std::copy(pos,pos+bytes_left,tail->write_pos());
+            tail->advance_write(bytes_left);
             bytes_left=0;
         }
         else{
-            size_t write_size=get_tail()->writable_size();
-            std::copy(pos,pos+write_size,writable_pos());
-            get_tail()->advance_write(write_size);
+            size_t write_size=tail->writable_size();
+            std::copy(pos,pos+write_size,tail->write_pos());
+            tail->advance_write(write_size);
             pos+=write_size;
             bytes_left-=write_size;
         }
     }
+}
+
+long ChainBuffer::write_istream(std::istream &istream,long count)
+{
+    long total_read=0;
+    while(count>0){
+        check_need_expand();
+        long try_to_read=std::min(static_cast<size_t>(count),get_tail()->writable_size());
+        istream.read(reinterpret_cast<char*>(get_tail()->write_pos()),try_to_read).gcount();
+        long actual_read=istream.gcount();
+        if(actual_read<=0)
+            break;
+
+        get_tail()->advance_write(actual_read);
+        total_read+=actual_read;
+        count-=actual_read;
+    }
+
+    return total_read;
 }
 
 ChainBuffer::chunk_rptr ChainBuffer::get_head() const
@@ -187,7 +201,6 @@ ChainBuffer::chunk_rptr ChainBuffer::get_tail() const
 std::unique_ptr<ChainBuffer> ChainBuffer::create_chain_buffer()
 {
     auto buff=std::make_unique<ChainBuffer>();
-    buff->tail_push_new_chunk();
     return buff;
 }
 
@@ -231,6 +244,13 @@ bool ChainBuffer::head_pop_unused_chunk(bool force)
     }
     _chunk_list.pop_front();
     return true;
+}
+
+void ChainBuffer::check_need_expand()
+{
+    if(!chunk_num()||get_tail()->writable_size()==0){
+        tail_push_new_chunk();
+    }
 }
 
 ChainBuffer &ChainBuffer::operator<<(const std::string &arg)

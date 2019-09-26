@@ -1,11 +1,12 @@
 #ifndef REACTOR_H
 #define REACTOR_H
 
-#include <memory>
 #include <functional>
+#include <memory>
 #include <vector>
 #include <list>
 #include <any>
+#include <atomic>
 #include "ReactorEpoll.h"
 #include "TimerHeap.h"
 #include "../RinxDefines.h"
@@ -39,6 +40,7 @@ public:
     bool remove_event_handler(RxFDType fd_type,RxEventType event_type) noexcept;
 
     int start_event_loop();
+    void stop();
 
     void queue_work(DeferCallback cb);
 
@@ -80,7 +82,7 @@ private:
 
 private:
     uint8_t _id;
-    bool _is_running;
+    std::atomic_bool _is_running;
 
     RxReactorEpoll _reactor_epoll;
     ReactorCallback _on_timeout;

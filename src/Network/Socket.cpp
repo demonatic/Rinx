@@ -49,7 +49,7 @@ bool RxSock::listen(int fd) noexcept
     return 0==::listen(fd,SOMAXCONN);
 }
 
-int RxSock::accept(int fd,Rx_Accept_Res &accept_res) noexcept
+int RxSock::accept(int fd,RxAcceptRc &accept_res) noexcept
 {
     int client_fd=-1;
     do{
@@ -57,18 +57,18 @@ int RxSock::accept(int fd,Rx_Accept_Res &accept_res) noexcept
         if(client_fd<0){
             switch(errno) {
                 case EAGAIN:
-                    accept_res=Rx_Accept_Res::ALL_ACCEPTED;
+                    accept_res=RxAcceptRc::ALL_ACCEPTED;
                 break;
                 case EMFILE:
                 case ENFILE:
-                    accept_res=Rx_Accept_Res::ERROR;
+                    accept_res=RxAcceptRc::ERROR;
                 break;
                 default:
-                    accept_res=Rx_Accept_Res::FAILED;
+                    accept_res=RxAcceptRc::FAILED;
             }
         }
         else{
-            accept_res=Rx_Accept_Res::ACCEPTING;
+            accept_res=RxAcceptRc::ACCEPTING;
         }
     }while(client_fd<0&&errno==EINTR);
 
@@ -86,10 +86,10 @@ bool RxSock::set_nonblock(int fd,const bool nonblock) noexcept
     return -1!=::fcntl(fd,F_SETFL,nonblock?O_NONBLOCK:O_SYNC);
 }
 
-ssize_t RxSock::read(int fd, void *buffer, size_t n,Rx_Read_Res &read_res)
+ssize_t RxSock::read(int fd, void *buffer, size_t n,RxReadRc &read_res)
 {
     ssize_t total_bytes=0;
-    read_res=Rx_Read_Res::OK;
+    read_res=RxReadRc::OK;
 
     do{
         ssize_t once_read_bytes;
@@ -101,11 +101,11 @@ ssize_t RxSock::read(int fd, void *buffer, size_t n,Rx_Read_Res &read_res)
             if(total_bytes==0){
                 total_bytes=once_read_bytes;
             }
-            read_res=(errno==EAGAIN)?Rx_Read_Res::OK:Rx_Read_Res::ERROR;
+            read_res=(errno==EAGAIN)?RxReadRc::OK:RxReadRc::ERROR;
             break;
         }
         else if (unlikely(once_read_bytes==0)){
-            read_res=Rx_Read_Res::CLOSED;
+            read_res=RxReadRc::CLOSED;
             break;
         }
         else{
@@ -119,52 +119,52 @@ ssize_t RxSock::read(int fd, void *buffer, size_t n,Rx_Read_Res &read_res)
     return total_bytes;
 }
 
-ssize_t RxSock::readv(int fd, std::vector<iovec> &io_vec,Rx_Read_Res &read_res)
+ssize_t RxSock::readv(int fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
 {
     ssize_t read_bytes;
-    read_res=Rx_Read_Res::OK;
+    read_res=RxReadRc::OK;
 
     do{
         read_bytes=::readv(fd,io_vec.data(),io_vec.size());
     }while(read_bytes<0&&errno==EINTR);
 
     if(unlikely(read_bytes<0)){
-        read_res=Rx_Read_Res::ERROR;
+        read_res=RxReadRc::ERROR;
     }
     else if(unlikely(read_bytes==0)){
-        read_res=Rx_Read_Res::CLOSED;
+        read_res=RxReadRc::CLOSED;
     }
 
     return read_bytes;
 }
 
-ssize_t RxSock::write(int fd, void *buffer, size_t n, Rx_Write_Res &write_res)
+ssize_t RxSock::write(int fd, void *buffer, size_t n, RxWriteRc &write_res)
 {
     ssize_t bytes_written=0;
-    write_res=Rx_Write_Res::OK;
+    write_res=RxWriteRc::OK;
 
     do{
         bytes_written=::write(fd,buffer,n);
     }while(bytes_written<0&&errno==EINTR);
 
     if(unlikely(bytes_written<0)){
-        write_res=(errno==EAGAIN)?Rx_Write_Res::SOCK_BUFF_FULL:Rx_Write_Res::ERROR;
+        write_res=(errno==EAGAIN)?RxWriteRc::SOCK_BUFF_FULL:RxWriteRc::ERROR;
     }
 
     return bytes_written;
 }
 
-ssize_t RxSock::writev(int fd,std::vector<struct iovec> &io_vec,Rx_Write_Res &write_res)
+ssize_t RxSock::writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res)
 {
     ssize_t write_bytes;
-    write_res=Rx_Write_Res::OK;
+    write_res=RxWriteRc::OK;
 
     do{
         write_bytes=::writev(fd,io_vec.data(),io_vec.size());
     }while(write_bytes<0&&errno==EINTR);
 
     if(unlikely(write_bytes<0)){
-        write_res=(errno==EAGAIN)?Rx_Write_Res::SOCK_BUFF_FULL:Rx_Write_Res::ERROR;
+        write_res=(errno==EAGAIN)?RxWriteRc::SOCK_BUFF_FULL:RxWriteRc::ERROR;
     }
     return write_bytes;
 }

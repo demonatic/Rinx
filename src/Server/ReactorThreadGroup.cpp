@@ -23,9 +23,10 @@ bool RxReactorThreadGroup::start()
     return true;
 }
 
-void RxReactorThreadGroup::stop()
+void RxReactorThreadGroup::shutdown()
 {
     for(RxReactorThread &reactor_thd:_reactor_threads){
+        reactor_for_each([](RxReactor &reactor){reactor.stop();});
         pthread_t ptid=reactor_thd.thread_id;
         if(pthread_cancel(ptid)<0){
             LOG_WARN<<"pthread_cancel failed. thread_id="<<ptid;

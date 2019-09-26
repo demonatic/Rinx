@@ -29,11 +29,12 @@ struct RxEvent{
     RxReactor *reactor;
 };
 
-enum RxHandlerRes{
+enum RxHandlerRc{
     Rx_HANDLER_OK=0,
+    Rx_HANDLER_EXIT_ALL,
     RX_HANDLER_ERR
 };
-using EventHandler=std::function<RxHandlerRes(const RxEvent &event_data)>;
+using EventHandler=std::function<RxHandlerRc(const RxEvent &event_data)>;
 
 
 

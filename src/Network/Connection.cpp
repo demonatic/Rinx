@@ -1,8 +1,15 @@
 #include "Connection.h"
 
-RxConnection::RxConnection()
+RxConnection::RxConnection():_reactor_belongs(nullptr)
 {
 
+}
+
+RxConnection::~RxConnection()
+{
+    if(_reactor_belongs){
+        close();
+    }
 }
 
 void RxConnection::init(const RxFD fd,RxReactor *reactor)
@@ -13,12 +20,12 @@ void RxConnection::init(const RxFD fd,RxReactor *reactor)
     _reactor_belongs=reactor;
 }
 
-ssize_t RxConnection::recv(Rx_Read_Res &read_res)
+ssize_t RxConnection::recv(RxReadRc &read_res)
 {
     return _input_buf->read_fd(_rx_fd.raw_fd,read_res);
 }
 
-ssize_t RxConnection::send(Rx_Write_Res &write_res)
+ssize_t RxConnection::send(RxWriteRc &write_res)
 {
     return _output_buf->write_fd(_rx_fd.raw_fd,write_res);
 }
@@ -26,9 +33,13 @@ ssize_t RxConnection::send(Rx_Write_Res &write_res)
 void RxConnection::close()
 {
     _reactor_belongs->unmonitor_fd_event(_rx_fd);
-    _input_buf.release();
-    _output_buf.release();
+    _input_buf.reset();
+    _output_buf.reset();
+    _proto_processor.reset();
+    _reactor_belongs=nullptr;
+    //must put close at the end, or it would cause race condition
     RxSock::close(_rx_fd.raw_fd);
+//    std::cout<<"@close conn="<<this->get_rx_fd().raw_fd<<std::endl;
 }
 
 RxProtoProcessor &RxConnection::get_proto_processor() const

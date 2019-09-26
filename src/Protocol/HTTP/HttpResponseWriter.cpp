@@ -18,13 +18,5 @@ void HttpResponseWriter::write_http_head(HttpResponse &response)
 
 long HttpResponseWriter::write_fstream(std::ifstream &ifstream,size_t stream_length)
 {
-    _buff.tail_push_new_chunk();
-    long expect_read=std::min(stream_length,_buff.chunk_size);
-
-    long actual_read=ifstream.read(reinterpret_cast<char*>(_buff.writable_pos()),expect_read).gcount();
-    if(actual_read<=0)
-        return 0;
-
-    _buff.get_tail()->advance_write(actual_read);
-    return actual_read;
+    return _buff.write_istream(ifstream,stream_length);
 }

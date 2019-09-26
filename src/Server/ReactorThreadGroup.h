@@ -19,7 +19,7 @@ class RxReactorThreadGroup
 public:
     RxReactorThreadGroup(size_t num);
     bool start();
-    void stop();
+    void shutdown();
 
     size_t get_thread_num() const noexcept;
     RxReactor* get_reactor(size_t index);

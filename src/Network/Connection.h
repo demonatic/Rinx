@@ -10,14 +10,15 @@
 #include "../RinxDefines.h"
 #include "../Protocol/ProtocolProcessor.h"
 
-class RxConnection
+class RxConnection:public RxNoncopyable
 {
 public:
     RxConnection();
+    ~RxConnection();
     void init(const RxFD fd,RxReactor *reactor);
 
-    ssize_t recv(Rx_Read_Res &read_res);
-    ssize_t send(Rx_Write_Res &write_res);
+    ssize_t recv(RxReadRc &read_res);
+    ssize_t send(RxWriteRc &write_res);
 
     void close();
 

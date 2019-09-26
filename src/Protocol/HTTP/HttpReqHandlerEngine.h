@@ -25,6 +25,7 @@ class HttpReqHandlerEngine
     using HandlerAction=std::function<void(HttpRequestHandler *hdr,HttpRequest &req)>;
 public:
     HttpReqHandlerEngine();
+    ~HttpReqHandlerEngine()=default;
     void set_handler(Route route,std::unique_ptr<HttpRequestHandler> handler);
 
     int handle_request(HttpRequest &req, HandlerAction hdlr_action);

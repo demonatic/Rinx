@@ -23,7 +23,7 @@ bool RxReactor::init()
     }
 
     //register event fd read handler
-    set_event_handler(_event_fd.fd_type,Rx_EVENT_READ,[this](const RxEvent &event_data)->RxHandlerRes{
+    set_event_handler(_event_fd.fd_type,Rx_EVENT_READ,[this](const RxEvent &event_data)->RxHandlerRc{
         if(!RxSock::read_event_fd(event_data.Fd.raw_fd)){
             LOG_WARN<<"read event fd failed, reactor_id="<<_id;
             return RX_HANDLER_ERR;
@@ -68,7 +68,7 @@ bool RxReactor::remove_event_handler(RxFDType fd_type, RxEventType event_type) n
 int RxReactor::start_event_loop()
 {
     _is_running=true;
-    LOG_INFO<<"start event loop";
+    LOG_INFO<<"reactor "<<get_id()<<" start event loop";
 
     while(_is_running){
         loop_each_begin();
@@ -78,6 +78,12 @@ int RxReactor::start_event_loop()
         loop_each_end();
     }
     return 0;
+}
+
+void RxReactor::stop()
+{
+    _is_running=false;
+    wake_up_loop();
 }
 
 
@@ -146,17 +152,21 @@ int RxReactor::poll_and_dispatch_io()
         rx_event.Fd.fd_type=static_cast<RxFDType>(ep_events[i].data.u64>>32);
         rx_event.reactor=this;
 
-        std::vector<RxEventType> rx_event_types=RxReactorEpoll::get_rx_event_types(ep_events[i]);
+        const std::vector<RxEventType> rx_event_types=RxReactorEpoll::get_rx_event_types(ep_events[i]);
         for(auto rx_ev_type:rx_event_types){
             EventHandler &ev_handler=_event_handlers[rx_ev_type][rx_event.Fd.fd_type];
+            if(!ev_handler)
+                continue;
 
-            if(ev_handler&&ev_handler(rx_event)==Rx_HANDLER_OK){
+            RxHandlerRc rc=ev_handler(rx_event);
+            if(rc==Rx_HANDLER_OK){
                  ++dispatched;
             }
-            else{
+            else if(rc==RX_HANDLER_ERR){
                 LOG_WARN<<"io_poll handler doesn't exist or exec failed. "
                 "event_type="<<rx_ev_type<<" fd_type="<<rx_event.Fd.fd_type<<" fd="<<rx_event.Fd.raw_fd;
             }
+            else break;
         }
     }
     return dispatched;

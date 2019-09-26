@@ -7,20 +7,20 @@
 #include <sys/eventfd.h>
 #include <vector>
 
-enum class Rx_Accept_Res{
+enum class RxAcceptRc{
     ACCEPTING,
     ALL_ACCEPTED,
     FAILED,
     ERROR
 };
 
-enum class Rx_Read_Res{
+enum class RxReadRc{
     OK,
     CLOSED,
     ERROR,
 };
 
-enum class Rx_Write_Res{
+enum class RxWriteRc{
     OK,
     SOCK_BUFF_FULL,
     ERROR
@@ -40,16 +40,16 @@ public:
 
     static bool bind(int fd,const char *host,const int port) noexcept;
     static bool listen(int fd) noexcept;
-    static int accept(int fd,Rx_Accept_Res &accept_res) noexcept;
+    static int accept(int fd,RxAcceptRc &accept_res) noexcept;
 
     static bool set_tcp_nodelay(int fd,const bool nodelay) noexcept;
     static bool set_nonblock(int fd,const bool nonblock) noexcept;
 
-    static ssize_t read(int fd,void *buffer,size_t n,Rx_Read_Res &read_res);
-    static ssize_t readv(int fd,std::vector<struct iovec> &io_vec,Rx_Read_Res &read_res);
+    static ssize_t read(int fd,void *buffer,size_t n,RxReadRc &read_res);
+    static ssize_t readv(int fd,std::vector<struct iovec> &io_vec,RxReadRc &read_res);
 
-    static ssize_t write(int fd,void *buffer,size_t n,Rx_Write_Res &write_res);
-    static ssize_t writev(int fd,std::vector<struct iovec> &io_vec,Rx_Write_Res &write_res);
+    static ssize_t write(int fd,void *buffer,size_t n,RxWriteRc &write_res);
+    static ssize_t writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res);
 
     ///for event fd
     static int create_event_fd() noexcept;
