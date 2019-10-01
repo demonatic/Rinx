@@ -30,7 +30,7 @@ public:
             HttpRequest &processed_req=std::any_cast<HttpRequest&>(request);
             processed_req.debug_print();
             this->recv_header_callback(processed_req);
-            processed_req.reset();
+            processed_req.clear_for_next_request();
         });
         parser.register_event(HttpEvent::ParseError,[this](HttpRequest &request){
             std::cout<<"@parse error cb"<<std::endl;

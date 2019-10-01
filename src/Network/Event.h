@@ -15,18 +15,27 @@ enum RxFDType:uint32_t{
     Rx_FD_LISTEN=0,
     Rx_FD_TCP_STREAM,
     Rx_FD_EVENT,
+    Rx_FD_INVALID,
     Rx_FD_TYPE_MAX,
 };
 
 struct RxFD{
     RxFDType fd_type;
     int raw_fd;
+    bool operator==(const RxFD &other){
+        return this->fd_type==other.fd_type&&this->raw_fd==other.raw_fd;
+    }
+    bool operator!=(const RxFD &other){
+        return !((*this)==other);
+    }
 };
 
-class RxReactor;
+constexpr static RxFD InvalidRxFD={RxFDType::Rx_FD_INVALID,-1};
+
+class RxEventLoop;
 struct RxEvent{
     RxFD Fd;
-    RxReactor *reactor;
+    RxEventLoop *eventloop;
 };
 
 enum RxHandlerRc{

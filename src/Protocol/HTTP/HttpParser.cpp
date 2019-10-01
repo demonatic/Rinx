@@ -1,5 +1,9 @@
 #include "HttpParser.h"
-#include "HttpRequest.h"
+
+StateRequestLine::~StateRequestLine()
+{
+
+}
 
 ConsumeRes StateRequestLine::consume(iterable_bytes iterable, std::any &request)
 {
@@ -58,6 +62,11 @@ ConsumeRes StateRequestLine::consume(iterable_bytes iterable, std::any &request)
 
 
 
+StateHeader::~StateHeader()
+{
+
+}
+
 ConsumeRes StateHeader::consume(iterable_bytes iterable, std::any &request)
 {
     ConsumeRes consume_res;
@@ -83,7 +92,9 @@ ConsumeRes StateHeader::consume(iterable_bytes iterable, std::any &request)
                 if(c=='\r'){
                     _sub_state=S_EXPECT_FIELD_END;
                     HttpRequest &req=std::any_cast<HttpRequest&>(request);
+
                     req.header_fields.emplace_back(std::make_pair(std::move(_header_field_key),std::move(_header_field_val)));
+
                 }
                 else{
                     _header_field_val.push_back(c);

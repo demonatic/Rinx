@@ -7,6 +7,8 @@
 class HttpResponse{
     friend class HttpResponseWriter;
 public:
+    HttpResponse(RxChainBuffer &buff);
+
     void set_response_line(HttpStatusCode status,HttpVersion version){
         this->_status_code=status;
         this->_version=version;
@@ -28,21 +30,18 @@ public:
         _headers=std::move(header);
     }
 
+    ///add http head //
+    void buff_commit_head();
+    ///add http body //
+    long buff_commit_istream(std::istream &ifstream,size_t stream_length);
+
 private:
     HttpStatusCode _status_code;
     HttpVersion _version;
     HttpHeaderFields _headers;
+
+    RxChainBuffer &_output_buff;
 };
 
-class HttpResponseWriter
-{
-public:
-    HttpResponseWriter(RxChainBuffer &buff);
-    void write_http_head(HttpResponse &response);
-    long write_fstream(std::ifstream &ifstream,size_t stream_length);
-
-private:
-    RxChainBuffer &_buff;
-};
 
 #endif // HTTPRESPONSEWRITER_H

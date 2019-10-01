@@ -17,8 +17,8 @@ SOURCES += \
         main.cpp\
         ../../../src/Network/Timer.cpp\
         ../../../src/Network/TimerHeap.cpp\
-        ../../../src/Network/Reactor.cpp\
-        ../../../src/Network/ReactorEpoll.cpp\
+        ../../../src/Network/EventLoop.cpp\
+        ../../../src/Network/EventPoller.cpp\
         ../../../src/Network/Socket.cpp\
         ../../../src/Util/Clock.cpp\
         ../../../src/Util/Mutex.cpp\

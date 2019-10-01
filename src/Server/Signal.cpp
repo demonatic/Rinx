@@ -1,5 +1,5 @@
 #include "Signal.h"
-#include "../Network/Reactor.h"
+#include "../Network/EventLoop.h"
 
 
 RxSignal RxSignalManager::_signals[RX_SIGNO_MAX];

@@ -8,7 +8,7 @@
 #include <chrono>
 #include <cmath>
 #include "../../../src/Network/TimerHeap.h"
-#include "../../../src/Network/Reactor.h"
+#include "../../../src/Network/EventLoop.h"
 
 
 
@@ -17,7 +17,7 @@ using namespace std::chrono;
 
 class TimerTest{
 public:
-    TimerTest():reactor(0),timer0(&reactor),timer1(&reactor),timer2(&reactor),timer3(&reactor){}
+    TimerTest():eventloop(0),timer0(&eventloop),timer1(&eventloop),timer2(&eventloop),timer3(&eventloop){}
     virtual ~TimerTest()=default;
     virtual void timer_cb_1()=0;
     virtual void timer_cb_2()=0;
@@ -38,12 +38,12 @@ public:
         t_start=steady_clock::now();
         while (true) {
             usleep(1);
-            if(reactor.get_timer_heap().check_timer_expiry()==0&&reactor.get_timer_heap().get_timer_num()==0){
+            if(eventloop.get_timer_heap().check_timer_expiry()==0&&eventloop.get_timer_heap().get_timer_num()==0){
                 break;
             }
         }
     }
-    RxReactor reactor;
+    RxEventLoop eventloop;
     RxTimer timer0;
     RxTimer timer1;
     RxTimer timer2;
@@ -82,14 +82,14 @@ TEST(timer_callback_and_accuracy, dataset)
 
 
 TEST(timer_stop,dataset){
-    RxReactor reactor(1);
-    RxTimer timer0(&reactor);
-    RxTimer timer1(&reactor);
-    RxTimer timer2(&reactor);
-    RxTimer timer3(&reactor);
-    RxTimer timer4(&reactor);
+    RxEventLoop eventloop(1);
+    RxTimer timer0(&eventloop);
+    RxTimer timer1(&eventloop);
+    RxTimer timer2(&eventloop);
+    RxTimer timer3(&eventloop);
+    RxTimer timer4(&eventloop);
 
-    RxTimer timer_defer(&reactor);
+    RxTimer timer_defer(&eventloop);
 
     timer0.start_timer(1000,[&](){timer1.stop(); std::cout<<"expired timer "<<timer0.get_id()<<std::endl;},false);
     timer1.start_timer(2000,[&](){std::cout<<"expired timer "<<timer1.get_id()<<std::endl;},false);
@@ -101,7 +101,7 @@ TEST(timer_stop,dataset){
 
     while (true) {
         usleep(1);
-        if(reactor.get_timer_heap().check_timer_expiry()==0&&reactor.get_timer_heap().get_timer_num()==0){
+        if(eventloop.get_timer_heap().check_timer_expiry()==0&&eventloop.get_timer_heap().get_timer_num()==0){
             break;
         }
     }

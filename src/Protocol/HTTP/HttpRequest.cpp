@@ -1,7 +1,7 @@
 #include "HttpRequest.h"
 #include <iostream>
 
-void HttpRequest::reset()
+void HttpRequest::clear_for_next_request()
 {
     version=HttpVersion::UNKNOWN;
     method=HttpMethod::UNDEFINED;

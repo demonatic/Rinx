@@ -28,6 +28,8 @@ public:
      */
     virtual void on_body_finished(HttpRequest &request)=0;
 
+protected:
+    std::function<void(HttpRequest& request)> _on_resume_write;
 };
 
 /**
@@ -36,17 +38,22 @@ public:
 class StaticHttpRequestHandler:public HttpRequestHandler{
 public:
     StaticHttpRequestHandler();
-    ~StaticHttpRequestHandler() override;
+    virtual ~StaticHttpRequestHandler() override;
 
     virtual void on_header_fetched(HttpRequest &request) override;
     virtual void on_part_of_body(HttpRequest &request) override;
     virtual void on_body_finished(HttpRequest &request) override;
 
-    bool serve_file(const std::filesystem::path &uri,RxChainBuffer &buff);
+    bool start_serve_file(const std::filesystem::path &uri,RxChainBuffer &buff);
+    bool resume_serve_file(RxChainBuffer &buff);
+
+    bool is_file_send_done();
+    void reset();
 
 private:
     static const std::filesystem::path _web_root_path;
     static const std::filesystem::path _default_page;
+    static const size_t one_round_length_limit=16384;
 
     std::unique_ptr<std::ifstream> _request_file;
     size_t _file_size;

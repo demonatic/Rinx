@@ -105,7 +105,6 @@ ssize_t ChainBuffer::read_fd(int fd,RxReadRc &res)
 
 ssize_t ChainBuffer::write_fd(int fd,RxWriteRc &res)
 {
-    assert(chunk_num()<10);
     std::vector<struct iovec> io_vecs;
     for(auto it_chunk=_chunk_list.begin();it_chunk!=_chunk_list.end();it_chunk++){
         if((*it_chunk)->readable_size()==0){
@@ -200,12 +199,12 @@ ChainBuffer::chunk_rptr ChainBuffer::get_tail() const
 
 std::unique_ptr<ChainBuffer> ChainBuffer::create_chain_buffer()
 {
-    auto buff=std::make_unique<ChainBuffer>();
-    return buff;
+    return std::make_unique<ChainBuffer>();
 }
 
 ChainBuffer::chunk_sptr ChainBuffer::alloc_chunk()
 {
+//    return std::make_shared<chunk_type>();
     return rx_pool_make_shared<chunk_type>();
 }
 
@@ -234,7 +233,7 @@ void ChainBuffer::tail_push_new_chunk(chunk_sptr chunk)
     if(!chunk)
         chunk=alloc_chunk();
 
-    _chunk_list.emplace_back(chunk);
+    _chunk_list.push_back(chunk);
 }
 
 bool ChainBuffer::head_pop_unused_chunk(bool force)

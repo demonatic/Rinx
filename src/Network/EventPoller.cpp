@@ -1,22 +1,22 @@
 #include <cstring>
 #include <unistd.h>
-#include "ReactorEpoll.h"
-#include "Reactor.h"
+#include "EventPoller.h"
+#include "EventLoop.h"
 #include "../3rd/NanoLog/NanoLog.h"
 
-RxReactorEpoll::RxReactorEpoll():_epoll_fd(-1),_events(nullptr),_max_event_num(0)
+RxEventPoller::RxEventPoller():_epoll_fd(-1),_events(nullptr),_max_event_num(0)
 {
 
 }
 
-RxReactorEpoll::~RxReactorEpoll()
+RxEventPoller::~RxEventPoller()
 {
     if(is_initialized()){
         destroy();
     }
 }
 
-bool RxReactorEpoll::create(int max_event_num)
+bool RxEventPoller::create(int max_event_num)
 {
     if(is_initialized())
         return true;
@@ -36,12 +36,12 @@ bool RxReactorEpoll::create(int max_event_num)
     return true;
 }
 
-bool RxReactorEpoll::is_initialized() const noexcept
+bool RxEventPoller::is_initialized() const noexcept
 {
     return _epoll_fd!=-1&&_events!=nullptr;
 }
 
-void RxReactorEpoll::destroy() noexcept
+void RxEventPoller::destroy() noexcept
 {
     if(_epoll_fd!=-1){
         ::close(_epoll_fd);
@@ -54,7 +54,7 @@ void RxReactorEpoll::destroy() noexcept
     }
 }
 
-int RxReactorEpoll::wait(const int timeout_millsec)
+int RxEventPoller::wait(const int timeout_millsec)
 {
     int nfds=::epoll_wait(_epoll_fd,_events,_max_event_num,timeout_millsec);
     if(nfds==0){
@@ -67,12 +67,12 @@ int RxReactorEpoll::wait(const int timeout_millsec)
 }
 
 
-epoll_event *RxReactorEpoll::get_epoll_events() const noexcept
+epoll_event *RxEventPoller::get_epoll_events() const noexcept
 {
     return _events;
 }
 
-bool RxReactorEpoll::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &event_type)
+bool RxEventPoller::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &event_type)
 {
     struct epoll_event epoll_event;
     bzero(&epoll_event,sizeof(struct epoll_event));
@@ -86,7 +86,7 @@ bool RxReactorEpoll::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &
     return true;
 }
 
-bool RxReactorEpoll::del_fd_event(const RxFD Fd)
+bool RxEventPoller::del_fd_event(const RxFD Fd)
 {
     if(::epoll_ctl(_epoll_fd,EPOLL_CTL_DEL,Fd.raw_fd,nullptr)<0){
         LOG_WARN<<"epoll_ctl del error"<<errno<<" "<<strerror(errno);
@@ -95,7 +95,7 @@ bool RxReactorEpoll::del_fd_event(const RxFD Fd)
     return true;
 }
 
-std::vector<RxEventType> RxReactorEpoll::get_rx_event_types(const epoll_event &ep_event) noexcept
+std::vector<RxEventType> RxEventPoller::get_rx_event_types(const epoll_event &ep_event) noexcept
 {
     std::vector<RxEventType> rx_event_types;
     uint32_t evt=ep_event.events;
@@ -118,7 +118,7 @@ std::vector<RxEventType> RxReactorEpoll::get_rx_event_types(const epoll_event &e
     return rx_event_types;
 }
 
-void RxReactorEpoll::set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) noexcept
+void RxEventPoller::set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) noexcept
 {
     ep_event.events|=EPOLLET;
     for(RxEventType rx_event:rx_events){

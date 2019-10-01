@@ -44,7 +44,7 @@ public:
 #ifdef _DEBUG
         assert(n==1);
 #endif
-        T *addr=static_cast<T*>(pool_.ordered_malloc());
+        T *addr=static_cast<T*>(pool_.malloc());
         if(!addr) throw std::bad_alloc();
         return addr;
     }
@@ -54,7 +54,7 @@ public:
         assert(n==1);
 #endif
         if(ptr){
-            pool_.ordered_free(ptr);
+            pool_.free(ptr);
         }
     }
 

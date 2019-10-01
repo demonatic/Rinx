@@ -5,17 +5,25 @@
 #include "HttpDefines.h"
 #include "../../Network/Connection.h"
 
-struct HttpRequest
+class HttpRequest
 {
+public:
+    void set_version(const HttpVersion version);
+    HttpVersion get_version() const;
+
+    void clear_for_next_request();
+    void debug_print();
+
+public:
     HttpVersion version;
     HttpMethod method;
     std::string uri;
-
     HttpHeaderFields header_fields;
+
+    RxChainBuffer _body;
+
     RxConnection *conn_belongs;
 
-    void reset();
-    void debug_print();
 
 };
 

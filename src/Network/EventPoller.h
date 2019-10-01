@@ -11,14 +11,14 @@
 #define Epoll_Interrupted -1
 #define Epoll_Error -2
 
-class RxReactor;
-class RxReactorEpoll
+class RxEventLoop;
+class RxEventPoller
 {
 public:
-    RxReactorEpoll();
-    ~RxReactorEpoll();
-    RxReactorEpoll(const RxReactorEpoll&)=delete;
-    RxReactorEpoll& operator=(const RxReactorEpoll&)=delete;
+    RxEventPoller();
+    ~RxEventPoller();
+    RxEventPoller(const RxEventPoller&)=delete;
+    RxEventPoller& operator=(const RxEventPoller&)=delete;
 
     bool create(int max_event_num);
     bool is_initialized() const noexcept;

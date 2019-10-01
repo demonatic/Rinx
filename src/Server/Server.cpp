@@ -2,12 +2,12 @@
 #include "Signal.h"
 #include <iostream>
 RxServer::RxServer(uint32_t max_connection):_max_connection(max_connection),_max_once_accept_count(128),
-    _main_reactor(0),_sub_reactor_threads(4),_connection_list(_max_connection)
+    _main_eventloop(0),_sub_eventloop_threads(std::thread::hardware_concurrency()),_connection_list(_max_connection)
 {
 
 }
 
-bool RxServer::start(const std::string &address, uint16_t port)
+bool RxServer::listen(const std::string &address, uint16_t port)
 {
     signal_setup();
 
@@ -34,14 +34,13 @@ bool RxServer::start(const std::string &address, uint16_t port)
     _listen_ports.emplace_back(std::make_pair(ls_port,std::make_unique<RxProtoProcHttp1Factory>()));
     g_threadpool::instantiate(4);
 
-    if(!_main_reactor.init()){
-        LOG_WARN<<"main reactor start failed";
+    if(!_main_eventloop.init()){
+        LOG_WARN<<"main eventloop start failed";
         RxSock::close(ls_port.serv_fd);
         return false;
     }
-    if(!_main_reactor.monitor_fd_event(RxFD{Rx_FD_LISTEN,ls_port.serv_fd},{Rx_EVENT_READ,Rx_EVENT_WRITE})||
-            !_main_reactor.set_event_handler(Rx_FD_LISTEN,Rx_EVENT_READ,
-                std::bind(&RxServer::on_acceptable,this,std::placeholders::_1)))
+    if(!_main_eventloop.monitor_fd_event(RxFD{Rx_FD_LISTEN,ls_port.serv_fd},{Rx_EVENT_READ,Rx_EVENT_WRITE})||
+        !_main_eventloop.set_event_handler(Rx_FD_LISTEN,Rx_EVENT_READ,std::bind(&RxServer::on_acceptable,this,std::placeholders::_1)))
     {
         LOG_WARN<<"monitor serv sock failed, fd="<<ls_port.serv_fd;
         return false;
@@ -49,23 +48,21 @@ bool RxServer::start(const std::string &address, uint16_t port)
 
     LOG_INFO<<"server listen on port "<<ls_port.port;
 
-    _sub_reactor_threads.reactor_for_each([this](RxReactor &reactor){
-        reactor.set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_READ,
-            std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
-        reactor.set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_ERROR,
-            std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
+    _sub_eventloop_threads.for_each([this](RxThreadID,RxEventLoop *eventloop){
+        eventloop->set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
+        eventloop->set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
     });
-    _sub_reactor_threads.start();
+    _sub_eventloop_threads.start();
 
-    /// only let the main reactor thread handle signal asynchronously
+    /// only let the main eventloop thread handle signal asynchronously
     /// and let other threads block all signals
-    _main_reactor.set_loop_each_begin([](RxReactor *){
+    _main_eventloop.set_loop_prepare([](RxEventLoop *){
         RxSignalManager::check_and_handle_async_signal();
     });
 
     RxSignalManager::enable_current_thread_signal();
-//    std::thread t([this](){sleep(8); this->shutdown();});
-    this->_main_reactor.start_event_loop();
+//    std::thread t([this](){sleep(30); this->shutdown();});
+    this->_main_eventloop.start_event_loop();
 //    t.join();
     return true;
 }
@@ -73,15 +70,15 @@ bool RxServer::start(const std::string &address, uint16_t port)
 void RxServer::shutdown()
 {
     std::cout<<"@shutdown"<<std::endl;
-     _sub_reactor_threads.shutdown();
-    _main_reactor.stop();
+     _sub_eventloop_threads.shutdown();
+    _main_eventloop.stop();
 }
 
-RxConnection *RxServer::incoming_connection(const RxFD rx_fd,RxReactor *reactor)
+RxConnection *RxServer::incoming_connection(const RxFD rx_fd,RxEventLoop *eventloop)
 {
     size_t conn_index=static_cast<size_t>(rx_fd.raw_fd);
     RxConnection *conn=&_connection_list[conn_index];
-    conn->init(rx_fd,reactor);
+    conn->init(rx_fd,eventloop);
 //    std::cout<<"@incoming conn fd="<<rx_fd.raw_fd<<std::endl;
     return conn;
 }
@@ -95,10 +92,6 @@ RxConnection *RxServer::get_connection(const RxFD rx_fd)
     return &_connection_list.at(static_cast<size_t>(rx_fd.raw_fd));
 }
 
-void RxServer::proto_handle(RxConnection &conn)
-{
-     conn.get_proto_processor().process(conn,conn.get_input_buf());
-}
 
 RxHandlerRc RxServer::on_acceptable(const RxEvent &event)
 {
@@ -124,11 +117,10 @@ RxHandlerRc RxServer::on_acceptable(const RxEvent &event)
         RxSock::set_nonblock(new_fd,true);
 
         RxFD client_rx_fd{Rx_FD_TCP_STREAM,new_fd};
-        size_t sub_reactor_index=new_fd%_sub_reactor_threads.get_thread_num();
-        RxReactor *sub_reactor=_sub_reactor_threads.get_reactor(sub_reactor_index);
-        _reactor_round_index++;
+        size_t sub_eventloop_index=new_fd%_sub_eventloop_threads.get_thread_num();
+        RxEventLoop *sub_eventloop=_sub_eventloop_threads.get_eventloop(sub_eventloop_index);
 
-        RxConnection *conn=this->incoming_connection(client_rx_fd,sub_reactor);
+        RxConnection *conn=this->incoming_connection(client_rx_fd,sub_eventloop);
         auto it_proto_proc_factory=std::find_if(_listen_ports.begin(),_listen_ports.end(),[&event](auto &ls_port){
             return ls_port.first.serv_fd==event.Fd.raw_fd;
         });
@@ -139,11 +131,12 @@ RxHandlerRc RxServer::on_acceptable(const RxEvent &event)
         conn->set_proto_processor(std::move(proto_processor));
 
         //TODO add it to incoming connection
-        if(!sub_reactor->monitor_fd_event(client_rx_fd,{Rx_EVENT_READ})){
-            RxSock::close(new_fd);
+        if(!sub_eventloop->monitor_fd_event(client_rx_fd,{Rx_EVENT_READ})){
+            conn->close();
             LOG_WARN<<"watch fd "<<new_fd<<" failed";
             return RX_HANDLER_ERR;
         }
+
     }
 
     return Rx_HANDLER_OK;
@@ -182,13 +175,17 @@ void RxServer::signal_handler(const int signo)
 RxHandlerRc RxServer::on_stream_readable(const RxEvent &event)
 {
     RxConnection *conn=this->get_connection(event.Fd);
+    if(!conn){
+        ///TODO
+        return RX_HANDLER_ERR;
+    }
 
-    RxReadRc read_res;
-    conn->recv(read_res);
+    RxReadRc read_rc;
+    conn->recv(read_rc);
 
-    switch(read_res) {
+    switch(read_rc) {
         case RxReadRc::OK:
-            this->proto_handle(*conn);
+            conn->get_proto_processor().process_read_data(*conn,conn->get_input_buf());
             break;
 
         case RxReadRc::CLOSED:
@@ -207,21 +204,34 @@ RxHandlerRc RxServer::on_stream_readable(const RxEvent &event)
 
 RxHandlerRc RxServer::on_stream_writable(const RxEvent &event)
 {
+    std::cout<<"@on stream writable"<<std::endl;
     RxConnection *conn=this->get_connection(event.Fd);
-    assert(conn);
-
-    RxWriteRc write_res;
-    conn->send(write_res);
-    if(write_res==RxWriteRc::ERROR){
-        conn->close();
-        return Rx_HANDLER_EXIT_ALL;
+    if(!conn){
+        ///TODO
+        return RX_HANDLER_ERR;
     }
+
+    conn->get_proto_processor().handle_write_prepared(*conn,conn->get_output_buf());
+
+
+    ///TODO
+//    RxWriteRc write_res;
+//    conn->send(write_res);
+//    if(write_res==RxWriteRc::ERROR){
+//        conn->close();
+//        return Rx_HANDLER_EXIT_ALL;
+//    }
     return Rx_HANDLER_OK;
 }
 
 RxHandlerRc RxServer::on_stream_error(const RxEvent &event)
 {
+//    std::cout<<"@on_stream_error"<<std::endl;
     RxConnection *conn=this->get_connection(event.Fd);
+    if(!conn){
+        ///TODO
+        return RX_HANDLER_ERR;
+    }
     conn->close();
     return Rx_HANDLER_EXIT_ALL;
 }

@@ -7,7 +7,7 @@
 #include <list>
 #include <any>
 #include <atomic>
-#include "ReactorEpoll.h"
+#include "EventPoller.h"
 #include "TimerHeap.h"
 #include "../RinxDefines.h"
 #include "../Util/Mutex.h"
@@ -19,14 +19,14 @@
 ///     2.Synchronous Event Demultiplexer: Epoll Object
 ///     3.Event handler: interface to handle events
 ///     4.Timers management
-class RxReactor
+class RxEventLoop
 {
 public:
-    using ReactorCallback=std::function<void(RxReactor*)>;
+    using ReactorCallback=std::function<void(RxEventLoop*)>;
     using DeferCallback=std::function<void()>;
 
 public:
-    RxReactor(uint8_t id);
+    RxEventLoop(uint8_t id);
 
     uint8_t get_id() const noexcept;
     RxTimerHeap& get_timer_heap() noexcept;
@@ -44,8 +44,7 @@ public:
 
     void queue_work(DeferCallback cb);
 
-    void set_loop_each_begin(ReactorCallback loop_each_begin);
-    void set_loop_each_end(ReactorCallback loop_each_end);
+    void set_loop_prepare(ReactorCallback loop_prepare_cb) noexcept;
 
     template<typename F1,typename F2,typename ...Args>
     std::enable_if_t<false==std::is_same_v<void,std::invoke_result_t<F1,Args...>>>
@@ -77,14 +76,15 @@ private:
     int poll_and_dispatch_io();
     int check_timers();
     void run_defers();
-    void loop_each_begin();
-    void loop_each_end();
+    void do_prepare();
 
 private:
     uint8_t _id;
     std::atomic_bool _is_running;
 
-    RxReactorEpoll _reactor_epoll;
+    ReactorCallback _on_loop_prepare;
+
+    RxEventPoller _eventloop_epoll;
     ReactorCallback _on_timeout;
     EventHandler _event_handlers[RxEventType::Rx_EVENT_TYPE_MAX][RxFDType::Rx_FD_TYPE_MAX];
 
@@ -95,8 +95,6 @@ private:
     RxMutex _defer_mutex;
     std::vector<DeferCallback> _defer_functors;
 
-    ReactorCallback _on_loop_each_begin;
-    ReactorCallback _on_loop_each_end;
 };
 
 

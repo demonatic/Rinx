@@ -4,7 +4,7 @@
 #include <functional>
 #include "../Util/Clock.h"
 
-class RxReactor;
+class RxEventLoop;
 
 using TimerID=uint64_t;
 using TimerCallback=std::function<void()>;
@@ -13,7 +13,7 @@ using TimerCallback=std::function<void()>;
 class RxTimer
 {
 public:
-    RxTimer(RxReactor *reactor);
+    RxTimer(RxEventLoop *eventloop);
 
     TimerID start_timer(uint64_t milliseconds,TimerCallback expiry_action,bool repeat=false);
     void stop();
@@ -30,7 +30,7 @@ private:
     void expired();
     void set_active(bool active) noexcept;
 
-    RxReactor *_reactor_belongs;
+    RxEventLoop *_eventloop_belongs;
 
     TimerID _id;
 

@@ -11,8 +11,8 @@ SOURCES += \
         3rd/NanoLog/NanoLog.cpp \
         Network/Buffer.cpp \
         Network/Connection.cpp \
-        Network/Reactor.cpp \
-        Network/ReactorEpoll.cpp \
+        Network/EventLoop.cpp \
+        Network/EventPoller.cpp \
         Network/Socket.cpp \
         Network/Timer.cpp \
         Network/TimerHeap.cpp \
@@ -24,7 +24,7 @@ SOURCES += \
         Protocol/HTTP/ProtocolHttp1.cpp \
         Protocol/ProtocolProcessorFactory.cpp \
         Protocol/ProtocolProcessor.cpp \
-        Server/ReactorThreadGroup.cpp \
+        Server/EventLoopThreadGroup.cpp \
         Server/Server.cpp \
         Server/Signal.cpp \
         Util/Clock.cpp \
@@ -38,8 +38,8 @@ HEADERS += \
         Network/Buffer.h \
         Network/Connection.h \
         Network/Event.h \
-        Network/Reactor.h \
-        Network/ReactorEpoll.h \
+        Network/EventLoop.h \
+        Network/EventPoller.h \
         Network/Socket.h \
         Network/Timer.h \
         Network/TimerHeap.h \
@@ -54,7 +54,7 @@ HEADERS += \
         Protocol/ProtocolProcessorFactory.h \
         Protocol/ProtocolProcessor.h \
         RinxDefines.h \
-        Server/ReactorThreadGroup.h \
+        Server/EventLoopThreadGroup.h \
         Server/Server.h \
         Server/Signal.h \
         Util/Clock.h \

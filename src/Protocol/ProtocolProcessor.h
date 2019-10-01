@@ -2,7 +2,7 @@
 #define SERVERPROTOCOL_H
 
 #include "../Network/Buffer.h"
-#include "../Network/Reactor.h"
+#include "../Network/EventLoop.h"
 #include "HFSMParser.hpp"
 
 class RxConnection;
@@ -21,7 +21,9 @@ public:
     virtual ~RxProtoProcessor()=default;
 
     virtual void init(RxConnection &conn)=0;
-    virtual ProcessStatus process(RxConnection &conn,RxChainBuffer &buf)=0;
+
+    virtual ProcessStatus process_read_data(RxConnection &conn,RxChainBuffer &input_buf)=0;
+    virtual ProcessStatus handle_write_prepared(RxConnection &conn,RxChainBuffer &output_buf)=0;
 };
 
 

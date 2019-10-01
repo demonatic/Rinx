@@ -1,9 +1,9 @@
 #include "Timer.h"
-#include "Reactor.h"
+#include "EventLoop.h"
 #include "TimerHeap.h"
 
 
-RxTimer::RxTimer(RxReactor *reactor):_reactor_belongs(reactor),
+RxTimer::RxTimer(RxEventLoop *eventloop):_eventloop_belongs(eventloop),
     _id(std::numeric_limits<uint64_t>::max()),_duration(0),
     _heap_index(std::numeric_limits<size_t>::max()),
     _is_active(false),_is_repeat(false)
@@ -14,7 +14,7 @@ RxTimer::RxTimer(RxReactor *reactor):_reactor_belongs(reactor),
 TimerID RxTimer::start_timer(uint64_t milliseconds, TimerCallback expiry_action,bool repeat)
 {
     uint64_t expire_time=Clock::get_now_tick()+milliseconds;
-    RxTimerHeap &timer_heap=_reactor_belongs->get_timer_heap();
+    RxTimerHeap &timer_heap=_eventloop_belongs->get_timer_heap();
     if(_is_active){
         this->stop();
     }
@@ -29,7 +29,7 @@ TimerID RxTimer::start_timer(uint64_t milliseconds, TimerCallback expiry_action,
 
 void RxTimer::stop()
 {
-    RxTimerHeap &timer_heap=_reactor_belongs->get_timer_heap();
+    RxTimerHeap &timer_heap=_eventloop_belongs->get_timer_heap();
     timer_heap.remove_timer(this->_id);
 }
 

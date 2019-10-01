@@ -1,55 +1,70 @@
 #include "Connection.h"
+#include "../3rd/NanoLog/NanoLog.h"
 
-RxConnection::RxConnection():_reactor_belongs(nullptr)
+RxConnection::RxConnection():_rx_fd(InvalidRxFD),_eventloop_belongs(nullptr)
 {
 
 }
 
 RxConnection::~RxConnection()
 {
-    if(_reactor_belongs){
+    if(_rx_fd.raw_fd!=-1){
         close();
     }
 }
 
-void RxConnection::init(const RxFD fd,RxReactor *reactor)
+void RxConnection::init(const RxFD fd,RxEventLoop *eventloop)
 {
     _rx_fd=fd;
     _input_buf=RxChainBuffer::create_chain_buffer();
     _output_buf=RxChainBuffer::create_chain_buffer();
-    _reactor_belongs=reactor;
+    _eventloop_belongs=eventloop;
 }
 
 ssize_t RxConnection::recv(RxReadRc &read_res)
 {
+    if(unlikely(!_input_buf)){
+        read_res=RxReadRc::ERROR;
+        LOG_WARN<<"try to read to an empty input buffer";
+        return -1;
+    }
     return _input_buf->read_fd(_rx_fd.raw_fd,read_res);
 }
 
 ssize_t RxConnection::send(RxWriteRc &write_res)
 {
+    if(unlikely(!_output_buf)){
+        write_res=RxWriteRc::ERROR;
+        LOG_WARN<<"try to read from an empty output buffer";
+        return -1;
+    }
     return _output_buf->write_fd(_rx_fd.raw_fd,write_res);
 }
 
 void RxConnection::close()
 {
-    _reactor_belongs->unmonitor_fd_event(_rx_fd);
-    _input_buf.reset();
-    _output_buf.reset();
-    _proto_processor.reset();
-    _reactor_belongs=nullptr;
-    //must put close at the end, or it would cause race condition
-    RxSock::close(_rx_fd.raw_fd);
-//    std::cout<<"@close conn="<<this->get_rx_fd().raw_fd<<std::endl;
+    if(_rx_fd!=InvalidRxFD){
+        _eventloop_belongs->unmonitor_fd_event(_rx_fd);
+        _input_buf.reset();
+        _output_buf.reset();
+        _proto_processor.reset();
+        _eventloop_belongs=nullptr;
+        //must put close at the end, or it would cause race condition
+        RxSock::close(_rx_fd.raw_fd);
+    //    std::cout<<"@close conn="<<this->get_rx_fd().raw_fd<<std::endl;
+        _rx_fd=InvalidRxFD;
+        data.reset();
+    }
 }
 
-RxProtoProcessor &RxConnection::get_proto_processor() const
+RxProtoProcessor& RxConnection::get_proto_processor() const
 {
     return *_proto_processor;
 }
 
-RxReactor &RxConnection::get_reactor() const
+RxEventLoop& RxConnection::get_eventloop() const
 {
-    return *_reactor_belongs;
+    return *_eventloop_belongs;
 }
 
 RxFD RxConnection::get_rx_fd() const
@@ -62,18 +77,12 @@ void RxConnection::set_proto_processor(std::unique_ptr<RxProtoProcessor> &&proce
     _proto_processor.swap(processor);
 }
 
-RxChainBuffer &RxConnection::get_input_buf()
+RxChainBuffer& RxConnection::get_input_buf()
 {
-    if(unlikely(_input_buf==nullptr)){
-        _input_buf=RxChainBuffer::create_chain_buffer();
-    }
     return *_input_buf;
 }
 
-RxChainBuffer &RxConnection::get_output_buf()
+RxChainBuffer& RxConnection::get_output_buf()
 {
-    if(unlikely(_output_buf==nullptr)){
-        _output_buf=RxChainBuffer::create_chain_buffer();
-    }
     return *_output_buf;
 }

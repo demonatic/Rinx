@@ -2,6 +2,7 @@
 #define HTTPPARSER_H
 
 #include <string>
+#include "HttpRequest.h"
 #include "../HFSMParser.hpp"
 #include <iostream>
 
@@ -22,6 +23,8 @@ public:
         _stored_uri.reserve(100);
         _stored_version.reserve(12);
     }
+
+    virtual ~StateRequestLine() override;
 
     virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override;
 
@@ -50,7 +53,11 @@ private:
 
 class StateHeader:public SuperState{
 public:
-    StateHeader(uint8_t state_id):SuperState(state_id){}
+    StateHeader(uint8_t state_id):SuperState(state_id){
+        _header_field_key.reserve(100);
+        _header_field_val.reserve(100);
+    }
+    virtual ~StateHeader() override;
 
     virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override;
 
