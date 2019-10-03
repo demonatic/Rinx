@@ -16,4 +16,6 @@ SOURCES += \
         ../../../src/Protocol/HFSMParser.hpp\
         ../../../src/Protocol/HTTP/HttpParser.cpp\
         ../../../src/Protocol/HTTP/HttpRequest.cpp\
+        ../../../src/Network/Buffer.cpp\
+        ../../../src/Network/Socket.cpp\
         ../../../src/Util/Util.cpp\

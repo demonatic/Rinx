@@ -3,20 +3,21 @@
 
 void HttpRequest::clear_for_next_request()
 {
-    version=HttpVersion::UNKNOWN;
-    method=HttpMethod::UNDEFINED;
-    uri.clear();
-    header_fields.clear();
+    _version=HttpVersion::UNKNOWN;
+    _method=HttpMethod::UNDEFINED;
+    _uri.clear();
+    _headers.clear();
+    _body.free();
 }
 
-void HttpRequest::debug_print()
+void HttpRequest::debug_print_header()
 {
     std::cout<<"----------------------"<<std::endl;
-    std::cout<<"[method] "<<to_http_method_str(method)<<std::endl;
-    std::cout<<"[uri] "<<uri<<std::endl;
-    std::cout<<"[version] "<<to_http_version_str(version)<<std::endl;
+    std::cout<<"[method] "<<to_http_method_str(_method)<<std::endl;
+    std::cout<<"[uri] "<<_uri<<std::endl;
+    std::cout<<"[version] "<<to_http_version_str(_version)<<std::endl;
     std::cout<<"[header fields]"<<std::endl;
-    for(auto field:header_fields){
+    for(auto &field:_headers){
         std::cout<<"<"<<field.first<<">:<"<<field.second<<">"<<std::endl;
     }
     std::cout<<"----------------------"<<std::endl;

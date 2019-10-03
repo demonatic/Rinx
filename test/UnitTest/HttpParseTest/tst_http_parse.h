@@ -13,32 +13,27 @@ using namespace testing;
 class ParserCallback{
 public:
     virtual ~ParserCallback()=default;
-    virtual void recv_request_line_callback(HttpRequest &request){(void)request;}
 
     virtual void recv_header_callback(HttpRequest &request){(void)request;}
 
     virtual void parse_error_callback(HttpRequest &request){(void)request;}
 
     void parse(std::vector<uint8_t> &buf){
-        parser.register_event(HttpEvent::RequestLineReceived,[this](std::any &request){
-            std::cout<<"@recv request line cb"<<std::endl;
-            HttpRequest &processed_req=std::any_cast<HttpRequest&>(request);
-            this->recv_request_line_callback(processed_req);
-        });
-        parser.register_event(HttpEvent::HttpHeaderReceived,[this](std::any &request){
+
+        parser.register_event(HttpReqLifetimeStage::HeaderReceived,[this](std::any &request){
             std::cout<<"@recv header cb"<<std::endl;
             HttpRequest &processed_req=std::any_cast<HttpRequest&>(request);
-            processed_req.debug_print();
+            processed_req.debug_print_header();
             this->recv_header_callback(processed_req);
             processed_req.clear_for_next_request();
         });
-        parser.register_event(HttpEvent::ParseError,[this](HttpRequest &request){
+        parser.register_event(HttpReqLifetimeStage::ParseError,[this](HttpRequest &request){
             std::cout<<"@parse error cb"<<std::endl;
             this->parse_error_callback(request);
         });
 
-        std::any req=HttpRequest{};
-        parser.parse_from_array(buf.begin(),buf.end(),req);
+        std::any req=HttpRequest{nullptr};
+        parser.parse(buf.begin(),buf.end(),req);
 
     }
 
@@ -47,8 +42,8 @@ public:
 
 class MockParserCallBack:public ParserCallback{
 public:
-    MOCK_METHOD1(recv_request_line_callback,void(HttpRequest &request));
     MOCK_METHOD1(recv_header_callback,void(HttpRequest &request));
+    MOCK_METHOD1(parse_error_callback,void(HttpRequest &request));
 };
 
 TEST(http_parse, dataset)

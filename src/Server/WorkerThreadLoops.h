@@ -15,10 +15,10 @@ struct RxEventLoopThread{
     std::unique_ptr<RxEventLoop> eventloop;
 };
 
-class RxEventLoopThreadGroup
+class RxWorkerThreadLoops
 {
 public:
-    RxEventLoopThreadGroup(size_t num);
+    RxWorkerThreadLoops(size_t num);
     bool start();
     void shutdown();
 

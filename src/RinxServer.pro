@@ -17,16 +17,16 @@ SOURCES += \
         Network/Timer.cpp \
         Network/TimerHeap.cpp \
         Protocol/HTTP/HttpParser.cpp \
-        Protocol/HTTP/HttpReqHandlerEngine.cpp \
+        Protocol/HTTP/HttpReqRouter.cpp \
         Protocol/HTTP/HttpRequest.cpp \
         Protocol/HTTP/HttpRequestHandler.cpp \
-        Protocol/HTTP/HttpResponseWriter.cpp \
+        Protocol/HTTP/HttpResponse.cpp \
         Protocol/HTTP/ProtocolHttp1.cpp \
         Protocol/ProtocolProcessorFactory.cpp \
         Protocol/ProtocolProcessor.cpp \
-        Server/EventLoopThreadGroup.cpp \
         Server/Server.cpp \
         Server/Signal.cpp \
+        Server/WorkerThreadLoops.cpp \
         Util/Clock.cpp \
         Util/Mutex.cpp \
         Util/ThreadPool.cpp \
@@ -46,17 +46,17 @@ HEADERS += \
         Protocol/HFSMParser.hpp \
         Protocol/HTTP/HttpDefines.h \
         Protocol/HTTP/HttpParser.h \
-        Protocol/HTTP/HttpReqHandlerEngine.h \
+        Protocol/HTTP/HttpReqRouter.h \
         Protocol/HTTP/HttpRequest.h \
         Protocol/HTTP/HttpRequestHandler.h \
-        Protocol/HTTP/HttpResponseWriter.h \
+        Protocol/HTTP/HttpResponse.h \
         Protocol/HTTP/ProtocolHttp1.h \
         Protocol/ProtocolProcessorFactory.h \
         Protocol/ProtocolProcessor.h \
         RinxDefines.h \
-        Server/EventLoopThreadGroup.h \
         Server/Server.h \
         Server/Signal.h \
+        Server/WorkerThreadLoops.h \
         Util/Clock.h \
         Util/FunctionTraits.h \
         Util/Mutex.h \

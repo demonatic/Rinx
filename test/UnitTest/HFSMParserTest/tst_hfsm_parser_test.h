@@ -79,7 +79,7 @@ TEST(hfsm_parser_test, dataset)
     parser.register_event(event_1,[&](std::any &req){request.cb_2(std::any_cast<TRequest&>(req));});
     std::vector<uint8_t> buf{0,1,2,3,4,5,6};
 
-    parser.parse_from_array(buf.begin(),buf.end(),any);
+    parser.parse(buf.begin(),buf.end(),any);
     EXPECT_EQ(read_in,buf);
 
     EXPECT_EQ(1, 1);

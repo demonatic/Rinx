@@ -1,7 +1,6 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
-
 #include <array>
 #include <memory>
 #include <list>
@@ -40,8 +39,8 @@ private:
 template<class ChunkIteratorType,class ByteType,size_t N>
 class BufferReadableIterator;
 
-///buffer最后一块writeable_size可为0
-class ChainBuffer:RxNoncopyable{
+///buffer only expand its size when try to write things in it
+class ChainBuffer{
 public:
     static constexpr size_t chunk_size=RX_BUFFER_CHUNK_SIZE;
     using chunk_type=BufferChunk<chunk_size>;
@@ -55,6 +54,7 @@ public:
     ~ChainBuffer()=default;
 
     static std::unique_ptr<ChainBuffer> create_chain_buffer();
+    void free();
 
     size_t chunk_num() const;
     size_t total_size() const;
@@ -79,7 +79,10 @@ public:
     void append(const char *data,size_t length);
 
     /// @brief read count bytes from istream to the buffer
-    long write_istream(std::istream &istream,long count);
+    long append(std::istream &istream,long length);
+
+    /// @brief append the chunks of parameter buf to this
+    void append(ChainBuffer &buf);
 
     ChainBuffer& operator<<(const std::string &arg);
 

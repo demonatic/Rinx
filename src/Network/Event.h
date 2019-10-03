@@ -13,7 +13,7 @@ enum RxEventType:uint32_t{
 
 enum RxFDType:uint32_t{
     Rx_FD_LISTEN=0,
-    Rx_FD_TCP_STREAM,
+    Rx_FD_CLIENT_STREAM,
     Rx_FD_EVENT,
     Rx_FD_INVALID,
     Rx_FD_TYPE_MAX,

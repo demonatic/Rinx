@@ -41,16 +41,15 @@ ConsumeRes StateRequestLine::consume(iterable_bytes iterable, std::any &request)
                 if(likely(c=='\n')){
                     HttpRequest &req=std::any_cast<HttpRequest&>(request);
                     Util::to_upper(_stored_method);
-                    req.method=to_http_method(_stored_method);
+                    req.method()=to_http_method(_stored_method);
                     Util::to_upper(_stored_version);
-                    req.version=to_http_version(_stored_version);
-                    req.uri=std::move(_stored_uri);
+                    req.version()=to_http_version(_stored_version);
+                    req.uri()=std::move(_stored_uri);
 
-                    consume_res.event=HttpEvent::RequestLineReceived;
                     consume_res.next_super_state.emplace(std::pair{GET_ID(StateHeader),nullptr});
                 }
                 else{
-                    consume_res.event=HttpEvent::ParseError;
+                    consume_res.event=HttpReqLifetimeStage::ParseError;
                 }
                 return ExitConsume;
             }
@@ -92,9 +91,7 @@ ConsumeRes StateHeader::consume(iterable_bytes iterable, std::any &request)
                 if(c=='\r'){
                     _sub_state=S_EXPECT_FIELD_END;
                     HttpRequest &req=std::any_cast<HttpRequest&>(request);
-
-                    req.header_fields.emplace_back(std::make_pair(std::move(_header_field_key),std::move(_header_field_val)));
-
+                    req.headers().add(std::move(_header_field_key),std::move(_header_field_val));
                 }
                 else{
                     _header_field_val.push_back(c);
@@ -106,7 +103,7 @@ ConsumeRes StateHeader::consume(iterable_bytes iterable, std::any &request)
                     _sub_state=S_FIELD_ENDED;
                 }
                 else{
-                    consume_res.event=HttpEvent::ParseError;
+                    consume_res.event=HttpReqLifetimeStage::ParseError;
                     return ExitConsume;
                 }
             }break;
@@ -123,12 +120,12 @@ ConsumeRes StateHeader::consume(iterable_bytes iterable, std::any &request)
 
             case S_EXPECT_HEADER_END:{
                 if(likely(c=='\n')){
-                    consume_res.event=HttpEvent::HttpHeaderReceived;
+                    consume_res.event=HttpReqLifetimeStage::HeaderReceived;
                     consume_res.next_super_state.emplace(std::pair{GET_ID(StateRequestLine),nullptr});
                     return ExitConsume;
                 }
                 else{
-                    consume_res.event=HttpEvent::ParseError;
+                    consume_res.event=HttpReqLifetimeStage::ParseError;
                     return ExitConsume;
                 }
             }

@@ -2,28 +2,53 @@
 #define HTTPREQUEST_H
 
 #include <string>
+#include <optional.hpp>
 #include "HttpDefines.h"
 #include "../../Network/Connection.h"
 
 class HttpRequest
 {
 public:
-    void set_version(const HttpVersion version);
-    HttpVersion get_version() const;
+    HttpRequest(RxConnection *conn):_conn_belongs(conn){
+
+    }
+
+    RxConnection *get_connection() const{
+       return _conn_belongs;
+    }
+
+    std::string& uri(){
+       return _uri;
+    }
+
+    HttpMethod &method(){
+       return _method;
+    }
+
+    HttpVersion& version(){
+       return _version;
+    }
+
+    HttpHeaderFields& headers(){
+       return _headers;
+    }
 
     void clear_for_next_request();
-    void debug_print();
+
+    void debug_print_header();
 
 public:
-    HttpVersion version;
-    HttpMethod method;
-    std::string uri;
-    HttpHeaderFields header_fields;
+    std::any req_hdlr_ctx;
 
-    RxChainBuffer _body;
+private:
+    HttpMethod _method;
+    std::string _uri;
+    HttpVersion _version;
+    HttpHeaderFields _headers;
 
-    RxConnection *conn_belongs;
+    RxChainBuffer _body; //TODO
 
+    RxConnection *_conn_belongs;
 
 };
 

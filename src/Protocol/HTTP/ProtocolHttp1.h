@@ -4,7 +4,7 @@
 #include "../ProtocolProcessor.h"
 #include "../ProtocolProcessorFactory.h"
 #include "HttpParser.h"
-#include "HttpReqHandlerEngine.h"
+#include "HttpReqRouter.h"
 
 class RxProtoHttp1Processor:public RxProtoProcessor
 {
@@ -18,7 +18,6 @@ public:
 
 private:
     HttpParser _request_parser;
-    HttpReqHandlerEngine _req_handler_engine;
 };
 
 

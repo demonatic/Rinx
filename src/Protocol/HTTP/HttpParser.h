@@ -3,18 +3,9 @@
 
 #include <string>
 #include "HttpRequest.h"
+#include "HttpDefines.h"
 #include "../HFSMParser.hpp"
 #include <iostream>
-
-enum HttpEvent{
-    RequestLineReceived,
-    HttpHeaderReceived,
-    RecvPartofContent,
-    RecvWholeContent,
-    RecvChunk,
-    ChunkEnd,
-    ParseError,
-};
 
 class StateRequestLine:public SuperState{
 public:
@@ -38,7 +29,6 @@ public:
     }
 
 private:
-    //TODO reserve space
     std::string _stored_method;
     std::string _stored_uri;
     std::string _stored_version;

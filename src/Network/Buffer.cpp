@@ -106,7 +106,7 @@ ssize_t ChainBuffer::read_fd(int fd,RxReadRc &res)
 ssize_t ChainBuffer::write_fd(int fd,RxWriteRc &res)
 {
     std::vector<struct iovec> io_vecs;
-    for(auto it_chunk=_chunk_list.begin();it_chunk!=_chunk_list.end();it_chunk++){
+    for(auto it_chunk=_chunk_list.begin();it_chunk!=_chunk_list.end();++it_chunk){
         if((*it_chunk)->readable_size()==0){
             break;
         }
@@ -168,12 +168,12 @@ void ChainBuffer::append(const char *data, size_t length)
     }
 }
 
-long ChainBuffer::write_istream(std::istream &istream,long count)
+long ChainBuffer::append(std::istream &istream,long length)
 {
     long total_read=0;
-    while(count>0){
+    while(length>0){
         check_need_expand();
-        long try_to_read=std::min(static_cast<size_t>(count),get_tail()->writable_size());
+        long try_to_read=std::min(static_cast<size_t>(length),get_tail()->writable_size());
         istream.read(reinterpret_cast<char*>(get_tail()->write_pos()),try_to_read).gcount();
         long actual_read=istream.gcount();
         if(actual_read<=0)
@@ -181,10 +181,18 @@ long ChainBuffer::write_istream(std::istream &istream,long count)
 
         get_tail()->advance_write(actual_read);
         total_read+=actual_read;
-        count-=actual_read;
+        length-=actual_read;
     }
 
     return total_read;
+}
+
+void ChainBuffer::append(ChainBuffer &buf)
+{
+    for(chunk_iterator it=buf.chunk_begin();it!=buf.chunk_end();++it){
+        this->_chunk_list.push_back((*it));
+    }
+    buf.free();
 }
 
 ChainBuffer::chunk_rptr ChainBuffer::get_head() const
@@ -202,9 +210,13 @@ std::unique_ptr<ChainBuffer> ChainBuffer::create_chain_buffer()
     return std::make_unique<ChainBuffer>();
 }
 
+void ChainBuffer::free()
+{
+    _chunk_list.clear();
+}
+
 ChainBuffer::chunk_sptr ChainBuffer::alloc_chunk()
 {
-//    return std::make_shared<chunk_type>();
     return rx_pool_make_shared<chunk_type>();
 }
 

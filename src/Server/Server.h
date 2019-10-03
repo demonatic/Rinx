@@ -11,7 +11,7 @@
 #include "../Network/Connection.h"
 #include "../Network/EventLoop.h"
 #include "../Protocol/HTTP/ProtocolHttp1.h"
-#include "EventLoopThreadGroup.h"
+#include "WorkerThreadLoops.h"
 #include "../3rd/NanoLog/NanoLog.h"
 
 struct RxListenPort{
@@ -51,7 +51,7 @@ private:
     uint16_t _eventloop_num;
 
     RxEventLoop _main_eventloop;
-    RxEventLoopThreadGroup _sub_eventloop_threads;
+    RxWorkerThreadLoops _sub_eventloop_threads;
 
     std::vector<RxConnection> _connection_list;
     std::list<std::pair<RxListenPort,std::unique_ptr<RxProtoProcFactory>>> _listen_ports;

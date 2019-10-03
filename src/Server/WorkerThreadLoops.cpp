@@ -1,6 +1,6 @@
-#include "EventLoopThreadGroup.h"
+#include "WorkerThreadLoops.h"
 
-RxEventLoopThreadGroup::RxEventLoopThreadGroup(size_t num):_eventloop_threads(num)
+RxWorkerThreadLoops::RxWorkerThreadLoops(size_t num):_eventloop_threads(num)
 {
     for(size_t i=0;i<_eventloop_threads.size();i++){
         RxEventLoopThread &eventloop_thd=_eventloop_threads[i];
@@ -9,11 +9,11 @@ RxEventLoopThreadGroup::RxEventLoopThreadGroup(size_t num):_eventloop_threads(nu
     }
 }
 
-bool RxEventLoopThreadGroup::start()
+bool RxWorkerThreadLoops::start()
 {
     for(auto &eventloop_thd:_eventloop_threads){
         pthread_t ptid;
-        if(pthread_create(&ptid,nullptr,&RxEventLoopThreadGroup::eventloop_thread_loop,eventloop_thd.eventloop.get())<0)
+        if(pthread_create(&ptid,nullptr,&RxWorkerThreadLoops::eventloop_thread_loop,eventloop_thd.eventloop.get())<0)
         {
             LOG_WARN<<"pthread create failed";
             return false;
@@ -23,7 +23,7 @@ bool RxEventLoopThreadGroup::start()
     return true;
 }
 
-void RxEventLoopThreadGroup::shutdown()
+void RxWorkerThreadLoops::shutdown()
 {
     for(RxEventLoopThread &eventloop_thd:_eventloop_threads){
         for_each([](RxThreadID,RxEventLoop *eventloop){
@@ -39,18 +39,18 @@ void RxEventLoopThreadGroup::shutdown()
     }
 }
 
-size_t RxEventLoopThreadGroup::get_thread_num() const noexcept
+size_t RxWorkerThreadLoops::get_thread_num() const noexcept
 {
     return _eventloop_threads.size();
 }
 
-RxEventLoop* RxEventLoopThreadGroup::get_eventloop(size_t index)
+RxEventLoop* RxWorkerThreadLoops::get_eventloop(size_t index)
 {
     return index<_eventloop_threads.size()?_eventloop_threads[index].eventloop.get():nullptr;
 }
 
 
-void RxEventLoopThreadGroup::for_each(std::function<void(RxThreadID,RxEventLoop*)> f)
+void RxWorkerThreadLoops::for_each(std::function<void(RxThreadID,RxEventLoop*)> f)
 {
     for(auto &eventloop_thread:_eventloop_threads){
         if(eventloop_thread.eventloop){
@@ -59,6 +59,6 @@ void RxEventLoopThreadGroup::for_each(std::function<void(RxThreadID,RxEventLoop*
     }
 }
 
-void *RxEventLoopThreadGroup::eventloop_thread_loop(void *eventloop_obj){
+void *RxWorkerThreadLoops::eventloop_thread_loop(void *eventloop_obj){
     return (void*)((RxEventLoop*)(eventloop_obj))->start_event_loop();
 }

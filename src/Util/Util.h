@@ -4,6 +4,7 @@
 #include <tuple>
 #include <memory>
 #include <functional>
+#include <type_traits>
 #include <assert.h>
 #include <iostream>
 
@@ -86,6 +87,12 @@ inline void to_lower(std::string &str) noexcept{
 
 inline void to_upper(std::string &str) noexcept{
     std::transform(str.begin(),str.end(),str.begin(),::toupper);
+}
+
+template <typename E>
+constexpr auto to_underlying_type(E e) noexcept
+{
+    return static_cast<std::underlying_type_t<E>>(e);
 }
 
 template<typename T>

@@ -49,8 +49,8 @@ bool RxServer::listen(const std::string &address, uint16_t port)
     LOG_INFO<<"server listen on port "<<ls_port.port;
 
     _sub_eventloop_threads.for_each([this](RxThreadID,RxEventLoop *eventloop){
-        eventloop->set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
-        eventloop->set_event_handler(Rx_FD_TCP_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
+        eventloop->set_event_handler(Rx_FD_CLIENT_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
+        eventloop->set_event_handler(Rx_FD_CLIENT_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
     });
     _sub_eventloop_threads.start();
 
@@ -116,7 +116,7 @@ RxHandlerRc RxServer::on_acceptable(const RxEvent &event)
 
         RxSock::set_nonblock(new_fd,true);
 
-        RxFD client_rx_fd{Rx_FD_TCP_STREAM,new_fd};
+        RxFD client_rx_fd{Rx_FD_CLIENT_STREAM,new_fd};
         size_t sub_eventloop_index=new_fd%_sub_eventloop_threads.get_thread_num();
         RxEventLoop *sub_eventloop=_sub_eventloop_threads.get_eventloop(sub_eventloop_index);
 

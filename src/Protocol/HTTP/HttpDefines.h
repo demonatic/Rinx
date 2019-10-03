@@ -1,12 +1,12 @@
 #ifndef HTTPDEFINES_H
 #define HTTPDEFINES_H
 
-#include <vector>
+#include <unordered_map>
 #include <string_view>
 #include <algorithm>
 #include "../../Util/Util.h"
 
-enum class HttpStatusCode
+enum class HttpStatusCode:uint16_t
 {
     EMPTY = 0,
 
@@ -54,7 +54,7 @@ enum class HttpStatusCode
     HTTP_versionNOT_SUPPORTED = 505,
 };
 
-enum HttpMethod{
+enum class HttpMethod:uint8_t{
     GET,
     POST,
     HEAD,
@@ -66,14 +66,62 @@ enum HttpMethod{
     HttpMethodCount
 };
 
-enum class HttpVersion{
+enum class HttpVersion:uint8_t{
     UNKNOWN=0,
     VERSION_1_0,
     VERSION_1_1,
     VERSION_2,
 };
 
-using HttpHeaderFields=std::vector<std::pair<std::string, std::string>>;
+///Http request lifetime stage
+enum HttpReqLifetimeStage:uint8_t{
+    ParseError, //TODO
+    HeaderReceived,
+    RecvPartofBody,
+    FinishRecvingBody,
+    ReqCompleted, //reponse is fully sent
+    ReqLifetimeStageCount
+};
+
+class HttpHeaderFields{
+public:
+    using HeaderMap=std::unordered_multimap<std::string, std::string>;
+
+    void add(std::string field_name,std::string field_val){
+        _headers.emplace(std::move(field_name),std::move(field_val));
+    }
+
+    void set_entire(std::unordered_multimap<std::string, std::string> header){
+        _headers=std::move(header);
+    }
+
+    /// @brief get the corresponding header val if headers contains field_name
+    /// @param id: the index of field vals of duplicate field_name
+    std::optional<std::string> field_val(const std::string &field_name,const size_t id=0) const{
+        auto it=_headers.find(field_name);
+        std::advance(it,id);
+        return it!=_headers.end()?std::make_optional<std::string>((*it).second):std::nullopt;
+    }
+
+    void remove(const std::string &key){
+         _headers.erase(key);
+    }
+
+    void clear() noexcept{
+        _headers.clear();
+    }
+
+    HeaderMap::iterator begin(){
+        return _headers.begin();
+    }
+
+    HeaderMap::iterator end(){
+        return _headers.end();
+    }
+
+private:
+    HeaderMap _headers;
+};
 
 inline HttpMethod to_http_method(const std::string &str_method){
     HttpMethod method=HttpMethod::UNDEFINED;

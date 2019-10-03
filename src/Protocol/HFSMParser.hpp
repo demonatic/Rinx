@@ -59,7 +59,7 @@ public:
     }
 
     template<typename InputIterator>
-    void parse_from_array(InputIterator begin,InputIterator end,std::any &request){
+    void parse(InputIterator begin,InputIterator end,std::any &request){
         while(begin!=end){
             ConsumeRes ret=_curr_state->consume([&](elm_handler<byte_t> f){
                 for(auto &it=begin;it!=end;++it){
