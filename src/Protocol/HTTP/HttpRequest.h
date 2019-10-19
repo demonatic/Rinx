@@ -2,9 +2,10 @@
 #define HTTPREQUEST_H
 
 #include <string>
-#include <optional.hpp>
+#include <optional>
 #include "HttpDefines.h"
 #include "../../Network/Connection.h"
+
 
 class HttpRequest
 {
@@ -33,12 +34,20 @@ public:
        return _headers;
     }
 
-    void clear_for_next_request();
+    RxChainBuffer& body(){
+        return _body;
+    }
+
+    HttpReqLifetimeStage& stage(){
+       return _stage;
+    }
+
+    void clear();
 
     void debug_print_header();
 
 public:
-    std::any req_hdlr_ctx;
+    std::any req_handler_ctx;
 
 private:
     HttpMethod _method;
@@ -46,9 +55,12 @@ private:
     HttpVersion _version;
     HttpHeaderFields _headers;
 
-    RxChainBuffer _body; //TODO
+    RxChainBuffer _body; //TODO parser set body
 
     RxConnection *_conn_belongs;
+
+    HttpReqLifetimeStage _stage;
+
 
 };
 

@@ -25,7 +25,7 @@ struct RxListenPort{
 class RxServer
 {
 public:
-    RxServer(uint32_t max_connection);
+    RxServer(uint32_t max_connection=65535);
     bool listen(const std::string &address,uint16_t port);
     void shutdown();
 

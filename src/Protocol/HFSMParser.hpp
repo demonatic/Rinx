@@ -11,17 +11,38 @@
 #include "../Util/FunctionTraits.h"
 #include <iostream>
 
-template<class T>
-using elm_handler=std::function<bool(T)>;
-template<class T>
+using byte_t=uint8_t;
+
+template<typename T>
+using elm_handler=std::function<void(T,bool&)>; //param: element,exit iteration
+
+template<typename T>
 using iterable=std::function<void(elm_handler<T> const&)>;
 
-using byte_t=uint8_t;
-using iterable_bytes=iterable<byte_t const&>;
+using iterable_bytes=iterable<byte_t const>;
 
-struct ConsumeRes
+
+class ConsumeRes
 {
-    using SuperStateID=size_t; using Context=std::any;
+    using SuperStateID=size_t;
+    using Context=std::any;
+
+public:
+    void set_event(int event){
+        this->event.emplace(event);
+    }
+
+    void set_n_consumed_explicitly(int n){
+        this->n_consumed_explicit.emplace(n);
+    }
+
+    void transit_super_state(SuperStateID id, std::optional<Context> ctx=std::nullopt){
+        this->next_super_state.emplace(std::make_pair<SuperStateID,Context>(std::move(id),std::move(ctx.value())));
+    }
+
+    //if it is set, the HFSMParser will regard it as the number of bytes consumed by the SuperState,
+    //instread of the step of cur iterator movement by default
+    std::optional<int> n_consumed_explicit;
     std::optional<int> event;
     std::optional<std::pair<SuperStateID,Context>> next_super_state;
 };
@@ -29,17 +50,17 @@ struct ConsumeRes
 class SuperState{
 public:
     using SubState=uint8_t;
-    static constexpr bool ExitConsume=false;
-    static constexpr bool InConsuming=true;
 
 public:
     SuperState(uint8_t state_id):_id(state_id){ }
 
     virtual ~SuperState()=default;
+    uint8_t get_id() const{return _id;}
 
-    virtual ConsumeRes consume(iterable_bytes iterable,std::any &request)=0;
-    virtual void on_entry(const std::any &context)=0;
-    virtual void on_exit()=0;
+    /// @param length: length of the iterable_bytes
+    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request)=0;
+    virtual void on_entry([[maybe_unused]]const std::any &context){}
+    virtual void on_exit(){}
 
 protected:
     uint8_t _id;
@@ -48,34 +69,54 @@ protected:
     char padding[6];
 };
 
+
 template<typename... SuperStateTypes>
 class HFSMParser
 {
 public:
-
+    struct ParseRes{
+        bool got_complete_request=false;
+        size_t n_remaining;
+    };
     HFSMParser():_super_states(make_super_states<SuperStateTypes...>()){
         _curr_state=std::get<0>(_super_states).get();
         _curr_state->on_entry({});
     }
 
+    /// @brief
     template<typename InputIterator>
-    void parse(InputIterator begin,InputIterator end,std::any &request){
-        while(begin!=end){
-            ConsumeRes ret=_curr_state->consume([&](elm_handler<byte_t> f){
-                for(auto &it=begin;it!=end;++it){
-                    if(unlikely(!f(*it))){++it; break;}
+    ParseRes parse(InputIterator begin,InputIterator end,void *request){
+        std::cout<<"@parse begin: end-begin="<<end-begin<<std::endl;
+        ParseRes parse_res;
+        InputIterator cur=begin,next=begin;
+
+        while(cur!=end&&!parse_res.got_complete_request){
+            next=cur;
+            ConsumeRes ret=_curr_state->consume(end-cur,[&](elm_handler<byte_t> f){
+                bool stop_iteration=false;
+                for(;next!=end;++next){
+                    f(*next,stop_iteration);
+                    if(unlikely(stop_iteration)){++next; break;}
                 }
             },request);
 
-            if(ret.event.has_value()){
-                this->emit_event(*ret.event,request);
+            typename InputIterator::difference_type consume_len=ret.n_consumed_explicit?ret.n_consumed_explicit.value():next-cur;
+            std::cout<<"@parse consume_length="<<consume_len<<" next-cur="<<next-cur<<std::endl;
+            if(ret.event){
+                this->emit_event(*ret.event,request,cur,consume_len);
             }
-            if(ret.next_super_state.has_value()){
-                const size_t &event=(*ret.next_super_state).first;
-                const std::any &context=(*ret.next_super_state).second;
+            if(ret.next_super_state){
+                size_t event=(*ret.next_super_state).first;
+                std::any &context=(*ret.next_super_state).second;
                 this->transit_super_state(event,context);
+                //we assume that a complete request has got if the _curr_state go back to the initial super state
+                parse_res.got_complete_request=_curr_state->get_id()==0?true:false;
             }
+            cur+=consume_len;
         }
+
+        parse_res.n_remaining=std::distance(cur,end);
+        return parse_res;
     }
 
     template<typename Fun>

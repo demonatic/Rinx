@@ -2,54 +2,120 @@
 #define HTTPRESPONSEWRITER_H
 
 #include "Network/Buffer.h"
+#include "Network/Connection.h"
 #include "HttpDefines.h"
+
 
 class HttpResponse{
 public:
+
+    using ProvideDone=std::function<void()>; //TODO　换声明的地方
+    using HttpStatusLine=std::pair<HttpStatusCode,HttpVersion>;
     using HttpResponseBody=RxChainBuffer;
+    enum class ComponentStatus{
+        NOT_SET,
+        SET,
+        SENT
+    };
 
-    HttpResponse(RxChainBuffer &output_buff);
+    HttpResponse(RxConnection *conn);
 
-    void set_response_line(HttpStatusCode status,HttpVersion version){
-        this->_status_code=status;
-        this->_version=version;
+    class DeferContentProvider{
+    public:
+        enum class Status{
+            ExecAsyncTask,
+            Providing,
+            Done,
+        };
+
+        using ProvideAction=std::function<void(RxChainBuffer &output_buf,size_t max_length_expected,ProvideDone done)>;
+
+    public:
+        DeferContentProvider(RxConnection *conn,ProvideAction provide_action,bool async=false)
+            :_status(async?Status::ExecAsyncTask:Status::Providing),_provide_action(provide_action),_conn(conn)
+        {
+
+        }
+
+        /// @return whether use provide_action to provide data to output_buf
+        bool try_provide_once();
+
+        void try_provide_remaining(){
+            while(try_provide_once());
+        }
+
+        Status get_status() const{
+            return _status;
+        }
+
+        void set_status(Status status) noexcept{
+            this->_status=status;
+        }
+
+
+    private:
+        Status _status;
+        ProvideAction _provide_action;
+        RxConnection *_conn;
+    };
+
+    void set_content_provider(DeferContentProvider::ProvideAction defer_content_provider){
+        _defer_content_provider.emplace(DeferContentProvider(_conn_belongs,defer_content_provider,false));
     }
 
-    void status_code(HttpStatusCode status){
-        this->_status_code=status;
+    void set_async_content_provider(std::function<void()> async_task,DeferContentProvider::ProvideAction defer_content_provider);
+
+
+    bool has_defer_content_provider() const{
+        return _defer_content_provider.has_value();
     }
 
-    HttpStatusCode status_code() const{
-        return this->_status_code;
+    DeferContentProvider& get_defer_content_provider(){
+        return _defer_content_provider.value();
     }
 
-    void version(HttpVersion version){
-        this->_version=version;
+    bool check_and_wait_content_provider(){
+        if(_defer_content_provider.has_value()){
+            DeferContentProvider &content_provider=_defer_content_provider.value();
+            content_provider.try_provide_remaining();
+            if(content_provider.get_status()!=DeferContentProvider::Status::Done){
+               return false;
+            }
+            _defer_content_provider.reset();
+        }
+        return true;
     }
 
-    HttpVersion version() const{
-        return this->_version;
+    HttpResponse& status_code(HttpStatusCode status){
+        HttpStatusLine &stat_line=_status_line.first;
+        stat_line.first=status;
+        _status_line.second=ComponentStatus::SET;
+        return *this;
     }
 
-    HttpHeaderFields& headers(){
-        return this->_headers;
+    HttpResponse& headers(std::string name,std::string val){
+        if(_status_line.second==ComponentStatus::NOT_SET){
+            throw std::runtime_error("HttpResponse: set status code before add any header");
+        }
+
+        _headers.first.add(std::move(name),std::move(val));
+        _headers.second=ComponentStatus::SET;
+        return *this;
     }
 
     HttpResponseBody &body();
-
-    long body_append_istream(std::istream &ifstream,size_t stream_length);
 
     ///@brief flush http head and body to connection's output buffer
     void flush();
 
 private:
-    HttpStatusCode _status_code;
-    HttpVersion _version;
-    HttpHeaderFields _headers;
+    std::pair<HttpStatusLine,ComponentStatus> _status_line;
+    std::pair<HttpHeaderFields,ComponentStatus> _headers;
 
     HttpResponseBody _body;
+    std::optional<DeferContentProvider> _defer_content_provider;
 
-    RxChainBuffer &_output_buff;
+    RxConnection *_conn_belongs;
 };
 
 

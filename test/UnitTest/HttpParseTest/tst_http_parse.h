@@ -20,20 +20,39 @@ public:
 
     void parse(std::vector<uint8_t> &buf){
 
-        parser.register_event(HttpReqLifetimeStage::HeaderReceived,[this](std::any &request){
+        parser.register_event(HttpReqLifetimeStage::HeaderReceived,[this](void *request,std::vector<uint8_t>::iterator,size_t){
             std::cout<<"@recv header cb"<<std::endl;
-            HttpRequest &processed_req=std::any_cast<HttpRequest&>(request);
-            processed_req.debug_print_header();
-            this->recv_header_callback(processed_req);
-            processed_req.clear_for_next_request();
+            HttpRequest *processed_req=static_cast<HttpRequest*>(request);
+            processed_req->debug_print_header();
+            this->recv_header_callback(*processed_req);
+            processed_req->clear();
         });
-        parser.register_event(HttpReqLifetimeStage::ParseError,[this](HttpRequest &request){
-            std::cout<<"@parse error cb"<<std::endl;
-            this->parse_error_callback(request);
+        parser.register_event(HttpReqLifetimeStage::RequestReceived,[this](void *request,std::vector<uint8_t>::iterator start,size_t length){
+            HttpRequest *req=static_cast<HttpRequest*>(request);
+            std::cout<<"!! @recv whole request cb, body size="<<length<<std::endl;
+            for(int i=0;i<length;i++){
+               std::cout<<*(start+i);
+            }
+            std::cout<<std::endl;
         });
 
-        std::any req=HttpRequest{nullptr};
-        parser.parse(buf.begin(),buf.end(),req);
+        parser.register_event(HttpReqLifetimeStage::ParseError,[this](void *request,std::vector<uint8_t>::iterator,size_t){
+            std::cout<<"@parse error cb"<<std::endl;
+            this->parse_error_callback(*static_cast<HttpRequest*>(request));
+        });
+
+        HttpRequest req{nullptr};
+        long total=std::distance(buf.begin(),buf.end());
+        long n_left=total;
+        do{
+            HttpParser::ParseRes parse_res=parser.parse(buf.begin()+total-n_left,buf.end(),&req);
+            n_left=parse_res.n_remaining;
+
+            if(parse_res.got_complete_request){
+                std::cout<<"got a request"<<std::endl;
+            }
+
+        }while(n_left);
 
     }
 
@@ -48,7 +67,7 @@ public:
 
 TEST(http_parse, dataset)
 {
-    const char request[]="GET /favicon.ico HTTP/1.1\r\n"
+    const char request[]="POST /favicon.ico HTTP/1.1\r\n"
                                 "Host: 0.0.0.0=5000\r\n"
                                 "User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9) Gecko/2008061015 Firefox/3.0\r\n"
                                 "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
@@ -57,8 +76,10 @@ TEST(http_parse, dataset)
                                 "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n"
                                 "Keep-Alive: 300\r\n"
                                 "Connection: keep-alive\r\n"
+                                "Content-Length: 3\r\n"
                                 "Transfer-Encoding: chunked\r\n"
                                 "\r\n"
+                                "123"
                         "GET /favicon.ico HTTP/1.1\r\n"
                                      "Host: 0.0.0.0=5000\r\n"
                                      "User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9) Gecko/2008061015 Firefox/3.0\r\n"

@@ -148,7 +148,7 @@ ssize_t RxSock::write(int fd, void *buffer, size_t n, RxWriteRc &write_res)
     }while(bytes_written<0&&errno==EINTR);
 
     if(unlikely(bytes_written<0)){
-        write_res=(errno==EAGAIN)?RxWriteRc::SOCK_BUFF_FULL:RxWriteRc::ERROR;
+        write_res=(errno==EAGAIN)?RxWriteRc::SYS_SOCK_BUFF_FULL:RxWriteRc::ERROR;
     }
 
     return bytes_written;
@@ -164,7 +164,7 @@ ssize_t RxSock::writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write
     }while(write_bytes<0&&errno==EINTR);
 
     if(unlikely(write_bytes<0)){
-        write_res=(errno==EAGAIN)?RxWriteRc::SOCK_BUFF_FULL:RxWriteRc::ERROR;
+        write_res=(errno==EAGAIN)?RxWriteRc::SYS_SOCK_BUFF_FULL:RxWriteRc::ERROR;
     }
     return write_bytes;
 }

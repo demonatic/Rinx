@@ -181,7 +181,8 @@ RxHandlerRc RxServer::on_stream_readable(const RxEvent &event)
     }
 
     RxReadRc read_rc;
-    conn->recv(read_rc);
+    ssize_t read_n=conn->recv(read_rc);
+    std::cout<<"@on readable: read"<<read_n<<std::endl;
 
     switch(read_rc) {
         case RxReadRc::OK:

@@ -5,6 +5,5 @@ SUBDIRS += \
     UnitTest/HFSMParserTest\
     UnitTest/HttpParseTest \
     UnitTest/ThreadPoolTest \
-    UnitTest/TimerTest
-
-
+    UnitTest/TimerTest\
+    UnitTest/RequestPipelineTest\

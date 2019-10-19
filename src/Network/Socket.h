@@ -22,7 +22,7 @@ enum class RxReadRc{
 
 enum class RxWriteRc{
     OK,
-    SOCK_BUFF_FULL,
+    SYS_SOCK_BUFF_FULL,
     ERROR
 };
 

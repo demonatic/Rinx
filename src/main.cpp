@@ -8,13 +8,24 @@ int main(){
     RxSignalManager::disable_current_thread_signal();
     nanolog::initialize(nanolog::GuaranteedLogger(),"/tmp/","rinx_log",20);
 
-    HttpRequestRouter::set_route({HttpMethod::GET,"/"},{{HttpReqLifetimeStage::HeaderReceived,[](HttpRequest &req,HttpResponse &resp){
+    //TODO 处理用户在不同stage写resp字段混乱的问题
+    /// 用户必须在某个stage一次性写完header,body可以分多次写
+
+    HttpRequestRouter::GET("/",HttpReqLifetimeStage::HeaderReceived,[](HttpRequest &req,HttpResponse &resp){
         req.debug_print_header();
-        resp.set_response_line(HttpStatusCode::OK,HttpVersion::VERSION_1_1);
-        resp.headers().add("Content-Length","3");
-        resp.body()<<"111";
-    }}});
-    RxServer server(65535);
-    server.listen("0.0.0.0",8895);
+
+        resp.status_code(HttpStatusCode::OK)
+            .headers("Content-Length","23")
+            .body()<<"response data";
+
+        resp.set_content_provider([](RxChainBuffer &body,size_t max_length_expected,HttpResponse::ProvideDone done){
+             body<<"large data";
+             done();
+        });
+
+    });
+
+    RxServer server;
+    server.listen("0.0.0.0",7783);
     return 0;
 }

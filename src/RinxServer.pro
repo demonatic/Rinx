@@ -17,6 +17,7 @@ SOURCES += \
         Network/Timer.cpp \
         Network/TimerHeap.cpp \
         Protocol/HTTP/HttpParser.cpp \
+        Protocol/HTTP/HttpPipeline.cpp \
         Protocol/HTTP/HttpReqRouter.cpp \
         Protocol/HTTP/HttpRequest.cpp \
         Protocol/HTTP/HttpRequestHandler.cpp \
@@ -46,6 +47,7 @@ HEADERS += \
         Protocol/HFSMParser.hpp \
         Protocol/HTTP/HttpDefines.h \
         Protocol/HTTP/HttpParser.h \
+        Protocol/HTTP/HttpPipeline.h \
         Protocol/HTTP/HttpReqRouter.h \
         Protocol/HTTP/HttpRequest.h \
         Protocol/HTTP/HttpRequestHandler.h \

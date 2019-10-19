@@ -61,6 +61,7 @@ enum class HttpMethod:uint8_t{
     PUT,
     PATCH,
     DELETE,
+    OPTIONS,
     ANY,
     UNDEFINED,
     HttpMethodCount
@@ -77,15 +78,16 @@ enum class HttpVersion:uint8_t{
 enum HttpReqLifetimeStage:uint8_t{
     ParseError, //TODO
     HeaderReceived,
-    RecvPartofBody,
-    FinishRecvingBody,
-    ReqCompleted, //reponse is fully sent
+    RequestReceived, //the whole reqeust has received
+    RequestCompleted, //reponse is fully sent
+
     ReqLifetimeStageCount
 };
 
 class HttpHeaderFields{
 public:
     using HeaderMap=std::unordered_multimap<std::string, std::string>;
+    HttpHeaderFields()=default;
 
     void add(std::string field_name,std::string field_val){
         _headers.emplace(std::move(field_name),std::move(field_val));

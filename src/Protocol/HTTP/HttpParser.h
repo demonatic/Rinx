@@ -17,7 +17,7 @@ public:
 
     virtual ~StateRequestLine() override;
 
-    virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override;
+    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
         _sub_state=S_EXPECT_METHOD;
@@ -49,7 +49,7 @@ public:
     }
     virtual ~StateHeader() override;
 
-    virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override;
+    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
         _sub_state=S_EXPECT_FIELD_KEY;
@@ -77,26 +77,22 @@ class StateContentLength:public SuperState{
 public:
     StateContentLength(uint8_t state_id):SuperState(state_id){}
 
-    virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override;
+    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
-        _sub_state=S_EXPECT_METHOD;
-    }
-    virtual void on_exit() override{
-
+        std::cout<<"@content length on entry"<<std::endl;
+        this->_length_got=0;
+        this->_length_expect=std::any_cast<int>(context);
     }
 
 private:
-
-    enum SubStates{
-        S_EXPECT_METHOD,
-        S_EXPECT_URI,
-        S_EXPECT_VERSION,
-        S_EXPECT_CRLF
-    };
+    size_t _length_got;
+    size_t _length_expect;
 };
 
-using HttpParser=HFSMParser<StateRequestLine,StateHeader>;
+
+
+using HttpParser=HFSMParser<StateRequestLine,StateHeader,StateContentLength>;
 #define GET_ID(StateType)  HttpParser::get_state_id<StateType>()
 
 #endif // HTTPPARSER_H

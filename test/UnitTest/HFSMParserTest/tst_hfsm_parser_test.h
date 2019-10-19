@@ -29,13 +29,12 @@ class State0:public SuperState{
 public:
     State0(uint8_t state_id):SuperState(state_id){}
 
-    virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override{
+    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request) override{
         ConsumeRes ret;
-        iterable([&](byte_t const& byte)->bool{
+        iterable([&](const byte_t byte,bool &)->bool{
             read_in.push_back(byte);
             ret.event=event_0;
             ret.next_super_state.emplace(std::pair{1,666});
-            return false;
         });
         return ret;
     }
@@ -48,13 +47,12 @@ class State1:public SuperState{
 public:
     State1(uint8_t state_id):SuperState(state_id){}
 
-    virtual ConsumeRes consume(iterable_bytes iterable,std::any &request) override{
+    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request) override{
         ConsumeRes ret;
-        iterable([&](byte_t const& byte)->bool{
+        iterable([&](const byte_t byte,bool &)->bool{
             read_in.push_back(byte);
             ret.event=event_1;
             ret.next_super_state.emplace(std::pair{0,"hello world"});
-            return false;
         });
         return ret;
     }
@@ -74,12 +72,11 @@ TEST(hfsm_parser_test, dataset)
 
     TestParser parser;
     TRequest request;
-    std::any any=request;
-    parser.register_event(event_0,[&](std::any &req){request.cb_1(std::any_cast<TRequest&>(req));});
-    parser.register_event(event_1,[&](std::any &req){request.cb_2(std::any_cast<TRequest&>(req));});
+    parser.register_event(event_0,[&](void *req){request.cb_1(*static_cast<TRequest*>(req));});
+    parser.register_event(event_1,[&](void *req){request.cb_2(*static_cast<TRequest*>(req));});
     std::vector<uint8_t> buf{0,1,2,3,4,5,6};
 
-    parser.parse(buf.begin(),buf.end(),any);
+    parser.parse(buf.begin(),buf.end(),&request);
     EXPECT_EQ(read_in,buf);
 
     EXPECT_EQ(1, 1);
