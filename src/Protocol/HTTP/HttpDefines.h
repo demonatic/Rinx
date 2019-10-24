@@ -76,7 +76,7 @@ enum class HttpVersion:uint8_t{
 
 ///Http request lifetime stage
 enum HttpReqLifetimeStage:uint8_t{
-    ParseError, //TODO
+    WaitingForHeader,
     HeaderReceived,
     RequestReceived, //the whole reqeust has received
     RequestCompleted, //reponse is fully sent

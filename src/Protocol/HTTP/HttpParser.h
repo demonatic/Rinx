@@ -7,17 +7,19 @@
 #include "../HFSMParser.hpp"
 #include <iostream>
 
+namespace HttpParse{
+enum ParseEvent{
+    ParseError, //TODO
+    HeaderReceived,
+    OnPartofBody,
+    RequestReceived, //the whole reqeust has received
+};
+
 class StateRequestLine:public SuperState{
 public:
-    StateRequestLine(uint8_t state_id):SuperState(state_id){
-        _stored_method.reserve(10);
-        _stored_uri.reserve(100);
-        _stored_version.reserve(12);
-    }
+    StateRequestLine(uint8_t state_id):SuperState(state_id){}
 
-    virtual ~StateRequestLine() override;
-
-    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request) override;
+    virtual void consume(size_t length,iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
         _sub_state=S_EXPECT_METHOD;
@@ -43,13 +45,9 @@ private:
 
 class StateHeader:public SuperState{
 public:
-    StateHeader(uint8_t state_id):SuperState(state_id){
-        _header_field_key.reserve(100);
-        _header_field_val.reserve(100);
-    }
-    virtual ~StateHeader() override;
+    StateHeader(uint8_t state_id):SuperState(state_id){}
 
-    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request) override;
+    virtual void consume(size_t length,iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
         _sub_state=S_EXPECT_FIELD_KEY;
@@ -77,10 +75,9 @@ class StateContentLength:public SuperState{
 public:
     StateContentLength(uint8_t state_id):SuperState(state_id){}
 
-    virtual ConsumeRes consume(size_t length,iterable_bytes iterable,void *request) override;
+    virtual void consume(size_t length,iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
-        std::cout<<"@content length on entry"<<std::endl;
         this->_length_got=0;
         this->_length_expect=std::any_cast<int>(context);
     }
@@ -91,8 +88,36 @@ private:
 };
 
 
+class StateChunk:public SuperState{
+public:
+    StateChunk(uint8_t state_id):SuperState(state_id){}
+    virtual void consume(size_t length,iterable_bytes iterable,void *request) override;
+    
+    virtual void on_entry(const std::any &context) override{
+        _chunk_len_expect=0;
+        _chunk_len_got=0;
+        _chunk_len_hex.clear();
+        _sub_state=S_EXPECT_LENGTH;
+    }
+private:
+    std::string _chunk_len_hex;
+    size_t _chunk_len_expect;
+    size_t _chunk_len_got;
 
-using HttpParser=HFSMParser<StateRequestLine,StateHeader,StateContentLength>;
+    enum SubStates {
+        S_EXPECT_LENGTH,
+        S_GET_INITIAL_CR,
+        S_EXPECT_CHUNK_DATA,
+        S_EXPECT_CHUNK_CR,
+        S_EXPECT_CHUNK_LF,
+        //finish the chunk recv
+        S_FINISH_WAIT_CR,
+        S_FINISH_WAIT_LF,
+    };
+};
+
+using HttpParser=HFSMParser<StateRequestLine,StateHeader,StateContentLength,StateChunk>;
 #define GET_ID(StateType)  HttpParser::get_state_id<StateType>()
 
+} //namespace HttpParser
 #endif // HTTPPARSER_H

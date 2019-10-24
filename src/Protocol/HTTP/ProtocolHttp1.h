@@ -6,6 +6,8 @@
 #include "HttpParser.h"
 #include "HttpPipeline.h"
 
+using HttpParse::HttpParser;
+
 class RxProtoHttp1Processor:public RxProtoProcessor
 {
 public:

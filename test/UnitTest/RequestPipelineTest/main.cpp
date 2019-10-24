@@ -1,4 +1,4 @@
-#include "pipeline_test.h"
+#include "tst_request_pipeline.h"
 
 #include <gtest/gtest.h>
 

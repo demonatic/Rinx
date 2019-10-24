@@ -55,7 +55,7 @@ private:
     HttpVersion _version;
     HttpHeaderFields _headers;
 
-    RxChainBuffer _body; //TODO parser set body
+    RxChainBuffer _body;
 
     RxConnection *_conn_belongs;
 

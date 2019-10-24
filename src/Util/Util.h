@@ -95,6 +95,16 @@ constexpr auto to_underlying_type(E e) noexcept
     return static_cast<std::underlying_type_t<E>>(e);
 }
 
+inline bool hex_str_to_size_t(const std::string &hex_string, size_t &hex)
+{
+    try {
+        hex=std::stoull(hex_string,nullptr,16);
+    } catch ([[maybe_unused]] std::invalid_argument &exception) {
+        return false;
+    }
+    return true;
+}
+
 template<typename T>
 struct TypeErasedIterator:std::iterator<
         std::input_iterator_tag,T,

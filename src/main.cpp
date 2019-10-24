@@ -24,8 +24,11 @@ int main(){
         });
 
     });
+    HttpRequestRouter::GET("/",HttpReqLifetimeStage::RequestCompleted,[](HttpRequest &req,HttpResponse &resp){
+        std::cout<<"@handler /: request compleleted"<<std::endl;
+    });
 
     RxServer server;
-    server.listen("0.0.0.0",7783);
+    server.listen("0.0.0.0",7788);
     return 0;
 }

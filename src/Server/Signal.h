@@ -2,11 +2,11 @@
 #define SIGNAL_H
 
 #include <sys/signal.h>
+#include <functional>
 #include "../RinxDefines.h"
 
-typedef void (*RxSignalHandler)(int);
-const RxSignalHandler RxSigHandlerDefault=SIG_DFL;
-const RxSignalHandler RxSigHandlerIgnore=SIG_IGN;
+using RxSignalHandler=std::function<void(int)>;
+const RxSignalHandler RxSigHandlerIgnore=nullptr;
 
 struct RxSignal
 {
@@ -18,7 +18,7 @@ struct RxSignal
 class RxSignalManager{
 public:
     RxSignalManager()=delete;
-    static void add_signal(int _signo,RxSignalHandler handler);
+    static void on_signal(int _signo,RxSignalHandler handler);
 
     /// @brief block all signals of the caller thread
     static bool disable_current_thread_signal();

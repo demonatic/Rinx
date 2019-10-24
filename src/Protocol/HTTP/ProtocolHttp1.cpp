@@ -16,11 +16,12 @@ RxProtoHttp1Processor::~RxProtoHttp1Processor()
 void RxProtoHttp1Processor::init(RxConnection &conn)
 {
     //TODO　处理Http parser关于HttpReqLifetimeStage
+    using InputDataRange=HttpParser::InputDataRange<RxChainBuffer::read_iterator>;
+
     conn.data.emplace<HttpRequestPipeline>(&conn);
 
-    _request_parser.register_event(HttpReqLifetimeStage::HeaderReceived,[](void *request,RxChainBuffer::read_iterator it,size_t){
+    _request_parser.on_event(HttpParse::HeaderReceived,[](InputDataRange origin_data,HttpRequest *http_request){
         std::cout<<"HeaderReceived"<<std::endl;
-        HttpRequest *http_request=static_cast<HttpRequest*>(request);
         http_request->stage()=HttpReqLifetimeStage::HeaderReceived;
         HttpReqHandler req_handler=HttpRequestRouter::get_route_handler(*http_request,http_request->stage());
 
@@ -29,12 +30,15 @@ void RxProtoHttp1Processor::init(RxConnection &conn)
         }
     });
 
-    //TODO let parser emit it
-    _request_parser.register_event(HttpReqLifetimeStage::RequestReceived,[](void *request,RxChainBuffer::read_iterator it,size_t len){
+    _request_parser.on_event(HttpParse::OnPartofBody,[](InputDataRange origin_data,HttpRequest *http_request){
+         size_t body_length=origin_data.second-origin_data.first;
+         http_request->body()=http_request->get_connection()->get_input_buf().slice(origin_data.first,body_length);
+    });
+
+    _request_parser.on_event(HttpParse::RequestReceived,[](InputDataRange origin_data,HttpRequest *http_request){
         std::cout<<"RequestReceived"<<std::endl;
-        HttpRequest *http_request=static_cast<HttpRequest*>(request);
-        http_request->body()=http_request->get_connection()->get_input_buf().slice(it,len);
         http_request->stage()=HttpReqLifetimeStage::RequestReceived;
+
         HttpReqHandler req_handler=HttpRequestRouter::get_route_handler(*http_request,http_request->stage());
 
         std::any_cast<HttpRequestPipeline&>(http_request->get_connection()->data).queue_req_handler([req_handler](HttpRequest &req,HttpResponse &resp){
@@ -42,17 +46,22 @@ void RxProtoHttp1Processor::init(RxConnection &conn)
                 req_handler(req,resp);
             }
             if(!resp.has_defer_content_provider()){
+                std::cout<<"@on_event RequestCompleted"<<std::endl;
                 req.stage()=HttpReqLifetimeStage::RequestCompleted;
             }
         });
-
     });
 
+
     //TODO 不能马上close连接　要等前面的处理完 　close连接和异步task有没有冲突？
-    _request_parser.register_event(HttpReqLifetimeStage::ParseError,[](void *request,RxChainBuffer::read_iterator it,size_t){
-        HttpRequest *http_request=static_cast<HttpRequest*>(request);
-        LOG_INFO<<"parse request error from fd "<<http_request->get_connection()->get_rx_fd().raw_fd;
-        http_request->get_connection()->close();
+    _request_parser.on_event(HttpParse::ParseError,[](HttpRequest *http_request,InputDataRange origin_data){
+
+        std::any_cast<HttpRequestPipeline&>(http_request->get_connection()->data).queue_req_handler([](HttpRequest &req,HttpResponse &resp){
+            RxConnection *conn=req.get_connection();
+            LOG_INFO<<"parse request error from fd "<<conn->get_rx_fd().raw_fd<<" closing connection..";
+            conn->close();
+        });
+
     });
 }
 
@@ -65,7 +74,7 @@ ProcessStatus RxProtoHttp1Processor::process_read_data(RxConnection &conn,RxChai
     HttpRequestPipeline &pipeline=std::any_cast<HttpRequestPipeline&>(conn.data);
 
     //input_buf.readable_end()-input_buf.readable_begin()
-    long n_left=std::distance(input_buf.readable_begin(),input_buf.readable_end());
+    long n_left=input_buf.readable_end()-input_buf.readable_begin();
     std::cout<<"@process read data: n_left="<<n_left<<std::endl;
     do{
         HttpParser::ParseRes parse_res=_request_parser.parse(input_buf.readable_begin(),input_buf.readable_end(),&pipeline.back().request);

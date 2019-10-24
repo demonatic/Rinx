@@ -6,13 +6,13 @@ RxSignal RxSignalManager::_signals[RX_SIGNO_MAX];
 volatile sig_atomic_t RxSignalManager::_signo=0;
 
 
-void RxSignalManager::add_signal(int signo, RxSignalHandler handler)
+void RxSignalManager::on_signal(int signo, RxSignalHandler handler)
 {
     _signals[signo].signal_no=signo;
     _signals[signo].handler=handler;
 
     struct sigaction act,old_act;
-    act.sa_handler=(handler==RxSigHandlerIgnore||handler==RxSigHandlerDefault)?handler:&async_sig_handler;
+    act.sa_handler=(handler==nullptr)?SIG_IGN:&async_sig_handler;
     sigemptyset(&act.sa_mask);
     act.sa_flags=0;
     if(sigaction(signo,&act,&old_act)>=0){

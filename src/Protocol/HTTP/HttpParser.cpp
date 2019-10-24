@@ -1,14 +1,10 @@
 #include "HttpParser.h"
 
-StateRequestLine::~StateRequestLine()
-{
+namespace HttpParse{
 
-}
-
-ConsumeRes StateRequestLine::consume(size_t length,iterable_bytes iterable, void *request)
+void StateRequestLine::consume(size_t length,iterable_bytes iterable, void *request)
 {
-    ConsumeRes consume_res;
-    iterable([&](const char c,bool &stop_iteration)->void{ //use macro
+    iterable([=](const char c,ConsumeCtx &ctx)->void{ //use macro
         switch(this->_sub_state) {
             case S_EXPECT_METHOD:{
                 if(c==' '){
@@ -39,41 +35,27 @@ ConsumeRes StateRequestLine::consume(size_t length,iterable_bytes iterable, void
 
             case S_EXPECT_CRLF:{
                 if(likely(c=='\n')){
-                    HttpRequest *req=static_cast<HttpRequest*>(request);
+                    HttpRequest *http_request=static_cast<HttpRequest*>(request);
                     Util::to_upper(_stored_method);
-                    req->method()=to_http_method(_stored_method);
+                    http_request->method()=to_http_method(_stored_method);
                     Util::to_upper(_stored_version);
-                    req->version()=to_http_version(_stored_version);
-                    req->uri()=std::move(_stored_uri);
+                    http_request->version()=to_http_version(_stored_version);
+                    http_request->uri()=std::move(_stored_uri);
 
-                    consume_res.next_super_state.emplace(std::pair{GET_ID(StateHeader),nullptr});
+                    ctx.transit_super_state(GET_ID(StateHeader));
                 }
                 else{
-//                    consume_res.transit_super_state(HttpReqLifetimeStage::ParseError);
-                    consume_res.event.emplace(HttpReqLifetimeStage::ParseError);
+                    ctx.add_event(ParseEvent::ParseError);
                 }
-
-                stop_iteration=true; //use macro
-                return;
             }
         }
     });
-    return consume_res;
 }
 
-
-
-StateHeader::~StateHeader()
+void StateHeader::consume(size_t length,iterable_bytes iterable, void *request)
 {
-
-}
-
-ConsumeRes StateHeader::consume(size_t length,iterable_bytes iterable, void *request)
-{
-    ConsumeRes consume_res;
-    HttpRequest *req=static_cast<HttpRequest*>(request);
-
-    iterable([&](const char c,bool &stop_iteration)->void{
+    HttpRequest *http_request=static_cast<HttpRequest*>(request);
+    iterable([=](const char c,ConsumeCtx &ctx)->void{
         switch(this->_sub_state) {
             case S_EXPECT_FIELD_KEY:{
                 if(c==':'){
@@ -96,7 +78,7 @@ ConsumeRes StateHeader::consume(size_t length,iterable_bytes iterable, void *req
                     _sub_state=S_EXPECT_FIELD_END;
                     Util::to_lower(_header_field_key);
                     Util::to_lower(_header_field_val);
-                    req->headers().add(std::move(_header_field_key),std::move(_header_field_val));
+                    http_request->headers().add(std::move(_header_field_key),std::move(_header_field_val));
                 }
                 else{
                     _header_field_val.push_back(c);
@@ -108,9 +90,7 @@ ConsumeRes StateHeader::consume(size_t length,iterable_bytes iterable, void *req
                     _sub_state=S_FIELD_ENDED;
                 }
                 else{
-                    consume_res.event=HttpReqLifetimeStage::ParseError;
-                    stop_iteration=true;
-                    return;
+                    goto parse_error;
                 }
             }break;
 
@@ -126,43 +106,133 @@ ConsumeRes StateHeader::consume(size_t length,iterable_bytes iterable, void *req
 
             case S_EXPECT_HEADER_END:{
                 if(likely(c=='\n')){
-                    consume_res.event.emplace(HttpReqLifetimeStage::HeaderReceived);
-                    HttpRequest *req=static_cast<HttpRequest*>(request);
-                    if(auto content_len=req->headers().field_val("content-length")){
-                        consume_res.next_super_state.emplace(std::pair{GET_ID(StateContentLength),atoi(content_len.value().c_str())});
-                    }
-                    else if(auto header_key=req->headers().field_val("transfer-encoding")){
+                    ctx.add_event(ParseEvent::HeaderReceived);
 
+                    if(auto content_len=http_request->headers().field_val("content-length")){
+                        ctx.transit_super_state(GET_ID(StateContentLength),atoi(content_len.value().c_str())); //TODO try catch
+                    }
+                    else if(auto header_key=http_request->headers().field_val("transfer-encoding")){
+                        ctx.transit_super_state(GET_ID(StateChunk));
                     }
                     else{
-                        consume_res.next_super_state.emplace(std::pair{GET_ID(StateRequestLine),nullptr});
+                        ctx.transit_super_state(GET_ID(StateRequestLine));
+                        ctx.add_event(ParseEvent::RequestReceived);
                     }
-                    stop_iteration=true;
-                    return;
                 }
                 else{
-                    consume_res.event=HttpReqLifetimeStage::ParseError;
-                    stop_iteration=true;
-                    return;
+                    goto parse_error;
                 }
             }
+            break;
+parse_error:
+            ctx.add_event(ParseEvent::ParseError);
         }
+
     });
-    return consume_res;
 }
 
-ConsumeRes StateContentLength::consume(size_t length,iterable_bytes iterable, void *request)
+void StateContentLength::consume(size_t length,iterable_bytes iterable, void *request)
 {
-    ConsumeRes consume_res;
+    iterable([=](const char,ConsumeCtx &ctx)->void{
+        size_t length_increasement=length+_length_got>=_length_expect?_length_expect-_length_got:length;
+        _length_got+=length_increasement;
+        ctx.iteration_step_over(length_increasement);
+        ctx.add_event(ParseEvent::OnPartofBody);
 
-    size_t length_increasement=length+_length_got>=_length_expect?_length_expect-_length_got:length;
-    _length_got+=length_increasement;
-    std::cout<<"@length increase "<<length_increasement<<std::endl;
-    consume_res.n_consumed_explicit.emplace(length_increasement);
+        if(_length_got==_length_expect){
+            ctx.transit_super_state(GET_ID(StateRequestLine));
+            ctx.add_event(ParseEvent::RequestReceived);
+        }
+    });
+}
 
-    if(_length_got==_length_expect){
-        consume_res.event.emplace(HttpReqLifetimeStage::RequestReceived);
-        consume_res.next_super_state.emplace(std::pair{GET_ID(StateRequestLine),nullptr});
-    }
-    return consume_res;
+void StateChunk::consume(size_t length, iterable_bytes iterable, void *request)
+{
+    iterable([=](const char c,ConsumeCtx &ctx)->void{
+        switch(this->_sub_state){
+            case S_EXPECT_LENGTH:{
+                if(c!='\r'){
+                    _chunk_len_hex.push_back(c);
+                }
+                else{
+                    _sub_state=S_GET_INITIAL_CR;
+                }
+            }
+            break;
+
+            case S_GET_INITIAL_CR:{
+                if(unlikely(c!='\n'||!Util::hex_str_to_size_t(_chunk_len_hex,this->_chunk_len_expect))){
+                    ctx.add_event(ParseEvent::ParseError);
+                }
+                else{
+                    if(_chunk_len_expect!=0){
+                        _sub_state=S_EXPECT_CHUNK_DATA;
+                    }
+                    else _sub_state=S_FINISH_WAIT_CR;
+                }
+            }
+            break;
+
+            case S_EXPECT_CHUNK_DATA:{
+                size_t length_increasement=_chunk_len_got+length>=_chunk_len_expect?_chunk_len_expect-_chunk_len_got:length;
+                _chunk_len_got+=length_increasement;
+                ctx.iteration_step_over(length_increasement);
+                ctx.add_event(HttpParse::OnPartofBody);
+
+                if(_chunk_len_got==_chunk_len_expect){
+                    _sub_state=S_EXPECT_CHUNK_CR;
+                }
+            }
+            break;
+
+            case S_EXPECT_CHUNK_CR:{
+                if(likely(c=='\r')){
+                     _sub_state=S_EXPECT_CHUNK_LF;
+                }
+                else{
+                    goto parse_error;
+                }
+            }
+            break;
+
+            case S_EXPECT_CHUNK_LF:{
+                ctx.transit_super_state(GET_ID(StateChunk));
+                if(likely(c=='\n')){
+                    //start recv next chunk
+                    ctx.transit_super_state(GET_ID(StateChunk));
+                }
+                else{
+                    goto parse_error;
+                }
+            }
+            break;
+
+            case S_FINISH_WAIT_CR:{
+                if(likely(c=='\r')){
+                    _sub_state=S_FINISH_WAIT_LF;
+                }
+                else{
+                    goto parse_error;
+                }
+            }
+            break;
+
+            case S_FINISH_WAIT_LF:{
+                if(likely(c=='\n')){
+                    //the whole chunk body has received
+                    ctx.add_event(ParseEvent::RequestReceived);
+                    ctx.transit_super_state(GET_ID(StateRequestLine));
+                }
+                else{
+                    goto parse_error;
+                }
+            }
+            break;
+
+parse_error:
+            ctx.add_event(ParseEvent::ParseError);
+        }
+    });
+}
+
 }

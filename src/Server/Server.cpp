@@ -69,7 +69,6 @@ bool RxServer::listen(const std::string &address, uint16_t port)
 
 void RxServer::shutdown()
 {
-    std::cout<<"@shutdown"<<std::endl;
      _sub_eventloop_threads.shutdown();
     _main_eventloop.stop();
 }
@@ -79,7 +78,7 @@ RxConnection *RxServer::incoming_connection(const RxFD rx_fd,RxEventLoop *eventl
     size_t conn_index=static_cast<size_t>(rx_fd.raw_fd);
     RxConnection *conn=&_connection_list[conn_index];
     conn->init(rx_fd,eventloop);
-//    std::cout<<"@incoming conn fd="<<rx_fd.raw_fd<<std::endl;
+    std::cout<<"@incoming conn fd="<<rx_fd.raw_fd<<std::endl;
     return conn;
 }
 
@@ -149,28 +148,15 @@ void RxServer::disable_accept()
 
 void RxServer::signal_setup()
 {
-    RxSignalManager::add_signal(SIGPIPE,&RxServer::signal_handler);
-    RxSignalManager::add_signal(SIGINT,&RxServer::signal_handler);
+    RxSignalManager::on_signal(SIGPIPE,RxSigHandlerIgnore);
+    RxSignalManager::on_signal(SIGTERM,[](int){
+
+    });
+    RxSignalManager::on_signal(SIGINT,[this](int signo){
+        std::cout<<"server recv sig int (signal num="<<signo<<"), shutdown server..."<<std::endl;
+        this->shutdown();
+    });
 }
-
-void RxServer::signal_handler(const int signo)
-{
-    switch(signo) {
-        case SIGINT:
-            std::cout<<"server recv sig int, shutdown server..."<<std::endl;
-        break;
-        case SIGTERM:
-
-        break;
-
-        case SIGPIPE:
-            std::cout<<"server recv SIGPIPE"<<std::endl;
-        break;
-        default:
-            std::cout<<"server recv other sig"<<std::endl;
-    }
-}
-
 
 RxHandlerRc RxServer::on_stream_readable(const RxEvent &event)
 {
