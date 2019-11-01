@@ -28,7 +28,7 @@ ssize_t RxConnection::recv(RxReadRc &read_res)
         LOG_WARN<<"try to read to an empty input buffer";
         return -1;
     }
-    return _input_buf->read_fd(_rx_fd.raw_fd,read_res);
+    return _input_buf->read_from_fd(_rx_fd.raw_fd,read_res);
 }
 
 ssize_t RxConnection::send(RxWriteRc &write_res)
@@ -38,7 +38,7 @@ ssize_t RxConnection::send(RxWriteRc &write_res)
         LOG_WARN<<"try to read from an empty output buffer";
         return -1;
     }
-    return _output_buf->write_fd(_rx_fd.raw_fd,write_res);
+    return _output_buf->write_to_fd(_rx_fd.raw_fd,write_res);
 }
 
 void RxConnection::close()
@@ -50,7 +50,7 @@ void RxConnection::close()
         _proto_processor.reset();
         _eventloop_belongs=nullptr;
         //must put close at the end, or it would cause race condition
-        RxSock::close(_rx_fd.raw_fd);
+        RxFDHelper::close(_rx_fd.raw_fd);
     //    std::cout<<"@close conn="<<this->get_rx_fd().raw_fd<<std::endl;
         _rx_fd=InvalidRxFD;
         data.reset();

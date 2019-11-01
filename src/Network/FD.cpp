@@ -1,34 +1,37 @@
-#include "Socket.h"
+#include "FD.h"
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
 #include <sys/uio.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <assert.h>
 #include "../Util/Util.h"
 
-int RxSock::create_stream() noexcept
+namespace RxFDHelper {
+
+int Stream::create_stream() noexcept
 {
     return ::socket(AF_INET,SOCK_STREAM,0);
 }
 
-bool RxSock::shutdown_both(int fd) noexcept
+bool Stream::shutdown_both(int fd) noexcept
 {
     return is_open(fd)&&::shutdown(fd,SHUT_RDWR)==0;
 }
 
-bool RxSock::close(int fd) noexcept
+bool close(int fd) noexcept
 {
     return is_open(fd)&&::close(fd)==0;
 }
 
-bool RxSock::is_open(int fd) noexcept
+bool is_open(int fd) noexcept
 {
     return fd!=-1;
 }
 
-bool RxSock::bind(int fd,const char *host,const int port) noexcept
+bool Stream::bind(int fd,const char *host,const int port) noexcept
 {
     struct sockaddr_in sock_addr{
         AF_INET,
@@ -44,12 +47,12 @@ bool RxSock::bind(int fd,const char *host,const int port) noexcept
     return 0==::bind(fd,reinterpret_cast<const ::sockaddr*>(&sock_addr),sizeof(::sockaddr_in));
 }
 
-bool RxSock::listen(int fd) noexcept
+bool Stream::listen(int fd) noexcept
 {
     return 0==::listen(fd,SOMAXCONN);
 }
 
-int RxSock::accept(int fd,RxAcceptRc &accept_res) noexcept
+int Stream::accept(int fd,RxAcceptRc &accept_res) noexcept
 {
     int client_fd=-1;
     do{
@@ -75,18 +78,18 @@ int RxSock::accept(int fd,RxAcceptRc &accept_res) noexcept
     return client_fd;
 }
 
-bool RxSock::set_tcp_nodelay(int fd,const bool nodelay) noexcept
+bool Stream::set_tcp_nodelay(int fd,const bool nodelay) noexcept
 {
     int flags=nodelay?1:0;
     return 0==::setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&flags,sizeof(flags));
 }
 
-bool RxSock::set_nonblock(int fd,const bool nonblock) noexcept
+bool Stream::set_nonblock(int fd,const bool nonblock) noexcept
 {
     return -1!=::fcntl(fd,F_SETFL,nonblock?O_NONBLOCK:O_SYNC);
 }
 
-ssize_t RxSock::read(int fd, void *buffer, size_t n,RxReadRc &read_res)
+ssize_t Stream::read(int fd, void *buffer, size_t n,RxReadRc &read_res)
 {
     ssize_t total_bytes=0;
     read_res=RxReadRc::OK;
@@ -119,7 +122,7 @@ ssize_t RxSock::read(int fd, void *buffer, size_t n,RxReadRc &read_res)
     return total_bytes;
 }
 
-ssize_t RxSock::readv(int fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
+ssize_t Stream::readv(int fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
 {
     ssize_t read_bytes;
     read_res=RxReadRc::OK;
@@ -138,7 +141,7 @@ ssize_t RxSock::readv(int fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
     return read_bytes;
 }
 
-ssize_t RxSock::write(int fd, void *buffer, size_t n, RxWriteRc &write_res)
+ssize_t Stream::write(int fd, void *buffer, size_t n, RxWriteRc &write_res)
 {
     ssize_t bytes_written=0;
     write_res=RxWriteRc::OK;
@@ -154,7 +157,7 @@ ssize_t RxSock::write(int fd, void *buffer, size_t n, RxWriteRc &write_res)
     return bytes_written;
 }
 
-ssize_t RxSock::writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res)
+ssize_t Stream::writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res)
 {
     ssize_t write_bytes;
     write_res=RxWriteRc::OK;
@@ -169,18 +172,38 @@ ssize_t RxSock::writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write
     return write_bytes;
 }
 
-int RxSock::create_event_fd() noexcept
+int Event::create_event_fd() noexcept
 {
     return ::eventfd(0,EFD_NONBLOCK);
 }
 
-bool RxSock::write_event_fd(int fd)
+bool Event::write_event_fd(int fd)
 {
     return ::eventfd_write(fd,1)!=-1;
 }
 
-bool RxSock::read_event_fd(int fd){
+bool Event::read_event_fd(int fd){
     uint64_t data;
     int ret=::eventfd_read(fd,&data);
     return ret!=-1&&data!=0;
+}
+
+bool RegFile::open(const std::string &path,RxFD &rx_fd,bool create)
+{
+    int fd=::open(path.c_str(),O_RDWR|(create?O_CREAT:0));
+    if(fd==-1){
+       return false;
+    }
+    rx_fd.raw_fd=fd;
+    rx_fd.fd_type=RxFD_REGULAR_FILE;
+    return true;
+}
+
+long RegFile::get_file_length(RxFD fd)
+{
+    struct ::stat st;
+    int rc=::fstat(fd.raw_fd,&st);
+    return rc==-1?rc:st.st_size;
+}
+
 }

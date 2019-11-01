@@ -4,7 +4,31 @@
 #include <sys/epoll.h>
 #include <sys/time.h>
 #include <vector>
-#include "Event.h"
+#include <functional>
+#include "FD.h"
+
+enum RxEventType:uint32_t{
+    Rx_EVENT_READ=0,
+    Rx_EVENT_WRITE,
+    Rx_EVENT_ERROR,
+
+    Rx_EVENT_TYPE_MAX
+};
+
+class RxEventLoop;
+struct RxEvent{
+    RxFD Fd;
+    RxEventLoop *eventloop;
+};
+
+enum RxHandlerRc{
+    Rx_HANDLER_OK=0,
+    Rx_HANDLER_EXIT_ALL,
+    RX_HANDLER_ERR
+};
+using EventHandler=std::function<RxHandlerRc(const RxEvent &event_data)>;
+
+
 
 
 #define Epoll_Timeout 0

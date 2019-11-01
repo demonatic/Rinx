@@ -13,7 +13,7 @@ SOURCES += \
         Network/Connection.cpp \
         Network/EventLoop.cpp \
         Network/EventPoller.cpp \
-        Network/Socket.cpp \
+        Network/FD.cpp \
         Network/Timer.cpp \
         Network/TimerHeap.cpp \
         Protocol/HTTP/HttpParser.cpp \
@@ -38,10 +38,9 @@ HEADERS += \
         3rd/NanoLog/NanoLog.h \
         Network/Buffer.h \
         Network/Connection.h \
-        Network/Event.h \
         Network/EventLoop.h \
         Network/EventPoller.h \
-        Network/Socket.h \
+        Network/FD.h \
         Network/Timer.h \
         Network/TimerHeap.h \
         Protocol/HFSMParser.hpp \

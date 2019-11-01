@@ -15,4 +15,5 @@ HEADERS += \
 SOURCES += \
         main.cpp\
         ../../../src/Network/Buffer.cpp\
-        ../../../src/Network/Socket.cpp\
+        ../../../src/Network/FD.cpp\
+        ../../../src/3rd/NanoLog/NanoLog.cpp\

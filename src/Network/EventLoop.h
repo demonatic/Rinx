@@ -86,7 +86,7 @@ private:
 
     RxEventPoller _eventloop_epoll;
     ReactorCallback _on_timeout;
-    EventHandler _event_handlers[RxEventType::Rx_EVENT_TYPE_MAX][RxFDType::Rx_FD_TYPE_MAX];
+    EventHandler _event_handlers[RxEventType::Rx_EVENT_TYPE_MAX][RxFDType::__RxFD_TYPE_COUNT];
 
     RxFD _event_fd;
 

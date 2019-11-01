@@ -12,22 +12,22 @@ bool RxServer::listen(const std::string &address, uint16_t port)
     signal_setup();
 
     RxListenPort ls_port(port);
-    ls_port.serv_fd=RxSock::create_stream();
+    ls_port.serv_fd=RxFDHelper::Stream::create_stream();
 
-    if(!RxSock::is_open(ls_port.serv_fd)||!RxSock::set_nonblock(ls_port.serv_fd,true)){
+    if(!RxFDHelper::is_open(ls_port.serv_fd)||!RxFDHelper::Stream::set_nonblock(ls_port.serv_fd,true)){
         LOG_WARN<<"create serv sock failed";
         return false;
     }
 
-    if(!RxSock::bind(ls_port.serv_fd,address.c_str(),ls_port.port)){
+    if(!RxFDHelper::Stream::bind(ls_port.serv_fd,address.c_str(),ls_port.port)){
         LOG_WARN<<"bind address failed";
-        RxSock::close(ls_port.serv_fd);
+        RxFDHelper::close(ls_port.serv_fd);
         return false;
     }
 
-    if(!RxSock::listen(ls_port.serv_fd)){
+    if(!RxFDHelper::Stream::listen(ls_port.serv_fd)){
         LOG_WARN<<"listen ["<<address<<":"<<ls_port.port<<"] failed";
-        RxSock::close(ls_port.serv_fd);
+        RxFDHelper::close(ls_port.serv_fd);
         return false;
     }
 
@@ -36,11 +36,11 @@ bool RxServer::listen(const std::string &address, uint16_t port)
 
     if(!_main_eventloop.init()){
         LOG_WARN<<"main eventloop start failed";
-        RxSock::close(ls_port.serv_fd);
+        RxFDHelper::close(ls_port.serv_fd);
         return false;
     }
-    if(!_main_eventloop.monitor_fd_event(RxFD{Rx_FD_LISTEN,ls_port.serv_fd},{Rx_EVENT_READ,Rx_EVENT_WRITE})||
-        !_main_eventloop.set_event_handler(Rx_FD_LISTEN,Rx_EVENT_READ,std::bind(&RxServer::on_acceptable,this,std::placeholders::_1)))
+    if(!_main_eventloop.monitor_fd_event(RxFD{RxFD_LISTEN,ls_port.serv_fd},{Rx_EVENT_READ,Rx_EVENT_WRITE})||
+        !_main_eventloop.set_event_handler(RxFD_LISTEN,Rx_EVENT_READ,std::bind(&RxServer::on_acceptable,this,std::placeholders::_1)))
     {
         LOG_WARN<<"monitor serv sock failed, fd="<<ls_port.serv_fd;
         return false;
@@ -49,8 +49,8 @@ bool RxServer::listen(const std::string &address, uint16_t port)
     LOG_INFO<<"server listen on port "<<ls_port.port;
 
     _sub_eventloop_threads.for_each([this](RxThreadID,RxEventLoop *eventloop){
-        eventloop->set_event_handler(Rx_FD_CLIENT_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
-        eventloop->set_event_handler(Rx_FD_CLIENT_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
+        eventloop->set_event_handler(RxFD_CLIENT_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
+        eventloop->set_event_handler(RxFD_CLIENT_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
     });
     _sub_eventloop_threads.start();
 
@@ -61,9 +61,8 @@ bool RxServer::listen(const std::string &address, uint16_t port)
     });
 
     RxSignalManager::enable_current_thread_signal();
-//    std::thread t([this](){sleep(30); this->shutdown();});
+
     this->_main_eventloop.start_event_loop();
-//    t.join();
     return true;
 }
 
@@ -96,7 +95,7 @@ RxHandlerRc RxServer::on_acceptable(const RxEvent &event)
 {
     for(int i=0;i<_max_once_accept_count;i++){
         RxAcceptRc accept_res;
-        int new_fd=RxSock::accept(event.Fd.raw_fd,accept_res);
+        int new_fd=RxFDHelper::Stream::accept(event.Fd.raw_fd,accept_res);
 
         switch (accept_res){
             case RxAcceptRc::ALL_ACCEPTED:
@@ -113,9 +112,9 @@ RxHandlerRc RxServer::on_acceptable(const RxEvent &event)
             default: break;
         }
 
-        RxSock::set_nonblock(new_fd,true);
+        RxFDHelper::Stream::set_nonblock(new_fd,true);
 
-        RxFD client_rx_fd{Rx_FD_CLIENT_STREAM,new_fd};
+        RxFD client_rx_fd{RxFD_CLIENT_STREAM,new_fd};
         size_t sub_eventloop_index=new_fd%_sub_eventloop_threads.get_thread_num();
         RxEventLoop *sub_eventloop=_sub_eventloop_threads.get_eventloop(sub_eventloop_index);
 

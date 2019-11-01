@@ -19,7 +19,7 @@ SOURCES += \
         ../../../src/Network/TimerHeap.cpp\
         ../../../src/Network/EventLoop.cpp\
         ../../../src/Network/EventPoller.cpp\
-        ../../../src/Network/Socket.cpp\
+        ../../../src/Network/FD.cpp\
         ../../../src/Util/Clock.cpp\
         ../../../src/Util/Mutex.cpp\
         ../../../src/3rd/NanoLog/NanoLog.cpp\

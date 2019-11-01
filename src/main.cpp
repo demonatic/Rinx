@@ -8,8 +8,8 @@ int main(){
     RxSignalManager::disable_current_thread_signal();
     nanolog::initialize(nanolog::GuaranteedLogger(),"/tmp/","rinx_log",20);
 
-    //TODO ´¦ÀíÓÃ»§ÔÚ²»Í¬stageĞ´resp×Ö¶Î»ìÂÒµÄÎÊÌâ
-    /// ÓÃ»§±ØĞëÔÚÄ³¸östageÒ»´ÎĞÔĞ´Íêheader,body¿ÉÒÔ·Ö¶à´ÎĞ´
+    //TODO å¤„ç†ç”¨æˆ·åœ¨ä¸åŒstageå†™respå­—æ®µæ··ä¹±çš„é—®é¢˜
+    /// ç”¨æˆ·å¿…é¡»åœ¨æŸä¸ªstageä¸€æ¬¡æ€§å†™å®Œheader,bodyå¯ä»¥åˆ†å¤šæ¬¡å†™
 
     HttpRequestRouter::GET("/",HttpReqLifetimeStage::HeaderReceived,[](HttpRequest &req,HttpResponse &resp){
         req.debug_print_header();

@@ -16,5 +16,6 @@ SOURCES += \
         ../../../src/Protocol/HTTP/HttpParser.cpp\
         ../../../src/Protocol/HTTP/HttpRequest.cpp\
         ../../../src/Network/Buffer.cpp\
-        ../../../src/Network/Socket.cpp\
+        ../../../src/Network/FD.cpp\
         ../../../src/Util/Util.cpp\
+        ../../../src/3rd/NanoLog/NanoLog.cpp\

@@ -1,31 +1,76 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
+#include <sys/mman.h>
 #include <array>
 #include <memory>
 #include <list>
 #include <cstring>
-#include "Socket.h"
+#include "FD.h"
+#include "../Util/ObjectAllocator.hpp"
 #include "../RinxDefines.h"
-#include <iostream>
+#include "../3rd/NanoLog/NanoLog.h"
 
-template<size_t N>
-struct BufferRaw{
+class BufferBase{
+public:
     using value_type=uint8_t;
-    using Ptr=std::shared_ptr<BufferRaw>;
+    using Ptr=std::shared_ptr<BufferBase>;
 
-    static Ptr create_one();
-    std::array<uint8_t,N> raw_data;
+    template<typename T,typename ...Args>
+    static Ptr create(Args... args){
+         return rx_pool_make_shared<T>(std::forward<Args>(args)...);
+    }
+
+    value_type* data() const{
+        return this->_p_data;
+    }
+
+    size_t length() const{
+        return this->_len;
+    }
+
+protected:
+    BufferBase():_p_data(nullptr),_len(0){}
+
+    value_type *_p_data;
+    size_t _len;
 };
 
-template<size_t N>
-class BufferRef
+/// @class provide a buffer of fixed size
+template<size_t N=RX_BUFFER_CHUNK_SIZE>
+class BufferFixed:public BufferBase{
+public:
+    BufferFixed(){
+        _len=N;
+        _p_data=_data;
+    }
+private:
+    uint8_t _data[N];
+};
+
+/// @class provide a mmap of a regular file
+class BufferFile:public BufferBase{
+public:
+    BufferFile(int fd,size_t length){
+        _p_data=static_cast<value_type*>(::mmap(nullptr,length,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0));
+        if(_p_data==MAP_FAILED){
+            LOG_WARN<<"create mmap for fd "<<fd<<" failed with len="<<length<<", Reason:"<<errno<<strerror(errno);
+            throw std::bad_alloc();
+        }
+        _len=length;
+    }
+    ~BufferFile(){
+        ::munmap(_p_data,_len);
+    }
+};
+
+class BufferSlice
 {
 public:
-    using value_type=typename BufferRaw<N>::value_type;
+    using value_type=typename BufferBase::value_type;
 
-    BufferRef(size_t start_pos=0,size_t end_pos=0,typename BufferRaw<N>::Ptr buf_raw=nullptr):
-        _start_pos(start_pos),_end_pos(end_pos),_buf_raw(buf_raw==nullptr?BufferRaw<N>::create_one():buf_raw)
+    BufferSlice(typename BufferBase::Ptr buf_raw,size_t start_pos=0,size_t end_pos=0):
+        _start_pos(start_pos),_end_pos(end_pos),_buf_ptr(buf_raw)
     {
 
     }
@@ -33,10 +78,11 @@ public:
     value_type* write_pos(){ return data()+_end_pos; }
 
     size_t readable_size() const{ return _end_pos-_start_pos; }
-    size_t writable_size() const{ return N-_end_pos; }
+    size_t writable_size() const{ return _buf_ptr->length()-_end_pos; }
 
-    #define check_index_valid()\
-    assert(_start_pos>=0&&_start_pos<=_end_pos&&_end_pos<=N)
+    void check_index_valid(){
+        assert(_start_pos<=_end_pos&&_end_pos<=_buf_ptr->length());
+    }
 
     void advance_read(size_t bytes){
         _start_pos+=bytes;
@@ -49,30 +95,27 @@ public:
         _end_pos+=bytes;
         check_index_valid();
     }
-    value_type *data(){ return _buf_raw->raw_data.data(); }
-    auto get_buf_raw_ptr(){ return _buf_raw; }
-    constexpr size_t get_length(){ return N; }
+    value_type *data(){ return _buf_ptr->data(); }
+    auto get_buf_raw_ptr(){ return _buf_ptr; }
 
 private:
     size_t _start_pos;
     size_t _end_pos;
-    typename BufferRaw<N>::Ptr _buf_raw;
+    typename BufferBase::Ptr _buf_ptr;
 };
 
-template<class ChunkIteratorType,class ByteType,size_t N>
+template<class ChunkIteratorType,class ByteType>
 class BufferReadableIterator;
 
 ///buffer only expand its size when try to write things in it
 class ChainBuffer{
-    static constexpr size_t buf_raw_size=RX_BUFFER_CHUNK_SIZE;
-    using buf_ref_type=BufferRef<buf_raw_size>;
 
 private:
-    std::list<buf_ref_type> _buf_ref_list;
+    std::list<BufferSlice> _buf_slice_list;
 
 public:
-    using buf_ref_iterator=decltype(_buf_ref_list)::iterator;
-    using read_iterator=BufferReadableIterator<buf_ref_iterator,buf_ref_type::value_type,buf_raw_size>;
+    using buf_slice_iterator=decltype(_buf_slice_list)::iterator;
+    using read_iterator=BufferReadableIterator<buf_slice_iterator,BufferSlice::value_type>;
     friend read_iterator;
 
     ChainBuffer()=default;
@@ -81,36 +124,44 @@ public:
     static std::unique_ptr<ChainBuffer> create_chain_buffer();
     void free();
 
-    size_t buf_ref_num() const;
-    size_t capacity() const;
+    size_t buf_slice_num() const;
     size_t readable_size();
 
-    ssize_t read_fd(int fd,RxReadRc &res);
-    /// write all data in the buffer to fd
-    ssize_t write_fd(int fd,RxWriteRc &res);
+    /// @brief read data as many as possible(no greater than 65535+n) from fd(socket,file...) to buffer
+    ssize_t read_from_fd(int fd,RxReadRc &res);
+
+    /// @brief write all data in buffer to fd(socket,file...)
+    ssize_t write_to_fd(int fd,RxWriteRc &res);
 
     read_iterator readable_begin();
     read_iterator readable_end();
 
-    buf_ref_iterator bref_begin();
-    buf_ref_iterator bref_end();
+    buf_slice_iterator slice_begin();
+    buf_slice_iterator slice_end();
 
-    buf_ref_type& get_head();
-    buf_ref_type& get_tail();
+    BufferSlice& get_head();
+    BufferSlice& get_tail();
 
-    void advance_read(size_t bytes);
+    /// @brief commit that n_bytes has been consumed by the caller, and the corresponding space in buffer could be freed
+    void commit_consume(size_t n_bytes);
 
     /// @brief slice [it,it+length)
-    ChainBuffer slice(read_iterator it,size_t length);
+    ChainBuffer slice(read_iterator begin,read_iterator end);
 
-    ///** functions for write data to the buffer **///
+    //TODO
+//    void insert(read_iterator dst_begin,read_iterator src_begin,read_iterator src_end)
 
+    ///** functions for append data to the buffer **///
+    //TODO merge peices
     void append(const char *data,size_t length);
+
+    /// @brief append file of range [offset,offset+length) to buffer using mmap
+    bool append(int regular_file_fd,size_t length,size_t offset=0);
 
     /// @brief read count bytes from istream to the buffer
     long append(std::istream &istream,long length);
 
-    /// @brief append the buf_refs of parameter buf to this
+    /// @brief append the buf_slices of parameter buf to this
     void append(ChainBuffer &buf);
 
     ChainBuffer& operator<<(const std::string &arg);
@@ -119,8 +170,8 @@ public:
     typename std::enable_if_t<
         std::is_integral_v<Arg>||std::is_floating_point_v<Arg>,ChainBuffer&> operator<<(Arg arg)
     {
-        append(reinterpret_cast<char*>(&arg),sizeof(arg));
-        return *this;
+        std::string str=std::to_string(arg);
+        return *this<<str;
     }
 
     template<size_t N>
@@ -142,15 +193,15 @@ public:
     }
 
 private:
-    void push_buf_ref(buf_ref_type ref={});
-    bool pop_unused_buf_ref(bool force=false);
+    void push_buf_slice(BufferSlice slice);
+    bool pop_unused_buf_slice(bool force=false);
 
     void check_need_expand();
 };
 
 using RxChainBuffer=ChainBuffer;
 
-template<class BufRefIteratorType,class ByteType,size_t N>
+template<class BufSliceIteratorType,class ByteType>
 class BufferReadableIterator:public std::iterator<
         std::input_iterator_tag,
         ByteType,
@@ -160,8 +211,8 @@ class BufferReadableIterator:public std::iterator<
     >
 {
 public:
-    using buf_ref_type=ChainBuffer::buf_ref_type;
-    using self_type=BufferReadableIterator<BufRefIteratorType,ByteType,N>;
+    using buf_slice_type=BufferSlice;
+    using self_type=BufferReadableIterator<BufSliceIteratorType,ByteType>;
 
     using difference_type=typename BufferReadableIterator::difference_type;
     using value_type=typename BufferReadableIterator::value_type;
@@ -170,12 +221,12 @@ public:
     friend ChainBuffer;
 
 public:
-    BufferReadableIterator(ChainBuffer *chain_buf,BufRefIteratorType it_buf_ref,value_type *cur):
-        _chain_buf(chain_buf),_it_buf_ref(it_buf_ref),_p_cur(cur)
+    BufferReadableIterator(ChainBuffer *chain_buf,BufSliceIteratorType it_buf_slice,value_type *cur):
+        _chain_buf(chain_buf),_it_buf_slice(it_buf_slice),_p_cur(cur)
     {
-        if(it_buf_ref!=chain_buf->bref_end()){
-            _p_start=static_cast<buf_ref_type&>(*it_buf_ref).read_pos();
-            _p_end=static_cast<buf_ref_type&>(*it_buf_ref).write_pos();
+        if(it_buf_slice!=chain_buf->slice_end()){
+            _p_start=static_cast<buf_slice_type&>(*it_buf_slice).read_pos();
+            _p_end=static_cast<buf_slice_type&>(*it_buf_slice).write_pos();
         }
         else{
             _p_start=_p_end=_p_cur;
@@ -187,7 +238,7 @@ public:
     }
 
     bool operator==(const self_type &other) const{
-        return _it_buf_ref==other._it_buf_ref&&_p_cur==other._p_cur;
+        return _it_buf_slice==other._it_buf_slice&&_p_cur==other._p_cur;
     }
 
     bool operator!=(const self_type &other) const{
@@ -201,11 +252,11 @@ public:
 
         _p_cur++;
         if(_p_cur==_p_end){
-            ++_it_buf_ref;
+            ++_it_buf_slice;
 
-            if(_it_buf_ref!=_chain_buf->bref_end()){
-                _p_start=static_cast<buf_ref_type&>(*_it_buf_ref).read_pos();
-                _p_end=static_cast<buf_ref_type&>(*_it_buf_ref).write_pos();
+            if(_it_buf_slice!=_chain_buf->slice_end()){
+                _p_start=static_cast<buf_slice_type&>(*_it_buf_slice).read_pos();
+                _p_end=static_cast<buf_slice_type&>(*_it_buf_slice).write_pos();
                 _p_cur=_p_start;
             }
             else{
@@ -223,10 +274,10 @@ public:
 
     self_type& operator--(){
         if(_p_cur==_p_start){
-            if(_it_buf_ref!=_chain_buf->bref_begin()){
-                --_it_buf_ref;
-                _p_start=static_cast<buf_ref_type&>(*_it_buf_ref).read_pos();
-                _p_end=static_cast<buf_ref_type&>(*_it_buf_ref).write_pos();
+            if(_it_buf_slice!=_chain_buf->slice_begin()){
+                --_it_buf_slice;
+                _p_start=static_cast<buf_slice_type&>(*_it_buf_slice).read_pos();
+                _p_end=static_cast<buf_slice_type&>(*_it_buf_slice).write_pos();
                 _p_cur=_p_end-1;
             }
             else{
@@ -256,15 +307,15 @@ public:
         }
         else if(step>0){
             do{
-                difference_type buf_ref_advance_room=_p_end-_p_cur-1;
-                if(step<=buf_ref_advance_room){
+                difference_type buf_slice_advance_room=_p_end-_p_cur-1;
+                if(step<=buf_slice_advance_room){
                     _p_cur+=step;
                     break;
                 }
                 else{
-                    step-=buf_ref_advance_room;
-                    ++_it_buf_ref;
-                    if(_it_buf_ref==_chain_buf->bref_end()){
+                    step-=buf_slice_advance_room;
+                    ++_it_buf_slice;
+                    if(_it_buf_slice==_chain_buf->slice_end()){
                         if(step>1){
                             throw std::runtime_error("index out of range");
                         }
@@ -272,8 +323,8 @@ public:
                         break;
                     }
                     else{
-                        _p_start=static_cast<buf_ref_type&>(*_it_buf_ref).read_pos();
-                        _p_end=static_cast<buf_ref_type&>(*_it_buf_ref).write_pos();
+                        _p_start=static_cast<buf_slice_type&>(*_it_buf_slice).read_pos();
+                        _p_end=static_cast<buf_slice_type&>(*_it_buf_slice).write_pos();
                         _p_cur=_p_start;
                         --step;
                     }
@@ -284,19 +335,19 @@ public:
         }
         else if(step<0){
             do{
-                difference_type buf_ref_advance_room=_p_cur-_p_start;
-                if(-step<=buf_ref_advance_room){
+                difference_type buf_slice_advance_room=_p_cur-_p_start;
+                if(-step<=buf_slice_advance_room){
                     _p_cur-=step;
                     step=0;
                 }
                 else{
-                    if(_it_buf_ref==_chain_buf->bref_begin()){
+                    if(_it_buf_slice==_chain_buf->slice_begin()){
                         throw std::runtime_error("index out of range");
                     }
-                    step+=buf_ref_advance_room+1;
-                    --_it_buf_ref;
-                    _p_start=static_cast<buf_ref_type&>(*_it_buf_ref).read_pos();
-                    _p_end=static_cast<buf_ref_type&>(*_it_buf_ref).write_pos();
+                    step+=buf_slice_advance_room+1;
+                    --_it_buf_slice;
+                    _p_start=static_cast<buf_slice_type&>(*_it_buf_slice).read_pos();
+                    _p_end=static_cast<buf_slice_type&>(*_it_buf_slice).write_pos();
                     _p_cur=_p_end-1;
                 }
             }while(step!=0);
@@ -320,11 +371,9 @@ public:
     }
 
     difference_type operator-(self_type other) const{
-//        std::cout<<"@operator-:"<<"this.start="<<(size_t)_p_start<<" this.cur="<<(size_t)_p_cur<<"  this.end="<<(size_t)_p_end
-//                <<"other.start="<<(size_t)other._p_start<<" other.cur="<<(size_t)other._p_cur<<"  other.end="<<(size_t)other._p_end<<std::endl;
         difference_type diff=-(other._p_cur-other._p_start);
 
-        while(other._it_buf_ref!=this->_it_buf_ref){
+        while(other._it_buf_slice!=this->_it_buf_slice){
             diff+=other._p_end-other._p_start;
             other+=other._p_end-other._p_cur;
         }
@@ -334,7 +383,7 @@ public:
 
 private:
     ChainBuffer *_chain_buf;
-    BufRefIteratorType _it_buf_ref;
+    BufSliceIteratorType _it_buf_slice;
 
     value_type *_p_start;
     value_type *_p_end;

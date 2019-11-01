@@ -31,8 +31,7 @@ void RxProtoHttp1Processor::init(RxConnection &conn)
     });
 
     _request_parser.on_event(HttpParse::OnPartofBody,[](InputDataRange origin_data,HttpRequest *http_request){
-         size_t body_length=origin_data.second-origin_data.first;
-         http_request->body()=http_request->get_connection()->get_input_buf().slice(origin_data.first,body_length);
+         http_request->body()=http_request->get_connection()->get_input_buf().slice(origin_data.first,origin_data.second);
     });
 
     _request_parser.on_event(HttpParse::RequestReceived,[](InputDataRange origin_data,HttpRequest *http_request){
@@ -78,7 +77,7 @@ ProcessStatus RxProtoHttp1Processor::process_read_data(RxConnection &conn,RxChai
     std::cout<<"@process read data: n_left="<<n_left<<std::endl;
     do{
         HttpParser::ParseRes parse_res=_request_parser.parse(input_buf.readable_begin(),input_buf.readable_end(),&pipeline.back().request);
-        input_buf.advance_read(n_left-parse_res.n_remaining);
+        input_buf.commit_consume(n_left-parse_res.n_remaining);
         n_left=parse_res.n_remaining;
 
         if(parse_res.got_complete_request)

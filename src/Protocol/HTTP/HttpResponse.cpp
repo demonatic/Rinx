@@ -48,8 +48,8 @@ void HttpResponse::flush()
 bool HttpResponse::DeferContentProvider::try_provide_once()
 {
     RxChainBuffer &output_buf=_conn->get_output_buf();
-    if(_status==Status::Providing&&output_buf.buf_ref_num()<RX_OUTPUT_BUF_CHUNK_THRESH){ //TO IMPROVE
-        size_t max_length_can_write=RX_BUFFER_CHUNK_SIZE*(RX_OUTPUT_BUF_CHUNK_THRESH-output_buf.buf_ref_num());
+    if(_status==Status::Providing&&output_buf.buf_slice_num()<RX_OUTPUT_BUF_CHUNK_THRESH){ //TO IMPROVE
+        size_t max_length_can_write=RX_BUFFER_CHUNK_SIZE*(RX_OUTPUT_BUF_CHUNK_THRESH-output_buf.buf_slice_num());
         _provide_action(output_buf,max_length_can_write,[this](){
             _status=Status::Done;
             HttpRequest &req=std::any_cast<HttpRequestPipeline&>(_conn->data).front().request;
