@@ -1,58 +1,96 @@
 #ifndef HTTPDEFINES_H
 #define HTTPDEFINES_H
 
+#include "../../Util/Util.h"
+#include "../../Util/OnceCall.h"
 #include <unordered_map>
 #include <string_view>
 #include <algorithm>
-#include "../../Util/Util.h"
+#include <mutex>
+
+#define HTTP_STATUS_MAP(XX)                                                    \
+  XX(100, CONTINUE, Continue)                                                  \
+  XX(101, SWITCHING_PROTOCOLS, Switching Protocols)                            \
+  XX(102, PROCESSING, Processing)                                              \
+  XX(200, OK, OK)                                                              \
+  XX(201, CREATED, Created)                                                    \
+  XX(202, ACCEPTED, Accepted)                                                  \
+  XX(203, NON_AUTHORITATIVE_INFORMATION, Non - Authoritative Information)      \
+  XX(204, NO_CONTENT, No Content)                                              \
+  XX(205, RESET_CONTENT, Reset Content)                                        \
+  XX(206, PARTIAL_CONTENT, Partial Content)                                    \
+  XX(207, MULTI_STATUS, Multi - Status)                                        \
+  XX(208, ALREADY_REPORTED, Already Reported)                                  \
+  XX(226, IM_USED, IM Used)                                                    \
+  XX(300, MULTIPLE_CHOICES, Multiple Choices)                                  \
+  XX(301, MOVED_PERMANENTLY, Moved Permanently)                                \
+  XX(302, FOUND, Found)                                                        \
+  XX(303, SEE_OTHER, See Other)                                                \
+  XX(304, NOT_MODIFIED, Not Modified)                                          \
+  XX(305, USE_PROXY, Use Proxy)                                                \
+  XX(307, TEMPORARY_REDIRECT, Temporary Redirect)                              \
+  XX(308, PERMANENT_REDIRECT, Permanent Redirect)                              \
+  XX(400, BAD_REQUEST, Bad Request)                                            \
+  XX(401, UNAUTHORIZED, Unauthorized)                                          \
+  XX(402, PAYMENT_REQUIRED, Payment Required)                                  \
+  XX(403, FORBIDDEN, Forbidden)                                                \
+  XX(404, NOT_FOUND, Not Found)                                                \
+  XX(405, METHOD_NOT_ALLOWED, Method Not Allowed)                              \
+  XX(406, NOT_ACCEPTABLE, Not Acceptable)                                      \
+  XX(407, PROXY_AUTHENTICATION_REQUIRED, Proxy Authentication Required)        \
+  XX(408, REQUEST_TIMEOUT, Request Timeout)                                    \
+  XX(409, CONFLICT, Conflict)                                                  \
+  XX(410, GONE, Gone)                                                          \
+  XX(411, LENGTH_REQUIRED, Length Required)                                    \
+  XX(412, PRECONDITION_FAILED, Precondition Failed)                            \
+  XX(413, PAYLOAD_TOO_LARGE, Payload Too Large)                                \
+  XX(414, URI_TOO_LONG, URI Too Long)                                          \
+  XX(415, UNSUPPORTED_MEDIA_TYPE, Unsupported Media Type)                      \
+  XX(416, RANGE_NOT_SATISFIABLE, Range Not Satisfiable)                        \
+  XX(417, EXPECTATION_FAILED, Expectation Failed)                              \
+  XX(421, MISDIRECTED_REQUEST, Misdirected Request)                            \
+  XX(422, UNPROCESSABLE_ENTITY, Unprocessable Entity)                          \
+  XX(423, LOCKED, Locked)                                                      \
+  XX(424, FAILED_DEPENDENCY, Failed Dependency)                                \
+  XX(426, UPGRADE_REQUIRED, Upgrade Required)                                  \
+  XX(428, PRECONDITION_REQUIRED, Precondition Required)                        \
+  XX(429, TOO_MANY_REQUESTS, Too Many Requests)                                \
+  XX(431, REQUEST_HEADER_FIELDS_TOO_LARGE, Request Header Fields Too Large)    \
+  XX(451, UNAVAILABLE_FOR_LEGAL_REASONS, Unavailable For Legal Reasons)        \
+  XX(500, INTERNAL_SERVER_ERROR, Internal Server Error)                        \
+  XX(501, NOT_IMPLEMENTED, Not Implemented)                                    \
+  XX(502, BAD_GATEWAY, Bad Gateway)                                            \
+  XX(503, SERVICE_UNAVAILABLE, Service Unavailable)                            \
+  XX(504, GATEWAY_TIMEOUT, Gateway Timeout)                                    \
+  XX(505, HTTP_VERSION_NOT_SUPPORTED, HTTP Version Not Supported)              \
+  XX(506, VARIANT_ALSO_NEGOTIATES, Variant Also Negotiates)                    \
+  XX(507, INSUFFICIENT_STORAGE, Insufficient Storage)                          \
+  XX(508, LOOP_DETECTED, Loop Detected)                                        \
+  XX(510, NOT_EXTENDED, Not Extended)                                          \
+  XX(511, NETWORK_AUTHENTICATION_REQUIRED, Network Authentication Required)
 
 enum class HttpStatusCode:uint16_t
 {
-    EMPTY = 0,
-
-    CONTINUE = 100,
-    SWITCHING_PROTOCOLS = 101,
-    PROCESSING = 102,
-
-    OK = 200,
-    CREATED = 201,
-    ACCEPTED = 202,
-    NON_AUTHORITATIVE_INFORMATION = 203,
-    NO_CONTENT = 204,
-    RESET_CONTENT = 205,
-    PARTIAL_CONTENT = 206,
-    MULTI_STATUS = 207,
-
-    MULTIPLE_CHOISES = 300,
-    MOVED_PERMANENTLY = 301,
-    MOVED_TEMPORARILY = 302,
-    FOUND = 302,
-    SEE_OTHER = 303,
-    NOT_MODIFIED = 304,
-    USE_PROXY = 305,
-    TEMPORARY_REDIRECT = 307,
-
-    BAD_REQUEST = 400,
-    UNAUTHORIZED = 401,
-    PAYMENT_REQUIRED = 402,
-    FORBIDDEN = 403,
-    NOT_FOUND = 404,
-    methodNOT_ALLOWED = 405,
-    NOT_ACCEPTABLE = 406,
-    PROXY_AUTHENTICATION_REQUIRED = 407,
-    REQUEST_TIMEOUT = 408,
-    CONFLICT = 409,
-    GONE = 410,
-    REQUEST_ENTITY_TOO_LARGE = 413,
-    REQUESTED_RANGE_NOT_SATISFIABLE = 416,
-
-    INTERNAL_SERVER_ERROR = 500,
-    NOT_IMPLEMENTED = 501,
-    BAD_GATEWAY = 502,
-    SERVICE_UNAVAILABLE = 503,
-    GATEWAY_TIMEOUT = 504,
-    HTTP_versionNOT_SUPPORTED = 505,
+#define EnumDeclare(num,name,string) name=num,
+    HTTP_STATUS_MAP(EnumDeclare)
+#undef EnumDeclare
 };
+
+static std::string s_http_status_table[512];
+
+static void init_http_status_table(){
+#define TABLE_ENTRY_INSERT(num,name,string) s_http_status_table[num]=#num " " #string;
+    HTTP_STATUS_MAP(TABLE_ENTRY_INSERT)
+#undef TABLE_ENTRY_INSERT
+}
+
+static std::string to_http_status_code_str(HttpStatusCode status_code){
+    static std::once_flag init_flag;
+    std::call_once(init_flag,[](){
+        init_http_status_table();
+    });
+    return s_http_status_table[Util::to_index(status_code)];
+}
 
 enum class HttpMethod:uint8_t{
     GET,
@@ -64,7 +102,8 @@ enum class HttpMethod:uint8_t{
     OPTIONS,
     ANY,
     UNDEFINED,
-    HttpMethodCount
+
+    __HttpMethodCount
 };
 
 enum class HttpVersion:uint8_t{
@@ -81,7 +120,7 @@ enum HttpReqLifetimeStage:uint8_t{
     RequestReceived, //the whole reqeust has received
     RequestCompleted, //reponse is fully sent
 
-    ReqLifetimeStageCount
+    __ReqLifetimeStageCount
 };
 
 class HttpHeaderFields{
@@ -213,11 +252,22 @@ inline const char *CRLF="\r\n";
 inline std::string get_mimetype_by_filename(const std::string &filename)
 {
     static const std::unordered_map<std::string, std::string> mime_types{
-        {"png","image/png"},
-        {"html","text/html"},
-        {"txt","text/plain"},
+        {"word", "application/msword"},
+         {"pdf", "application/pdf"},
+         {"zip", "application/zip"},
+         {"js", "application/javascript"},
+         {"gif", "image/gif"},
+         {"jpeg", "image/jpeg"},
+         {"jpg", "image/jpeg"},
+         {"png", "image/png"},
+         {"css", "text/css"},
+         {"html", "text/html"},
+         {"htm", "text/html"},
+         {"txt", "text/plain"},
+         {"xml", "text/xml"},
+         {"svg", "image/svg+xml"},
+         {"mp4", "video/mp4"},
     };
-
     const size_t extension_pos=filename.find_last_of('.');
 
     std::string file_extension;

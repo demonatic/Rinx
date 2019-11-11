@@ -23,20 +23,14 @@ bool RxWorkerThreadLoops::start()
     return true;
 }
 
-void RxWorkerThreadLoops::shutdown()
+void RxWorkerThreadLoops::stop()
 {
-    for(RxEventLoopThread &eventloop_thd:_eventloop_threads){
-        for_each([](RxThreadID,RxEventLoop *eventloop){
-            eventloop->stop();
-        });
-        RxThreadID tid=eventloop_thd.thread_id;
-        if(pthread_cancel(tid)<0){
-            LOG_WARN<<"pthread_cancel failed. thread_id="<<tid;
-        }
+    for_each([](RxThreadID tid,RxEventLoop *eventloop){
+        eventloop->stop_event_loop();
         if(pthread_join(tid,nullptr)<0){
             LOG_WARN<<"pthread_join failed. thread_id="<<tid;
         }
-    }
+    });
 }
 
 size_t RxWorkerThreadLoops::get_thread_num() const noexcept

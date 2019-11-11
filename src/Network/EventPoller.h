@@ -28,9 +28,6 @@ enum RxHandlerRc{
 };
 using EventHandler=std::function<RxHandlerRc(const RxEvent &event_data)>;
 
-
-
-
 #define Epoll_Timeout 0
 #define Epoll_Interrupted -1
 #define Epoll_Error -2

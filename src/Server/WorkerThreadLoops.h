@@ -20,7 +20,7 @@ class RxWorkerThreadLoops
 public:
     RxWorkerThreadLoops(size_t num);
     bool start();
-    void shutdown();
+    void stop();
 
     size_t get_thread_num() const noexcept;
     RxEventLoop* get_eventloop(size_t index);

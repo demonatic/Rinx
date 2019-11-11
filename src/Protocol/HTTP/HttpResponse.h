@@ -5,20 +5,51 @@
 #include "Network/Connection.h"
 #include "HttpDefines.h"
 
-
+class HttpRequestPipeline;
 class HttpResponse{
-public:
+    friend HttpRequestPipeline;
 
-    using ProvideDone=std::function<void()>; //TODO　换声明的地方
-    using HttpStatusLine=std::pair<HttpStatusCode,HttpVersion>;
-    using HttpResponseBody=RxChainBuffer;
-    enum class ComponentStatus{
-        NOT_SET,
-        SET,
-        SENT
+public:
+    using BufAllocator=std::function<uint8_t*(size_t length_expect)>;
+    using ProvideDone=std::function<void()>; //TODO銆�鎹㈠０鏄庣殑鍦版柟
+
+    struct HttpStatusLine{
+        HttpStatusCode status_code;
+        HttpVersion version;
     };
+    using HttpResponseBody=RxChainBuffer;
 
     HttpResponse(RxConnection *conn);
+
+    HttpResponse& status_code(HttpStatusCode stat_code){
+        HttpStatusLine &stat_line=_status_line.first;
+        stat_line.status_code=stat_code;
+        _status_line.second=ComponentStatus::SET;
+        return *this;
+    }
+
+    HttpResponse& headers(std::string name,std::string val){
+        if(_status_line.second==ComponentStatus::NOT_SET){
+            throw std::runtime_error("HttpResponse: please set status code before add any header");
+        }
+
+        _headers.first.add(std::move(name),std::move(val));
+        _headers.second=ComponentStatus::SET;
+        return *this;
+    }
+
+    HttpResponseBody &body(){
+        if(_status_line.second==ComponentStatus::NOT_SET||_headers.second==ComponentStatus::NOT_SET){
+            throw std::runtime_error("HttpResponse: please set request line and headers before set body");
+        }
+        return _body;
+    }
+
+    bool empty(){
+        return _status_line.second==ComponentStatus::NOT_SET||_headers.second==ComponentStatus::NOT_SET;
+    }
+
+    bool send_file(const std::string &filename,size_t offset=0);
 
     class DeferContentProvider{
     public:
@@ -28,14 +59,11 @@ public:
             Done,
         };
 
-        using ProvideAction=std::function<void(RxChainBuffer &output_buf,size_t max_length_expected,ProvideDone done)>;
+        using ProvideAction=std::function<void(BufAllocator allocator,ProvideDone done)>;
 
     public:
         DeferContentProvider(RxConnection *conn,ProvideAction provide_action,bool async=false)
-            :_status(async?Status::ExecAsyncTask:Status::Providing),_provide_action(provide_action),_conn(conn)
-        {
-
-        }
+            :_status(async?Status::ExecAsyncTask:Status::Providing),_provide_action(provide_action),_conn(conn){}
 
         /// @return whether use provide_action to provide data to output_buf
         bool try_provide_once();
@@ -44,14 +72,8 @@ public:
             while(try_provide_once());
         }
 
-        Status get_status() const{
-            return _status;
-        }
-
-        void set_status(Status status) noexcept{
-            this->_status=status;
-        }
-
+        Status get_status() const;
+        void set_status(Status status) noexcept{ this->_status=status; }
 
     private:
         Status _status;
@@ -66,6 +88,14 @@ public:
     void set_async_content_provider(std::function<void()> async_task,DeferContentProvider::ProvideAction defer_content_provider);
 
 
+    void NotFound_404(){
+        std::cout<<"@NotFound_404"<<std::endl;
+        this->status_code(HttpStatusCode::NOT_FOUND);
+        std::string content="Page Not Found";
+        this->headers("Content-Length",std::to_string(content.length()));
+        this->body()<<content;
+    }
+
     bool has_defer_content_provider() const{
         return _defer_content_provider.has_value();
     }
@@ -73,6 +103,11 @@ public:
     DeferContentProvider& get_defer_content_provider(){
         return _defer_content_provider.value();
     }
+
+
+private:
+    ///@brief flush http head and body to connection's output buffer
+    void flush();
 
     bool check_and_wait_content_provider(){
         if(_defer_content_provider.has_value()){
@@ -86,29 +121,13 @@ public:
         return true;
     }
 
-    HttpResponse& status_code(HttpStatusCode status){
-        HttpStatusLine &stat_line=_status_line.first;
-        stat_line.first=status;
-        _status_line.second=ComponentStatus::SET;
-        return *this;
-    }
+private:    
+    enum class ComponentStatus{
+        NOT_SET,
+        SET,
+        SENT
+    };
 
-    HttpResponse& headers(std::string name,std::string val){
-        if(_status_line.second==ComponentStatus::NOT_SET){
-            throw std::runtime_error("HttpResponse: set status code before add any header");
-        }
-
-        _headers.first.add(std::move(name),std::move(val));
-        _headers.second=ComponentStatus::SET;
-        return *this;
-    }
-
-    HttpResponseBody &body();
-
-    ///@brief flush http head and body to connection's output buffer
-    void flush();
-
-private:
     std::pair<HttpStatusLine,ComponentStatus> _status_line;
     std::pair<HttpHeaderFields,ComponentStatus> _headers;
 

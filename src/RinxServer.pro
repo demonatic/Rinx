@@ -63,6 +63,7 @@ HEADERS += \
         Util/Mutex.h \
         Util/Noncopyable.h \
         Util/ObjectAllocator.hpp \
+        Util/OnceCall.h \
         Util/Singeleton.h \
         Util/ThreadPool.h \
         Util/Util.h

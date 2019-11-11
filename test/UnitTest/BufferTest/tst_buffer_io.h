@@ -83,7 +83,7 @@ TEST(file_rw_test,testset){
     long file_length=RxFDHelper::RegFile::get_file_length(file_read);
     std::cout<<"read file length="<<file_length<<std::endl;
     int offset=3;
-    bool res=buf->append(file_read.raw_fd,file_length,offset);
+    bool res=buf->read_from_regular_file(file_read.raw_fd,file_length,offset);
     *buf<<append;
     EXPECT_EQ(res,true);
 
@@ -103,7 +103,7 @@ TEST(file_rw_test,testset){
 
     RxFD file_write_check;
     EXPECT_EQ(RxFDHelper::RegFile::open("./write_file.txt",file_write_check),true);
-    buf->append(file_write_check.raw_fd,RxFDHelper::RegFile::get_file_length(file_write_check));
+    buf->read_from_regular_file(file_write_check.raw_fd,RxFDHelper::RegFile::get_file_length(file_write_check));
     size_t j=0;
     for(auto it=buf->readable_begin();it!=buf->readable_end();++it){
         std::cout<<*it;

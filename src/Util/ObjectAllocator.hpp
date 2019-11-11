@@ -6,6 +6,8 @@
 #include <iostream>
 #include <atomic>
 
+namespace RxAllocator {
+
 template<typename T>
 class ObjectAllocator
 {
@@ -76,14 +78,14 @@ inline bool operator != (const ObjectAllocator<T>& a, const ObjectAllocator<U> &
     return !(a==b);
 }
 
-namespace RxAllocator {
+
 template <typename T>
 thread_local static ObjectAllocator<T> allocator;
 }
 
 template <typename T, typename ...Args>
 inline auto rx_pool_make_shared(Args&&... args){
-    return std::allocate_shared<T,ObjectAllocator<T>>(RxAllocator::allocator<T>,std::forward<Args>(args)...);
+    return std::allocate_shared<T,RxAllocator::ObjectAllocator<T>>(RxAllocator::allocator<T>,std::forward<Args>(args)...);
 }
 
 

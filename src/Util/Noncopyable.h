@@ -4,12 +4,12 @@
 
 class RxNoncopyable
 {
- public:
-  RxNoncopyable(const RxNoncopyable&) = delete;
-  void operator=(const RxNoncopyable&) = delete;
+public:
+    RxNoncopyable(const RxNoncopyable&) = delete;
+    void operator=(const RxNoncopyable&) = delete;
 
- protected:
-  RxNoncopyable() = default;
-  ~RxNoncopyable() = default;
+protected:
+    RxNoncopyable() = default;
+    ~RxNoncopyable() = default;
 };
 #endif // NONCOPYABLE_H

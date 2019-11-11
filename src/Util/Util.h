@@ -89,9 +89,11 @@ inline void to_upper(std::string &str) noexcept{
     std::transform(str.begin(),str.end(),str.begin(),::toupper);
 }
 
+/// @brief convert enum class to its underlying arithmetic type
+//template <typename E,std::enable_if_t<std::is_arithmetic_v<typename std::enable_if_t<std::is_enum_v<E>,std::underlying_type_t<E>>>>>
 template <typename E>
-constexpr auto to_underlying_type(E e) noexcept
-{
+constexpr auto to_index(E e) noexcept
+{    
     return static_cast<std::underlying_type_t<E>>(e);
 }
 

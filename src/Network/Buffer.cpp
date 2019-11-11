@@ -37,6 +37,19 @@ ssize_t ChainBuffer::read_from_fd(int fd,RxReadRc &res)
     return read_bytes;
 }
 
+bool ChainBuffer::read_from_regular_file(int regular_file_fd, size_t length, size_t offset)
+{
+    try{
+        auto buf_file=BufferBase::create<BufferFile>(regular_file_fd,length);
+        BufferSlice file(buf_file,offset,buf_file->length());
+        this->push_buf_slice(file);
+    }
+    catch(std::bad_alloc &){
+        return false;
+    }
+    return true;
+}
+
 ssize_t ChainBuffer::write_to_fd(int fd,RxWriteRc &res)
 {
     std::vector<struct iovec> io_vecs;
@@ -56,19 +69,6 @@ ssize_t ChainBuffer::write_to_fd(int fd,RxWriteRc &res)
         this->commit_consume(bytes);
     }
     return bytes;
-}
-
-bool ChainBuffer::append(int regular_file_fd,size_t length,size_t offset)
-{
-    try{
-        auto buf_file=BufferBase::create<BufferFile>(regular_file_fd,length);
-        BufferSlice file(buf_file,offset,buf_file->length());
-        this->push_buf_slice(file);
-    }
-    catch(std::bad_alloc &){
-        return false;
-    }
-    return true;
 }
 
 ChainBuffer::read_iterator ChainBuffer::readable_begin()
@@ -142,7 +142,6 @@ void ChainBuffer::append(ChainBuffer &buf)
     }
     buf.free();
 }
-
 
 BufferSlice& ChainBuffer::get_head()
 {
@@ -224,6 +223,12 @@ void ChainBuffer::check_need_expand()
 ChainBuffer &ChainBuffer::operator<<(const std::string &arg)
 {
     append(arg.c_str(),arg.length());
+    return *this;
+}
+
+ChainBuffer &ChainBuffer::operator<<(const char c)
+{
+    append(&c,sizeof(c));
     return *this;
 }
 

@@ -5,29 +5,15 @@
 
 RxProtoHttp1Processor::RxProtoHttp1Processor()
 {
-
-}
-
-RxProtoHttp1Processor::~RxProtoHttp1Processor()
-{
-
-}
-
-void RxProtoHttp1Processor::init(RxConnection &conn)
-{
-    //TODO¡¡´¦ÀíHttp parser¹ØÓÚHttpReqLifetimeStage
+    //TODOã€€å¤„ç†Http parserå…³äºŽHttpReqLifetimeStage
     using InputDataRange=HttpParser::InputDataRange<RxChainBuffer::read_iterator>;
-
-    conn.data.emplace<HttpRequestPipeline>(&conn);
 
     _request_parser.on_event(HttpParse::HeaderReceived,[](InputDataRange origin_data,HttpRequest *http_request){
         std::cout<<"HeaderReceived"<<std::endl;
         http_request->stage()=HttpReqLifetimeStage::HeaderReceived;
         HttpReqHandler req_handler=HttpRequestRouter::get_route_handler(*http_request,http_request->stage());
+        std::any_cast<HttpRequestPipeline&>(http_request->get_connection()->data).queue_req_handler(req_handler);
 
-        if(req_handler){
-            std::any_cast<HttpRequestPipeline&>(http_request->get_connection()->data).queue_req_handler(req_handler);
-        }
     });
 
     _request_parser.on_event(HttpParse::OnPartofBody,[](InputDataRange origin_data,HttpRequest *http_request){
@@ -37,13 +23,17 @@ void RxProtoHttp1Processor::init(RxConnection &conn)
     _request_parser.on_event(HttpParse::RequestReceived,[](InputDataRange origin_data,HttpRequest *http_request){
         std::cout<<"RequestReceived"<<std::endl;
         http_request->stage()=HttpReqLifetimeStage::RequestReceived;
-
         HttpReqHandler req_handler=HttpRequestRouter::get_route_handler(*http_request,http_request->stage());
 
         std::any_cast<HttpRequestPipeline&>(http_request->get_connection()->data).queue_req_handler([req_handler](HttpRequest &req,HttpResponse &resp){
-            if(req_handler){
+            if(req_handler)
                 req_handler(req,resp);
+
+            if(resp.empty()){
+                std::cout<<"empty resp, use default_static_file_handler"<<std::endl;
+                HttpRequestRouter::default_static_file_handler(req,resp);
             }
+
             if(!resp.has_defer_content_provider()){
                 std::cout<<"@on_event RequestCompleted"<<std::endl;
                 req.stage()=HttpReqLifetimeStage::RequestCompleted;
@@ -52,7 +42,7 @@ void RxProtoHttp1Processor::init(RxConnection &conn)
     });
 
 
-    //TODO ²»ÄÜÂíÉÏcloseÁ¬½Ó¡¡ÒªµÈÇ°ÃæµÄ´¦ÀíÍê ¡¡closeÁ¬½ÓºÍÒì²½taskÓÐÃ»ÓÐ³åÍ»£¿
+    //TODO ä¸èƒ½é©¬ä¸Šcloseè¿žæŽ¥ã€€è¦ç­‰å‰é¢çš„å¤„ç†å®Œ ã€€closeè¿žæŽ¥å’Œå¼‚æ­¥taskæœ‰æ²¡æœ‰å†²çªï¼Ÿ
     _request_parser.on_event(HttpParse::ParseError,[](HttpRequest *http_request,InputDataRange origin_data){
 
         std::any_cast<HttpRequestPipeline&>(http_request->get_connection()->data).queue_req_handler([](HttpRequest &req,HttpResponse &resp){
@@ -64,6 +54,16 @@ void RxProtoHttp1Processor::init(RxConnection &conn)
     });
 }
 
+RxProtoHttp1Processor::~RxProtoHttp1Processor()
+{
+
+}
+
+void RxProtoHttp1Processor::init(RxConnection &conn)
+{
+    conn.data.emplace<HttpRequestPipeline>(&conn);
+}
+
 ProcessStatus RxProtoHttp1Processor::process_read_data(RxConnection &conn,RxChainBuffer &input_buf)
 {
 //    std::cout<<"process http1 incoming data"<<std::endl;
@@ -72,7 +72,6 @@ ProcessStatus RxProtoHttp1Processor::process_read_data(RxConnection &conn,RxChai
     ///
     HttpRequestPipeline &pipeline=std::any_cast<HttpRequestPipeline&>(conn.data);
 
-    //input_buf.readable_end()-input_buf.readable_begin()
     long n_left=input_buf.readable_end()-input_buf.readable_begin();
     std::cout<<"@process read data: n_left="<<n_left<<std::endl;
     do{

@@ -40,7 +40,8 @@ public:
     bool remove_event_handler(RxFDType fd_type,RxEventType event_type) noexcept;
 
     int start_event_loop();
-    void stop();
+    /// @brief stop eventloop asynchronously
+    void stop_event_loop();
 
     void queue_work(DeferCallback cb);
 
@@ -77,6 +78,8 @@ private:
     int check_timers();
     void run_defers();
     void do_prepare();
+
+    void quit();
 
 private:
     uint8_t _id;

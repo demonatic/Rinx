@@ -26,8 +26,9 @@ class RxServer
 {
 public:
     RxServer(uint32_t max_connection=65535);
+
     bool listen(const std::string &address,uint16_t port);
-    void shutdown();
+    void stop();
 
     RxConnection *incoming_connection(const RxFD rx_fd,RxEventLoop *eventloop);
     RxConnection *get_connection(const RxFD rx_fd);

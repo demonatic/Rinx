@@ -48,13 +48,25 @@ private:
     uint8_t _data[N];
 };
 
+class BufferMalloc:public BufferBase{
+public:
+    BufferMalloc(size_t length){
+        _p_data=static_cast<value_type*>(::malloc(length));
+        _len=length;
+    }
+
+    ~BufferMalloc(){
+        ::free(_p_data);
+    }
+};
+
 /// @class provide a mmap of a regular file
 class BufferFile:public BufferBase{
 public:
     BufferFile(int fd,size_t length){
         _p_data=static_cast<value_type*>(::mmap(nullptr,length,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0));
         if(_p_data==MAP_FAILED){
-            LOG_WARN<<"create mmap for fd "<<fd<<" failed with len="<<length<<", Reason:"<<errno<<strerror(errno);
+            LOG_WARN<<"create mmap for fd "<<fd<<" failed with len="<<length<<", Reason:"<<errno<<' '<<strerror(errno);
             throw std::bad_alloc();
         }
         _len=length;
@@ -64,8 +76,10 @@ public:
     }
 };
 
+class ChainBuffer;
 class BufferSlice
 {
+    friend ChainBuffer;
 public:
     using value_type=typename BufferBase::value_type;
 
@@ -79,6 +93,10 @@ public:
 
     size_t readable_size() const{ return _end_pos-_start_pos; }
     size_t writable_size() const{ return _buf_ptr->length()-_end_pos; }
+
+private:
+    value_type *data(){ return _buf_ptr->data(); }
+    auto get_buf_raw_ptr(){ return _buf_ptr; }
 
     void check_index_valid(){
         assert(_start_pos<=_end_pos&&_end_pos<=_buf_ptr->length());
@@ -95,9 +113,6 @@ public:
         _end_pos+=bytes;
         check_index_valid();
     }
-    value_type *data(){ return _buf_ptr->data(); }
-    auto get_buf_raw_ptr(){ return _buf_ptr; }
-
 private:
     size_t _start_pos;
     size_t _end_pos;
@@ -130,6 +145,10 @@ public:
     /// @brief read data as many as possible(no greater than 65535+n) from fd(socket,file...) to buffer
     ssize_t read_from_fd(int fd,RxReadRc &res);
 
+    /// @brief append file of range [offset,offset+length) to buffer using mmap
+    /// @return whether file has been successfully read in
+    bool read_from_regular_file(int regular_file_fd,size_t length,size_t offset=0);
+
     /// @brief write all data in buffer to fd(socket,file...)
     ssize_t write_to_fd(int fd,RxWriteRc &res);
 
@@ -155,15 +174,13 @@ public:
     //TODO merge peices
     void append(const char *data,size_t length);
 
-    /// @brief append file of range [offset,offset+length) to buffer using mmap
-    bool append(int regular_file_fd,size_t length,size_t offset=0);
-
     /// @brief read count bytes from istream to the buffer
     long append(std::istream &istream,long length);
 
     /// @brief append the buf_slices of parameter buf to this
     void append(ChainBuffer &buf);
 
+    ChainBuffer& operator<<(const char c);
     ChainBuffer& operator<<(const std::string &arg);
 
     template<typename Arg>
@@ -192,10 +209,10 @@ public:
         return *this;
     }
 
-private:
     void push_buf_slice(BufferSlice slice);
-    bool pop_unused_buf_slice(bool force=false);
 
+private:
+    bool pop_unused_buf_slice(bool force=false);
     void check_need_expand();
 };
 

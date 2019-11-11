@@ -13,18 +13,27 @@ void HttpResponse::set_async_content_provider(std::function<void ()> async_task,
     });
 }
 
-HttpResponse::HttpResponse(RxConnection *conn): _status_line(HttpStatusLine(HttpStatusCode::EMPTY,HttpVersion::VERSION_1_1),ComponentStatus::NOT_SET),
+bool HttpResponse::send_file(const std::string &filename,size_t offset)
+{
+    RxFD file;
+    bool open=RxFDHelper::RegFile::open(filename,file);
+    if(!open){
+        return false;
+    }
+
+    long file_length=RxFDHelper::RegFile::get_file_length(file);
+    this->status_code(HttpStatusCode::OK)
+         .headers("Content-Length",std::to_string(file_length))
+         .headers("Content-Type",get_mimetype_by_filename(filename));
+
+    return this->body().read_from_regular_file(file.raw_fd,file_length);
+}
+
+HttpResponse::HttpResponse(RxConnection *conn):
+    _status_line(HttpStatusLine{HttpStatusCode::OK,HttpVersion::VERSION_1_1},ComponentStatus::NOT_SET),
     _headers({},ComponentStatus::NOT_SET),_conn_belongs(conn)
 {
 
-}
-
-HttpResponse::HttpResponseBody &HttpResponse::body()
-{
-    if(_headers.second==ComponentStatus::NOT_SET){
-        throw std::runtime_error("HttpResponse: set headers before add body");
-    }
-    return _body;
 }
 
 void HttpResponse::flush()
@@ -32,7 +41,8 @@ void HttpResponse::flush()
     RxChainBuffer &output_buf=_conn_belongs->get_output_buf();
 
     if(this->_status_line.second==ComponentStatus::SET){
-        output_buf<<to_http_version_str(this->_status_line.first.second)<<' '<<"200 OK"<<CRLF;//TODO
+        const HttpStatusLine &status_line=this->_status_line.first;
+        output_buf<<to_http_version_str(status_line.version)<<' '<<to_http_status_code_str(status_line.status_code)<<CRLF;
         this->_status_line.second=ComponentStatus::SENT;
     }
     if(this->_headers.second==ComponentStatus::SET){
@@ -43,28 +53,40 @@ void HttpResponse::flush()
         this->_headers.second=ComponentStatus::SENT;
     }
     output_buf.append(_body);
+    for(auto it=output_buf.readable_begin();it!=output_buf.readable_end();it++){
+        std::cout<<*it;
+    }
+    std::cout<<std::endl;
 }
 
 bool HttpResponse::DeferContentProvider::try_provide_once()
 {
     RxChainBuffer &output_buf=_conn->get_output_buf();
-    if(_status==Status::Providing&&output_buf.buf_slice_num()<RX_OUTPUT_BUF_CHUNK_THRESH){ //TO IMPROVE
-        size_t max_length_can_write=RX_BUFFER_CHUNK_SIZE*(RX_OUTPUT_BUF_CHUNK_THRESH-output_buf.buf_slice_num());
-        _provide_action(output_buf,max_length_can_write,[this](){
+    if(_status==Status::Providing&&output_buf.buf_slice_num()<RX_OUTPUT_BUF_SLICE_THRESH){ //TO IMPROVE
+        BufAllocator allocator=[this](size_t length_expect)->uint8_t*{
+            auto buf_ptr=BufferBase::create<BufferMalloc>(length_expect);
+            BufferSlice slice(buf_ptr,0,buf_ptr->length());
+            HttpResponse &req=std::any_cast<HttpRequestPipeline&>(_conn->data).front().response;
+            req.body().push_buf_slice(slice);
+            return buf_ptr->data();
+        };
+        ProvideDone done=[this](){
             _status=Status::Done;
             HttpRequest &req=std::any_cast<HttpRequestPipeline&>(_conn->data).front().request;
             if(req.stage()==HttpReqLifetimeStage::RequestReceived){
                req.stage()=HttpReqLifetimeStage::RequestCompleted;
             }
-        }); //TOTEST ���req����wholebodyreceived״̬��DoneʱӦ������req.lifetimestage=reqcomplete
+        };
 
-        RxWriteRc rc;
-        ssize_t n_sent=_conn->send(rc);
-//                std::cout<<"@try_provide_once "<<n_sent<<std::endl;
-        if(rc==RxWriteRc::ERROR){
+        _provide_action(allocator,done); //TOTEST 如果req处于wholebodyreceived状态　Done时应该设置req.lifetimestage=reqcomplete
 
-        }
+        std::cout<<"@try_provide_once "<<std::endl;
+
         return true;
     }
     return false;
+}
+
+HttpResponse::DeferContentProvider::Status HttpResponse::DeferContentProvider::get_status() const{
+    return _status;
 }

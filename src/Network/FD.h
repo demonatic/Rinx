@@ -52,7 +52,11 @@ enum class RxWriteRc{
 
 namespace RxFDHelper{
 
-    bool close(int fd) noexcept;
+    /// @brief close the fd and reset fd to -1
+    /// @return whether the close operation is executed successfully
+    bool close(int &fd) noexcept;
+
+    /// @brief check whether the fd is -1
     bool is_open(int fd) noexcept;
 
     namespace Stream{

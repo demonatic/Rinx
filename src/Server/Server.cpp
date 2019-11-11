@@ -66,18 +66,19 @@ bool RxServer::listen(const std::string &address, uint16_t port)
     return true;
 }
 
-void RxServer::shutdown()
+void RxServer::stop()
 {
-     _sub_eventloop_threads.shutdown();
-    _main_eventloop.stop();
+    _main_eventloop.stop_event_loop();
+    _sub_eventloop_threads.stop();
 }
 
 RxConnection *RxServer::incoming_connection(const RxFD rx_fd,RxEventLoop *eventloop)
 {
-    size_t conn_index=static_cast<size_t>(rx_fd.raw_fd);
-    RxConnection *conn=&_connection_list[conn_index];
-    conn->init(rx_fd,eventloop);
     std::cout<<"@incoming conn fd="<<rx_fd.raw_fd<<std::endl;
+    RxConnection *conn=this->get_connection(rx_fd);
+    if(conn){
+        conn->init(rx_fd,eventloop);
+    }
     return conn;
 }
 
@@ -153,7 +154,7 @@ void RxServer::signal_setup()
     });
     RxSignalManager::on_signal(SIGINT,[this](int signo){
         std::cout<<"server recv sig int (signal num="<<signo<<"), shutdown server..."<<std::endl;
-        this->shutdown();
+        this->stop();
     });
 }
 

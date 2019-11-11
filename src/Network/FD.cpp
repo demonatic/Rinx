@@ -21,9 +21,13 @@ bool Stream::shutdown_both(int fd) noexcept
     return is_open(fd)&&::shutdown(fd,SHUT_RDWR)==0;
 }
 
-bool close(int fd) noexcept
+bool close(int &fd) noexcept
 {
-    return is_open(fd)&&::close(fd)==0;
+    if(is_open(fd)&&::close(fd)==0){
+        fd=-1;
+        return true;
+    }
+    return false;
 }
 
 bool is_open(int fd) noexcept

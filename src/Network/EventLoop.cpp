@@ -2,6 +2,7 @@
 #include "FD.h"
 #include "../Util/Util.h"
 #include "../3rd/NanoLog/NanoLog.h"
+#include <string.h>
 
 RxEventLoop::RxEventLoop(uint8_t id):_id(id),_is_running(false),
     _event_handlers{{nullptr}} //FIX THIS
@@ -68,7 +69,7 @@ bool RxEventLoop::remove_event_handler(RxFDType fd_type, RxEventType event_type)
 int RxEventLoop::start_event_loop()
 {
     _is_running=true;
-    LOG_INFO<<"eventloop "<<get_id()<<" start event loop";
+    LOG_INFO<<"START EventLoop "<<get_id();
 
     while(_is_running){
         do_prepare();
@@ -76,10 +77,11 @@ int RxEventLoop::start_event_loop()
         poll_and_dispatch_io();
         run_defers();
     }
+    quit();
     return 0;
 }
 
-void RxEventLoop::stop()
+void RxEventLoop::stop_event_loop()
 {
     _is_running=false;
     wake_up_loop();
@@ -104,7 +106,7 @@ void RxEventLoop::set_loop_prepare(RxEventLoop::ReactorCallback loop_prepare_cb)
 void RxEventLoop::wake_up_loop()
 {
     if(!RxFDHelper::Event::write_event_fd(_event_fd.raw_fd)){
-        LOG_WARN<<"eventloop write event fd failed, eventloop_id="<<_id;
+        LOG_WARN<<"eventloop write event fd failed, eventloop_id="<<_id<<" Reason:"<<errno<<' '<<strerror(errno);
     }
 }
 
@@ -113,6 +115,13 @@ void RxEventLoop::do_prepare()
     if(this->_on_loop_prepare){
         _on_loop_prepare(this);
     }
+}
+
+void RxEventLoop::quit()
+{
+    RxFDHelper::close(_event_fd.raw_fd);
+    _eventloop_epoll.destroy();
+    LOG_INFO<<"QUIT EventLoop "<<get_id();
 }
 
 int RxEventLoop::poll_and_dispatch_io()

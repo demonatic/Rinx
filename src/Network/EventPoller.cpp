@@ -38,14 +38,13 @@ bool RxEventPoller::create(int max_event_num)
 
 bool RxEventPoller::is_initialized() const noexcept
 {
-    return _epoll_fd!=-1&&_events!=nullptr;
+    return RxFDHelper::is_open(_epoll_fd)&&_events!=nullptr;
 }
 
 void RxEventPoller::destroy() noexcept
 {
-    if(_epoll_fd!=-1){
-        ::close(_epoll_fd);
-         _epoll_fd=-1;
+    if(RxFDHelper::is_open(_epoll_fd)){
+        RxFDHelper::close(_epoll_fd);
     }
 
     if(_events!=nullptr){
