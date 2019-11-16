@@ -21,7 +21,7 @@ TimerID RxTimer::start_timer(uint64_t milliseconds, TimerCallback expiry_action,
 
     _is_repeat=repeat;
     _duration=milliseconds;
-    _cb=expiry_action;
+    _timeout_cb=expiry_action;
     _id=timer_heap.add_timer(expire_time,this);
 
     return _id;
@@ -50,12 +50,12 @@ TimerID RxTimer::get_id() const noexcept
 
 uint64_t RxTimer::get_duration() const noexcept
 {
-    return  _duration;
+    return _duration;
 }
 
 void RxTimer::expired()
 {
-    this->_cb();
+    this->_timeout_cb();
 }
 
 void RxTimer::set_active(bool active) noexcept

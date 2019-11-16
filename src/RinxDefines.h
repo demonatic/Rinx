@@ -9,10 +9,14 @@ constexpr size_t RX_OUTPUT_BUF_SLICE_THRESH=10;
 
 constexpr int RX_SIGNO_MAX=128;
 
+using g_threadpool=RxSingeleton<RxThreadPool>;
+
+///HTTP
 const std::string WebRootPath="/home/demonatic/Projects/web_test_send";
 const std::string DefaultWebPage="nginx.html";
 
-using g_threadpool=RxSingeleton<RxThreadPool>;
-
+constexpr uint64_t ReadHeaderTimeout=60; //sec
+constexpr uint64_t ReadBodyTimeout=60; //sec
+constexpr uint64_t KeepAliveTimeout=60; //sec
 
 #endif // RINXDEFINES_H

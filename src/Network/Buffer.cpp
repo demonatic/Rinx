@@ -10,7 +10,7 @@ size_t ChainBuffer::readable_size()
     return readable_end()-readable_begin();
 }
 
-ssize_t ChainBuffer::read_from_fd(int fd,RxReadRc &res)
+ssize_t ChainBuffer::read_from_fd(RxFD fd,RxReadRc &res)
 {
     this->check_need_expand();
 
@@ -37,20 +37,21 @@ ssize_t ChainBuffer::read_from_fd(int fd,RxReadRc &res)
     return read_bytes;
 }
 
-bool ChainBuffer::read_from_regular_file(int regular_file_fd, size_t length, size_t offset)
+bool ChainBuffer::read_from_regular_file(RxFD regular_file_fd, size_t length, size_t offset)
 {
     try{
-        auto buf_file=BufferBase::create<BufferFile>(regular_file_fd,length);
-        BufferSlice file(buf_file,offset,buf_file->length());
+        auto buf_file=BufferBase::create<BufferFile>(regular_file_fd,offset+length);
+        BufferSlice file(buf_file,offset,offset+length);
         this->push_buf_slice(file);
     }
-    catch(std::bad_alloc &){
+    catch(std::bad_alloc &e){
+        LOG_WARN<<"err when read from regular file "<<regular_file_fd.raw<<' '<<e.what();
         return false;
     }
     return true;
 }
 
-ssize_t ChainBuffer::write_to_fd(int fd,RxWriteRc &res)
+ssize_t ChainBuffer::write_to_fd(RxFD fd,RxWriteRc &res)
 {
     std::vector<struct iovec> io_vecs;
     for(auto it_chunk=_buf_slice_list.begin();it_chunk!=_buf_slice_list.end();++it_chunk){

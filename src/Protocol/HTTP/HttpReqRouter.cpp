@@ -33,7 +33,6 @@ void HttpRequestRouter::default_static_file_handler(HttpRequest &req,HttpRespons
     static const std::filesystem::path web_root_path=WebRootPath;
     static const std::filesystem::path default_web_page=DefaultWebPage;
 
-    std::cout<<"try send file"<<std::endl;
     std::filesystem::path authentic_path;
     try {
         //remove prefix to concat path
@@ -59,8 +58,10 @@ void HttpRequestRouter::default_static_file_handler(HttpRequest &req,HttpRespons
          resp.NotFound_404();
          return;
     }
-    std::cout<<"authentic path="<<authentic_path<<std::endl;
-    resp.send_file(authentic_path.string());
+//    std::cout<<"authentic path="<<authentic_path<<std::endl;
+    if(!resp.send_file(authentic_path.string())){
+        //TODO close conn
+    }
 }
 
 void HttpRequestRouter::set_route(const HttpRoute &route, HttpReqLifetimeStage stage,HttpReqHandler stage_handler)

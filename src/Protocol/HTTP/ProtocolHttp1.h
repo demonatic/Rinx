@@ -11,27 +11,57 @@ using HttpParse::HttpParser;
 class RxProtoHttp1Processor:public RxProtoProcessor
 {
 public:
-    RxProtoHttp1Processor();
+    RxProtoHttp1Processor(RxConnection *conn);
     virtual ~RxProtoHttp1Processor() override;
-    virtual void init(RxConnection &conn) override;
 
-    virtual ProcessStatus process_read_data(RxConnection &conn,RxChainBuffer &input_buf) override;
-    virtual ProcessStatus handle_write_prepared(RxConnection &conn,RxChainBuffer &output_buf) override;
+    virtual ProcessStatus process_read_data(RxConnection *conn,RxChainBuffer &input_buf) override;
+    virtual ProcessStatus handle_write_prepared(RxConnection *conn,RxChainBuffer &output_buf) override;
+
+protected:
+    using InputDataRange=HttpParser::InputDataRange<RxChainBuffer::read_iterator>;
+
+    /// callback when get http header on socket stream
+    void on_header_recv(InputDataRange range,HttpRequest *http_request);
+
+    /// callback when get part of http body on socket stream
+    void on_part_of_body(InputDataRange range,HttpRequest *http_request);
+
+    /// callback when a complete request has received
+    void on_request_recv(InputDataRange range,HttpRequest *http_request);
+
+    /// callback when an http protocol parse error occurs
+    void on_parse_error(InputDataRange range,HttpRequest *http_request);
+
+private:
+    void set_timeout(uint64_t sec,TimerCallback timeout_cb=nullptr){
+        if(!timeout_cb){
+            timeout_cb=[](){printf("time out");}; //TODO
+        }
+        cancel_read_timer();
+        _read_timer->start_timer(sec*1000,timeout_cb);
+    }
+
+    void cancel_read_timer(){
+        if(_read_timer->is_active()){
+            _read_timer->stop();
+        }
+    }
 
 private:
     HttpParser _request_parser;
+    std::unique_ptr<RxTimer> _read_timer;
 };
 
 
-/// 1.´¦ÀíÍêÒ»¸öHttpRequestºóÔÙ´¦ÀíÏÂÒ»¸öHttpRequest
-/// 2.µ±HttpParser·¢ÏÖÒ»¸öHttpRequestµ½À´ºóÏÈ½Ø¶ÏÊ£Óàinput_bufferÄÚµÄÊı¾İ£¬¼´Ã¿´Î×î¶àÌáÈ¡³öÒ»¸öÍêÕûµÄHttpRequest£¬
-/// Èç¹ûÒ»´ÎÎŞ·¨ÏìÓ¦ÍêÔòÏÈ²»¼ÌĞø¶Áinput_bufferÄÚµÄÊı¾İ½øĞĞ´¦Àí(EventLoopÔÚsocketÓĞreadÊÂ¼şÊ±ÈÔÈ»»á°ÑÊı¾İappendµ½input_buffer)£¬
-/// µ±connection.data×Ö¶Î£¨¼´HttpRequest£©ÖĞµÄ±êÖ¾Î»±íÃ÷request completeÊ±²ÅÄÜÖØÖÃrequest¶ÔÏó£¬¼ÌĞø´¦ÀíÏÂÒ»¸öÁ¬½Ó
+/// 1.å¤„ç†å®Œä¸€ä¸ªHttpRequeståå†å¤„ç†ä¸‹ä¸€ä¸ªHttpRequest
+/// 2.å½“HttpParserå‘ç°ä¸€ä¸ªHttpRequeståˆ°æ¥åå…ˆæˆªæ–­å‰©ä½™input_bufferå†…çš„æ•°æ®ï¼Œå³æ¯æ¬¡æœ€å¤šæå–å‡ºä¸€ä¸ªå®Œæ•´çš„HttpRequestï¼Œ
+/// å¦‚æœä¸€æ¬¡æ— æ³•å“åº”å®Œåˆ™å…ˆä¸ç»§ç»­è¯»input_bufferå†…çš„æ•°æ®è¿›è¡Œå¤„ç†(EventLoopåœ¨socketæœ‰readäº‹ä»¶æ—¶ä»ç„¶ä¼šæŠŠæ•°æ®appendåˆ°input_buffer)ï¼Œ
+/// å½“connection.dataå­—æ®µï¼ˆå³HttpRequestï¼‰ä¸­çš„æ ‡å¿—ä½è¡¨æ˜request completeæ—¶æ‰èƒ½é‡ç½®requestå¯¹è±¡ï¼Œç»§ç»­å¤„ç†ä¸‹ä¸€ä¸ªè¿æ¥
 class RxProtoProcHttp1Factory:public RxProtoProcFactory
 {
 public:
     RxProtoProcHttp1Factory()=default;
-    virtual std::unique_ptr<RxProtoProcessor> new_proto_processor(RxConnection &conn) override;
+    virtual std::unique_ptr<RxProtoProcessor> new_proto_processor(RxConnection *conn) override;
 };
 
 #endif // PROTOCOLHTTP1_H

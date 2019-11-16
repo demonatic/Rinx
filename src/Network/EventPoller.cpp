@@ -4,7 +4,7 @@
 #include "EventLoop.h"
 #include "../3rd/NanoLog/NanoLog.h"
 
-RxEventPoller::RxEventPoller():_epoll_fd(-1),_events(nullptr),_max_event_num(0)
+RxEventPoller::RxEventPoller():_epoll_fd(),_events(nullptr),_max_event_num(0)
 {
 
 }
@@ -21,8 +21,9 @@ bool RxEventPoller::create(int max_event_num)
     if(is_initialized())
         return true;
 
-    _epoll_fd=::epoll_create(1);
-    if(_epoll_fd<0){
+    _epoll_fd=RxFD(RxFD_EPOLL,::epoll_create(1));
+
+    if(_epoll_fd.raw<0){
         LOG_WARN<<"create epoll failed. Error"<<errno<<strerror(errno);
         return false;
     }
@@ -53,9 +54,9 @@ void RxEventPoller::destroy() noexcept
     }
 }
 
-int RxEventPoller::wait(const int timeout_millsec)
+int RxEventPoller::wait(int timeout_millsec)
 {
-    int nfds=::epoll_wait(_epoll_fd,_events,_max_event_num,timeout_millsec);
+    int nfds=::epoll_wait(_epoll_fd.raw,_events,_max_event_num,timeout_millsec);
     if(nfds==0){
         nfds=Epoll_Timeout;
     }
@@ -76,9 +77,9 @@ bool RxEventPoller::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &e
     struct epoll_event epoll_event;
     bzero(&epoll_event,sizeof(struct epoll_event));
     set_ep_event(epoll_event,event_type);
-    epoll_event.data.u64=(static_cast<uint64_t>(Fd.fd_type)<<32)|static_cast<uint64_t>(Fd.raw_fd);
+    epoll_event.data.u64=(static_cast<uint64_t>(Fd.type)<<32)|static_cast<uint64_t>(Fd.raw);
 
-    if(::epoll_ctl(_epoll_fd,EPOLL_CTL_ADD,Fd.raw_fd,&epoll_event)==-1){
+    if(::epoll_ctl(_epoll_fd.raw,EPOLL_CTL_ADD,Fd.raw,&epoll_event)==-1){
         LOG_WARN<<"epoll_ctl add error: "<<errno<<" "<<strerror(errno);
         return false;
     }
@@ -87,7 +88,7 @@ bool RxEventPoller::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &e
 
 bool RxEventPoller::del_fd_event(const RxFD Fd)
 {
-    if(::epoll_ctl(_epoll_fd,EPOLL_CTL_DEL,Fd.raw_fd,nullptr)<0){
+    if(::epoll_ctl(_epoll_fd.raw,EPOLL_CTL_DEL,Fd.raw,nullptr)<0){
         LOG_WARN<<"epoll_ctl del error"<<errno<<" "<<strerror(errno);
         return false;
     }

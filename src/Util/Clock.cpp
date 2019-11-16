@@ -1,6 +1,6 @@
 #include "Clock.h"
 #include "Util.h"
-#include "3rd/NanoLog/NanoLog.h"
+#include "../3rd/NanoLog/NanoLog.h"
 
 uint64_t Clock::get_now_tick()
 {

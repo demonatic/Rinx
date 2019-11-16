@@ -143,14 +143,14 @@ public:
     size_t readable_size();
 
     /// @brief read data as many as possible(no greater than 65535+n) from fd(socket,file...) to buffer
-    ssize_t read_from_fd(int fd,RxReadRc &res);
+    ssize_t read_from_fd(RxFD fd,RxReadRc &res);
 
     /// @brief append file of range [offset,offset+length) to buffer using mmap
     /// @return whether file has been successfully read in
-    bool read_from_regular_file(int regular_file_fd,size_t length,size_t offset=0);
+    bool read_from_regular_file(RxFD regular_file_fd,size_t length,size_t offset=0);
 
     /// @brief write all data in buffer to fd(socket,file...)
-    ssize_t write_to_fd(int fd,RxWriteRc &res);
+    ssize_t write_to_fd(RxFD fd,RxWriteRc &res);
 
     read_iterator readable_begin();
     read_iterator readable_end();

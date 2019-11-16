@@ -15,12 +15,17 @@
 #include "../3rd/NanoLog/NanoLog.h"
 
 struct RxListenPort{
-    RxListenPort(uint16_t port):port(port){}
+    explicit RxListenPort(uint16_t port):port(port){
+        serv_fd=RxFDHelper::Stream::create_serv_sock();
+    }
+    RxListenPort(const RxListenPort &other){
+        port=other.port;
+        serv_fd=other.serv_fd;
+    }
 
     uint16_t port;
-    int serv_fd;
+    RxFD serv_fd;
 };
-
 
 class RxServer
 {
@@ -30,8 +35,8 @@ public:
     bool listen(const std::string &address,uint16_t port);
     void stop();
 
-    RxConnection *incoming_connection(const RxFD rx_fd,RxEventLoop *eventloop);
-    RxConnection *get_connection(const RxFD rx_fd);
+    RxConnection *incoming_connection(const RxFD fd,RxEventLoop *eventloop);
+    RxConnection *get_connection(const RxFD fd);
 
 private:
     RxHandlerRc on_acceptable(const RxEvent &event);
@@ -49,6 +54,8 @@ private:
     uint32_t _max_connection;
     uint16_t _max_once_accept_count;
     uint16_t _eventloop_num;
+
+    size_t connected=0;
 
     RxEventLoop _main_eventloop;
     RxWorkerThreadLoops _sub_eventloop_threads;

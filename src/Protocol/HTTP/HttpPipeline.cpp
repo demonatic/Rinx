@@ -1,36 +1,36 @@
 #include "HttpPipeline.h"
 
-HttpRequestPipeline::HttpRequestPipeline(RxConnection *conn):_conn(conn)
+HttpRequestQueue::HttpRequestQueue(RxConnection *conn):_conn(conn)
 {
     this->prepare_for_next_request();
 }
 
-bool HttpRequestPipeline::empty() const
+bool HttpRequestQueue::empty() const
 {
     return _pipeline.empty();
 }
 
-HttpRequestPipeline::PipelineNode &HttpRequestPipeline::front()
+HttpRequestQueue::PipelineNode &HttpRequestQueue::front()
 {
     return _pipeline.front();
 }
 
-HttpRequestPipeline::PipelineNode &HttpRequestPipeline::back()
+HttpRequestQueue::PipelineNode &HttpRequestQueue::back()
 {
     return _pipeline.back();
 }
 
-size_t HttpRequestPipeline::pending_request_num() const
+size_t HttpRequestQueue::pending_request_num() const
 {
     return _pipeline.size()-1;
 }
 
-void HttpRequestPipeline::prepare_for_next_request()
+void HttpRequestQueue::prepare_for_next_request()
 {
     _pipeline.push(PipelineNode(_conn));
 }
 
-void HttpRequestPipeline::queue_req_handler(const HttpReqHandler &req_handler)
+void HttpRequestQueue::queue_req_handler(const HttpReqHandler &req_handler)
 {
     if(req_handler){
          _pipeline.back().pending_req_handlers.push(req_handler);
@@ -42,7 +42,7 @@ void HttpRequestPipeline::queue_req_handler(const HttpReqHandler &req_handler)
 /// any req_handler may use defer_content_provider in HttpResponse to provide content to output buffer,
 /// so we should check if there exists defer content provider set by previous req_handler,
 /// if so, we must wait it to finish before we execute following request handler in the handlers' queue
-bool HttpRequestPipeline::try_handle_one()
+bool HttpRequestQueue::try_handle_one()
 {
     if(this->pending_request_num()!=0){
         PipelineNode &pipe_node=_pipeline.front();
@@ -59,14 +59,14 @@ bool HttpRequestPipeline::try_handle_one()
 
         RxWriteRc rc;
         ssize_t n_send=pipe_node.request.get_connection()->send(rc);
-        std::cout<<"n_send="<<n_send<<std::endl;
+//        std::cout<<"n_send="<<n_send<<std::endl;
         if(rc==RxWriteRc::ERROR){
 
         }
 
-        //TODO¡¡ÅĞ¶ÏÊÇ·ñÒª°ÑifÓï¾ä·ÅÕâÀï
+        //TODOã€€åˆ¤æ–­æ˜¯å¦è¦æŠŠifè¯­å¥æ”¾è¿™é‡Œ
         if(pipe_node.request.stage()==HttpReqLifetimeStage::RequestCompleted){
-            std::cout<<"!!! req complete"<<std::endl;
+//            std::cout<<"!!! req complete"<<std::endl;
             HttpRequestRouter::route_request(pipe_node.request,pipe_node.response,HttpReqLifetimeStage::RequestCompleted);
             _pipeline.pop();
             return true;
@@ -75,7 +75,7 @@ bool HttpRequestPipeline::try_handle_one()
     return false;
 }
 
-void HttpRequestPipeline::try_handle_remaining()
+void HttpRequestQueue::try_handle_remaining()
 {
     while(try_handle_one());
 }

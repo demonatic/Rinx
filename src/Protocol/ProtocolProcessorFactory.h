@@ -8,7 +8,7 @@ class RxProtoProcFactory
 {
 public:
     RxProtoProcFactory();
-    virtual std::unique_ptr<RxProtoProcessor> new_proto_processor(RxConnection &conn)=0;
+    virtual std::unique_ptr<RxProtoProcessor> new_proto_processor(RxConnection *conn)=0;
     virtual ~RxProtoProcFactory();
 };
 

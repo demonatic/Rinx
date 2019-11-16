@@ -29,7 +29,7 @@
 template<typename T>
 struct function_traits;
 
-//ÆÕÍ¨º¯Êý
+//æ™®é€šå‡½æ•°
 template<typename Ret, typename... Args>
 struct function_traits<Ret(Args...)>
 {
@@ -48,7 +48,7 @@ public:
     };
 };
 
-//º¯ÊýÖ¸Õë
+//å‡½æ•°æŒ‡é’ˆ
 template<typename Ret, typename... Args>
 struct function_traits<Ret(*)(Args...)> : function_traits<Ret(Args...)>{};
 
@@ -66,7 +66,7 @@ FUNCTION_TRAITS(const)
 FUNCTION_TRAITS(volatile)
 FUNCTION_TRAITS(const volatile)
 
-//º¯Êý¶ÔÏó
+//å‡½æ•°å¯¹è±¡
 template<typename Callable>
 struct function_traits : function_traits<decltype(&Callable::operator())>{};
 

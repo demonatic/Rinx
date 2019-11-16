@@ -45,7 +45,7 @@ public:
     bool is_initialized() const noexcept;
     void destroy() noexcept;
 
-    int wait(const int timeout_millsec=-1);
+    int wait(int timeout_millsec=-1);
 
     epoll_event *get_epoll_events() const noexcept;
 
@@ -57,7 +57,7 @@ public:
     static void set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) noexcept;
 
 private:
-    int _epoll_fd;
+    RxFD _epoll_fd;
     struct epoll_event *_events;
 
     int _max_event_num;

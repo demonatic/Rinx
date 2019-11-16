@@ -14,6 +14,7 @@ public:
 
     }
 
+
     RxConnection *get_connection() const{
        return _conn_belongs;
     }
@@ -38,8 +39,12 @@ public:
         return _body;
     }
 
-    HttpReqLifetimeStage& stage(){
+    HttpReqLifetimeStage stage() const{
        return _stage;
+    }
+
+    void set_stage(HttpReqLifetimeStage stage){
+       _stage=stage;
     }
 
     void clear();
@@ -55,12 +60,12 @@ private:
     HttpVersion _version;
     HttpHeaderFields _headers;
 
-    RxChainBuffer _body;
-
-    RxConnection *_conn_belongs;
+    HttpResponseBody _body;
 
     HttpReqLifetimeStage _stage;
 
+    /// Networks
+    RxConnection *_conn_belongs;
 
 };
 

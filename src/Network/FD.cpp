@@ -6,37 +6,45 @@
 #include <sys/uio.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <string.h>
 #include <assert.h>
 #include "../Util/Util.h"
 
 namespace RxFDHelper {
 
-int Stream::create_stream() noexcept
+RxFD Stream::create_client_stream() noexcept
 {
-    return ::socket(AF_INET,SOCK_STREAM,0);
+    return RxFD(RxFDType::RxFD_CLIENT_STREAM,::socket(AF_INET,SOCK_STREAM,0));
 }
 
-bool Stream::shutdown_both(int fd) noexcept
+RxFD Stream::create_serv_sock() noexcept
 {
-    return is_open(fd)&&::shutdown(fd,SHUT_RDWR)==0;
+    return RxFD(RxFDType::RxFD_LISTEN,::socket(AF_INET,SOCK_STREAM,0));
 }
 
-bool close(int &fd) noexcept
+bool Stream::shutdown_both(RxFD fd) noexcept
 {
-    if(is_open(fd)&&::close(fd)==0){
-        fd=-1;
-        return true;
+    return is_open(fd)&&::shutdown(fd.raw,SHUT_RDWR)==0;
+}
+
+bool close(RxFD &fd) noexcept
+{
+    if(is_open(fd)){
+        int raw=fd.raw;
+        fd=RxInvalidFD;
+        return ::close(raw)==0;
     }
     return false;
 }
 
-bool is_open(int fd) noexcept
+bool is_open(RxFD fd) noexcept
 {
-    return fd!=-1;
+    return fd!=RxInvalidFD;
 }
 
-bool Stream::bind(int fd,const char *host,const int port) noexcept
+bool Stream::bind(RxFD fd,const char *host,const int port) noexcept
 {
+    assert(fd.type==RxFDType::RxFD_LISTEN);
     struct sockaddr_in sock_addr{
         AF_INET,
         htons(static_cast<uint16_t>(port)),
@@ -44,23 +52,25 @@ bool Stream::bind(int fd,const char *host,const int port) noexcept
         {0}
     };
     if(host&&1!=inet_pton(AF_INET,host,&(sock_addr.sin_addr))){
-       return false;
+        return false;
     }
 //    bool dont_linger=true;
 //    ::setsockopt(fd,SOL_SOCKET,SO_LINGER,&(dont_linger),sizeof(dont_linger));
-    return 0==::bind(fd,reinterpret_cast<const ::sockaddr*>(&sock_addr),sizeof(::sockaddr_in));
+    return 0==::bind(fd.raw,reinterpret_cast<const ::sockaddr*>(&sock_addr),sizeof(::sockaddr_in));
 }
 
-bool Stream::listen(int fd) noexcept
+bool Stream::listen(RxFD fd) noexcept
 {
-    return 0==::listen(fd,SOMAXCONN);
+    assert(fd.type==RxFDType::RxFD_LISTEN);
+    return 0==::listen(fd.raw,SOMAXCONN);
 }
 
-int Stream::accept(int fd,RxAcceptRc &accept_res) noexcept
+RxFD Stream::accept(RxFD fd,RxAcceptRc &accept_res) noexcept
 {
+    assert(fd.type==RxFDType::RxFD_LISTEN);
     int client_fd=-1;
     do{
-        client_fd=::accept(fd,static_cast<struct sockaddr*>(nullptr),static_cast<socklen_t*>(nullptr));
+        client_fd=::accept(fd.raw,static_cast<struct sockaddr*>(nullptr),static_cast<socklen_t*>(nullptr));
         if(client_fd<0){
             switch(errno) {
                 case EAGAIN:
@@ -79,21 +89,21 @@ int Stream::accept(int fd,RxAcceptRc &accept_res) noexcept
         }
     }while(client_fd<0&&errno==EINTR);
 
-    return client_fd;
+    return RxFD(RxFDType::RxFD_CLIENT_STREAM,client_fd);
 }
 
-bool Stream::set_tcp_nodelay(int fd,const bool nodelay) noexcept
+bool Stream::set_tcp_nodelay(RxFD fd,const bool nodelay) noexcept
 {
     int flags=nodelay?1:0;
-    return 0==::setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&flags,sizeof(flags));
+    return 0==::setsockopt(fd.raw,IPPROTO_TCP,TCP_NODELAY,&flags,sizeof(flags));
 }
 
-bool Stream::set_nonblock(int fd,const bool nonblock) noexcept
+bool Stream::set_nonblock(RxFD fd,const bool nonblock) noexcept
 {
-    return -1!=::fcntl(fd,F_SETFL,nonblock?O_NONBLOCK:O_SYNC);
+    return -1!=::fcntl(fd.raw,F_SETFL,nonblock?O_NONBLOCK:O_SYNC);
 }
 
-ssize_t Stream::read(int fd, void *buffer, size_t n,RxReadRc &read_res)
+ssize_t Stream::read(RxFD fd, void *buffer, size_t n,RxReadRc &read_res)
 {
     ssize_t total_bytes=0;
     read_res=RxReadRc::OK;
@@ -101,7 +111,7 @@ ssize_t Stream::read(int fd, void *buffer, size_t n,RxReadRc &read_res)
     do{
         ssize_t once_read_bytes;
         do{
-            once_read_bytes=::read(fd,buffer,n);
+            once_read_bytes=::read(fd.raw,buffer,n);
         }while(once_read_bytes<0&&errno==EINTR);
 
         if(unlikely(once_read_bytes<0)){
@@ -126,13 +136,13 @@ ssize_t Stream::read(int fd, void *buffer, size_t n,RxReadRc &read_res)
     return total_bytes;
 }
 
-ssize_t Stream::readv(int fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
+ssize_t Stream::readv(RxFD fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
 {
     ssize_t read_bytes;
     read_res=RxReadRc::OK;
 
     do{
-        read_bytes=::readv(fd,io_vec.data(),io_vec.size());
+        read_bytes=::readv(fd.raw,io_vec.data(),io_vec.size());
     }while(read_bytes<0&&errno==EINTR);
 
     if(unlikely(read_bytes<0)){
@@ -145,13 +155,13 @@ ssize_t Stream::readv(int fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
     return read_bytes;
 }
 
-ssize_t Stream::write(int fd, void *buffer, size_t n, RxWriteRc &write_res)
+ssize_t Stream::write(RxFD fd, void *buffer, size_t n, RxWriteRc &write_res)
 {
     ssize_t bytes_written=0;
     write_res=RxWriteRc::OK;
 
     do{
-        bytes_written=::write(fd,buffer,n);
+        bytes_written=::write(fd.raw,buffer,n);
     }while(bytes_written<0&&errno==EINTR);
 
     if(unlikely(bytes_written<0)){
@@ -161,13 +171,13 @@ ssize_t Stream::write(int fd, void *buffer, size_t n, RxWriteRc &write_res)
     return bytes_written;
 }
 
-ssize_t Stream::writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res)
+ssize_t Stream::writev(RxFD fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res)
 {
     ssize_t write_bytes;
     write_res=RxWriteRc::OK;
 
     do{
-        write_bytes=::writev(fd,io_vec.data(),io_vec.size());
+        write_bytes=::writev(fd.raw,io_vec.data(),io_vec.size());
     }while(write_bytes<0&&errno==EINTR);
 
     if(unlikely(write_bytes<0)){
@@ -176,38 +186,62 @@ ssize_t Stream::writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write
     return write_bytes;
 }
 
-int Event::create_event_fd() noexcept
+RxFD Event::create_event_fd() noexcept
 {
-    return ::eventfd(0,EFD_NONBLOCK);
+    return RxFD(RxFDType::RxFD_EVENT,::eventfd(0,EFD_NONBLOCK));
 }
 
-bool Event::write_event_fd(int fd)
+bool Event::write_event_fd(RxFD fd)
 {
-    return ::eventfd_write(fd,1)!=-1;
+    assert(fd.type==RxFD_EVENT);
+    return ::eventfd_write(fd.raw,1)!=-1;
 }
 
-bool Event::read_event_fd(int fd){
+bool Event::read_event_fd(RxFD fd){
+    assert(fd.type==RxFD_EVENT);
     uint64_t data;
-    int ret=::eventfd_read(fd,&data);
+    int ret=::eventfd_read(fd.raw,&data);
     return ret!=-1&&data!=0;
 }
 
-bool RegFile::open(const std::string &path,RxFD &rx_fd,bool create)
+bool RegFile::open(const std::string &path,RxFD &fd,bool create)
 {
-    int fd=::open(path.c_str(),O_RDWR|(create?O_CREAT:0));
-    if(fd==-1){
+    int raw_fd=::open(path.c_str(),O_RDWR|(create?O_CREAT:0));
+    if(raw_fd==-1){
        return false;
     }
-    rx_fd.raw_fd=fd;
-    rx_fd.fd_type=RxFD_REGULAR_FILE;
+    fd=RxFD(RxFD_REGULAR_FILE,raw_fd);
     return true;
 }
 
 long RegFile::get_file_length(RxFD fd)
 {
+    assert(fd.type==RxFD_REGULAR_FILE);
     struct ::stat st;
-    int rc=::fstat(fd.raw_fd,&st);
+    int rc=::fstat(fd.raw,&st);
     return rc==-1?rc:st.st_size;
+}
+
+File::File(const std::string &path,bool create):_file_fd(RxInvalidFD)
+{
+    if(!RegFile::open(path,_file_fd,create)){
+        throw std::runtime_error("error occur when open file "+path+' '+strerror(errno));
+    }
+}
+
+File::~File(){
+    if(_file_fd!=RxInvalidFD){
+        RxFDHelper::close(_file_fd);
+    }
+}
+
+long File::get_len() const
+{
+    return RegFile::get_file_length(_file_fd);
+}
+
+RxFD File::get_fd() const{
+    return _file_fd;
 }
 
 }

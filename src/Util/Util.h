@@ -90,7 +90,7 @@ inline void to_upper(std::string &str) noexcept{
 }
 
 /// @brief convert enum class to its underlying arithmetic type
-//template <typename E,std::enable_if_t<std::is_arithmetic_v<typename std::enable_if_t<std::is_enum_v<E>,std::underlying_type_t<E>>>>>
+//TODO template <typename E,std::enable_if_t<std::is_arithmetic_v<typename std::enable_if_t<std::is_enum_v<E>,std::underlying_type_t<E>>>>>
 template <typename E>
 constexpr auto to_index(E e) noexcept
 {    
@@ -101,7 +101,7 @@ inline bool hex_str_to_size_t(const std::string &hex_string, size_t &hex)
 {
     try {
         hex=std::stoull(hex_string,nullptr,16);
-    } catch ([[maybe_unused]] std::invalid_argument &exception) {
+    } catch (std::invalid_argument &) {
         return false;
     }
     return true;

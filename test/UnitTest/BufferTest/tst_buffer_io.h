@@ -12,7 +12,7 @@ TEST(sock_rw_test, testset)
 {
     std::unique_ptr<ChainBuffer> buf=ChainBuffer::create_chain_buffer();
     RxReadRc read_res;
-    ssize_t read_bytes=buf->read_from_fd(STDIN_FILENO,read_res);
+    ssize_t read_bytes=buf->read_from_fd(RxFD{RxFDType::RxFD_REGULAR_FILE,STDIN_FILENO},read_res);
     EXPECT_EQ(read_res, RxReadRc::OK);
     std::cout<<"begin-end distance="<<buf->readable_end()-buf->readable_begin()<<std::endl;
     EXPECT_EQ(read_bytes,buf->readable_end()-buf->readable_begin());
@@ -60,7 +60,7 @@ TEST(sock_rw_test, testset)
 
     RxWriteRc write_res;
     std::cout<<std::endl<<"about to write fd------"<<std::endl;
-    ssize_t write_bytes=buf->write_to_fd(STDOUT_FILENO,write_res);
+    ssize_t write_bytes=buf->write_to_fd(RxFD{RxFDType::RxFD_REGULAR_FILE,STDOUT_FILENO},write_res);
     std::cout<<"has written fd------"<<std::endl;
     std::cout<<"read "<<read_bytes<<"  write "<<write_bytes<<std::endl;
     EXPECT_EQ(write_res, RxWriteRc::OK);
@@ -83,7 +83,7 @@ TEST(file_rw_test,testset){
     long file_length=RxFDHelper::RegFile::get_file_length(file_read);
     std::cout<<"read file length="<<file_length<<std::endl;
     int offset=3;
-    bool res=buf->read_from_regular_file(file_read.raw_fd,file_length,offset);
+    bool res=buf->read_from_regular_file(file_read,file_length,offset);
     *buf<<append;
     EXPECT_EQ(res,true);
 
@@ -97,13 +97,13 @@ TEST(file_rw_test,testset){
     RxFD file_write;
     RxFDHelper::RegFile::open("./write_file.txt",file_write,true);
     RxWriteRc rc;
-    buf->write_to_fd(file_write.raw_fd,rc);
+    buf->write_to_fd(file_write,rc);
     EXPECT_EQ(rc,RxWriteRc::OK);
-    RxFDHelper::close(file_write.raw_fd);
+    RxFDHelper::close(file_write);
 
     RxFD file_write_check;
     EXPECT_EQ(RxFDHelper::RegFile::open("./write_file.txt",file_write_check),true);
-    buf->read_from_regular_file(file_write_check.raw_fd,RxFDHelper::RegFile::get_file_length(file_write_check));
+    buf->read_from_regular_file(file_write_check,RxFDHelper::RegFile::get_file_length(file_write_check));
     size_t j=0;
     for(auto it=buf->readable_begin();it!=buf->readable_end();++it){
         std::cout<<*it;
@@ -121,7 +121,7 @@ TEST(write_data_test,testset){
     char array[]="c_array";
     *buf<<"string_literal"<<"|"<<str<<"|"<<array<<"|"<<p<<"|"<<i<<"|"<<d;
     RxWriteRc write_res;
-    buf->write_to_fd(STDOUT_FILENO,write_res);
+    buf->write_to_fd(RxFD{RxFDType::RxFD_REGULAR_FILE,STDOUT_FILENO},write_res);
 }
 
 TEST(slice_test,testset){

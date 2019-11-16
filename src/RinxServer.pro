@@ -3,7 +3,11 @@ CONFIG += console c++17
 CONFIG -= app_bundle
 CONFIG -= qt
 
-DEFINES+=DEBUG
+CONFIG(release,debug|release){
+    message("NDEBUG")
+    DEFINES+=NDEBUG
+}
+
 
 include(../lib_dependency.pri)
 
@@ -20,7 +24,6 @@ SOURCES += \
         Protocol/HTTP/HttpPipeline.cpp \
         Protocol/HTTP/HttpReqRouter.cpp \
         Protocol/HTTP/HttpRequest.cpp \
-        Protocol/HTTP/HttpRequestHandler.cpp \
         Protocol/HTTP/HttpResponse.cpp \
         Protocol/HTTP/ProtocolHttp1.cpp \
         Protocol/ProtocolProcessorFactory.cpp \
@@ -49,7 +52,6 @@ HEADERS += \
         Protocol/HTTP/HttpPipeline.h \
         Protocol/HTTP/HttpReqRouter.h \
         Protocol/HTTP/HttpRequest.h \
-        Protocol/HTTP/HttpRequestHandler.h \
         Protocol/HTTP/HttpResponse.h \
         Protocol/HTTP/ProtocolHttp1.h \
         Protocol/ProtocolProcessorFactory.h \

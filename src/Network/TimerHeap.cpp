@@ -90,6 +90,17 @@ size_t RxTimerHeap::get_timer_num() const
     return _timer_heap.size()-1;
 }
 
+uint64_t RxTimerHeap::get_timeout_interval()
+{
+    uint64_t interval=0,now=Clock::get_now_tick();
+    heap_entry *entry=this->get_heap_top();
+
+    if(entry&&entry->expire_time>now){
+        interval=entry->expire_time-now;
+    }
+    return interval;
+}
+
 void RxTimerHeap::heap_init()
 {
     _timer_heap.reserve(64);

@@ -6,27 +6,33 @@
 void HttpResponse::set_async_content_provider(std::function<void ()> async_task, HttpResponse::DeferContentProvider::ProvideAction defer_content_provider)
 {
     _defer_content_provider.emplace(DeferContentProvider(_conn_belongs,defer_content_provider,true));
-    _conn_belongs->get_eventloop().async(async_task,[this](){
+    _conn_belongs->get_eventloop()->async(async_task,[this](){
         DeferContentProvider &provider=_defer_content_provider.value();
         provider.set_status(DeferContentProvider::Status::Providing);
-        std::any_cast<HttpRequestPipeline&>(_conn_belongs->data).try_handle_remaining();
+        std::any_cast<HttpRequestQueue&>(_conn_belongs->data).try_handle_remaining();
     });
 }
 
 bool HttpResponse::send_file(const std::string &filename,size_t offset)
 {
-    RxFD file;
-    bool open=RxFDHelper::RegFile::open(filename,file);
-    if(!open){
+    try {
+        RxFDHelper::File file(filename);
+
+        long send_length=file.get_len()-offset;
+        if(send_length<=0)
+            throw std::runtime_error("error occur when send_file "+filename+" offset>=file length");
+
+        this->status_code(HttpStatusCode::OK)
+             .headers("Content-Length",std::to_string(send_length))
+             .headers("Content-Type",get_mimetype_by_filename(filename));
+
+        return this->body().read_from_regular_file(file.get_fd(),send_length,offset);
+
+    }catch (std::runtime_error &e) {
+        LOG_WARN<<e.what();
         return false;
     }
 
-    long file_length=RxFDHelper::RegFile::get_file_length(file);
-    this->status_code(HttpStatusCode::OK)
-         .headers("Content-Length",std::to_string(file_length))
-         .headers("Content-Type",get_mimetype_by_filename(filename));
-
-    return this->body().read_from_regular_file(file.raw_fd,file_length);
 }
 
 HttpResponse::HttpResponse(RxConnection *conn):
@@ -53,10 +59,12 @@ void HttpResponse::flush()
         this->_headers.second=ComponentStatus::SENT;
     }
     output_buf.append(_body);
-    for(auto it=output_buf.readable_begin();it!=output_buf.readable_end();it++){
-        std::cout<<*it;
-    }
-    std::cout<<std::endl;
+
+//    std::cout<<"@HttpResponse flush"<<std::endl;
+//    for(auto it=output_buf.readable_begin();it!=output_buf.readable_end();it++){
+//        std::cout<<*it;
+//    }
+//    std::cout<<std::endl;
 }
 
 bool HttpResponse::DeferContentProvider::try_provide_once()
@@ -66,15 +74,15 @@ bool HttpResponse::DeferContentProvider::try_provide_once()
         BufAllocator allocator=[this](size_t length_expect)->uint8_t*{
             auto buf_ptr=BufferBase::create<BufferMalloc>(length_expect);
             BufferSlice slice(buf_ptr,0,buf_ptr->length());
-            HttpResponse &req=std::any_cast<HttpRequestPipeline&>(_conn->data).front().response;
+            HttpResponse &req=std::any_cast<HttpRequestQueue&>(_conn->data).front().response;
             req.body().push_buf_slice(slice);
             return buf_ptr->data();
         };
         ProvideDone done=[this](){
             _status=Status::Done;
-            HttpRequest &req=std::any_cast<HttpRequestPipeline&>(_conn->data).front().request;
+            HttpRequest &req=std::any_cast<HttpRequestQueue&>(_conn->data).front().request;
             if(req.stage()==HttpReqLifetimeStage::RequestReceived){
-               req.stage()=HttpReqLifetimeStage::RequestCompleted;
+               req.set_stage(HttpReqLifetimeStage::RequestCompleted);
             }
         };
 

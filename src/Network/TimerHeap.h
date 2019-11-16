@@ -12,10 +12,15 @@ class RxTimerHeap
 public:
     RxTimerHeap();
 
+    /// @brief check whether there is timer has expired, if any, call the timeout callback
     /// @return the number of timers expired
     int check_timer_expiry();
 
     size_t get_timer_num() const;
+
+    /// @brief get how many milliseconds from now till the first timeout happends
+    /// @return 0 if no timer is going to timeout
+    uint64_t get_timeout_interval();
 
 private:
     struct heap_entry{

@@ -17,13 +17,16 @@ enum class ProcessStatus{
 class RxProtoProcessor
 {
 public:
-    RxProtoProcessor()=default;
-    virtual ~RxProtoProcessor()=default;
+    RxProtoProcessor(RxConnection *conn):_conn_belongs(conn){}
+    virtual ~RxProtoProcessor();
 
-    virtual void init(RxConnection &conn)=0;
+    RxConnection *conn_belongs();
 
-    virtual ProcessStatus process_read_data(RxConnection &conn,RxChainBuffer &input_buf)=0;
-    virtual ProcessStatus handle_write_prepared(RxConnection &conn,RxChainBuffer &output_buf)=0;
+    virtual ProcessStatus process_read_data(RxConnection *conn,RxChainBuffer &input_buf)=0;
+    virtual ProcessStatus handle_write_prepared(RxConnection *conn,RxChainBuffer &output_buf)=0;
+
+protected:
+    RxConnection *_conn_belongs;
 };
 
 

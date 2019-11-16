@@ -5,9 +5,9 @@
 #include "Network/Connection.h"
 #include "HttpDefines.h"
 
-class HttpRequestPipeline;
+class HttpRequestQueue;
 class HttpResponse{
-    friend HttpRequestPipeline;
+    friend HttpRequestQueue;
 
 public:
     using BufAllocator=std::function<uint8_t*(size_t length_expect)>;
@@ -17,7 +17,6 @@ public:
         HttpStatusCode status_code;
         HttpVersion version;
     };
-    using HttpResponseBody=RxChainBuffer;
 
     HttpResponse(RxConnection *conn);
 

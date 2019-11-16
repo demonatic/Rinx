@@ -25,7 +25,7 @@ public:
     RxChainBuffer& get_output_buf();
 
     RxProtoProcessor& get_proto_processor() const;
-    RxEventLoop& get_eventloop() const;
+    RxEventLoop* get_eventloop() const;
     RxFD get_rx_fd() const;
 
     void set_proto_processor(std::unique_ptr<RxProtoProcessor> &&processor) noexcept;

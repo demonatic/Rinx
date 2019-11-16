@@ -74,10 +74,11 @@ public:
     void wake_up_loop();
 
 private:
-    int poll_and_dispatch_io();
+    int poll_and_dispatch_io(int timeout_millsec);
     int check_timers();
     void run_defers();
     void do_prepare();
+    int get_poll_timeout();
 
     void quit();
 

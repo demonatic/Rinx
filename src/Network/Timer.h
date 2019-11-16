@@ -3,6 +3,7 @@
 
 #include <functional>
 #include "../Util/Clock.h"
+#include "../Util/Noncopyable.h"
 
 class RxEventLoop;
 
@@ -12,6 +13,7 @@ using TimerCallback=std::function<void()>;
 /// The caller need to hold and manage the RxTimer object
 class RxTimer
 {
+    friend class RxTimerHeap;
 public:
     RxTimer(RxEventLoop *eventloop);
 
@@ -25,22 +27,21 @@ public:
     uint64_t get_duration() const noexcept;
 
 private:    
-    friend class RxTimerHeap;
-
     void expired();
     void set_active(bool active) noexcept;
 
-    RxEventLoop *_eventloop_belongs;
-
+private:
     TimerID _id;
 
     uint64_t _duration;
-    std::size_t _heap_index;
+    size_t _heap_index;
 
     bool _is_active;
     bool _is_repeat;
 
-    TimerCallback _cb;
+    TimerCallback _timeout_cb;
+
+    RxEventLoop *_eventloop_belongs;
 };
 
 #endif // TIMER_H

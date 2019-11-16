@@ -3,6 +3,7 @@
 
 #include "../../Util/Util.h"
 #include "../../Util/OnceCall.h"
+#include "../../Network/Buffer.h"
 #include <unordered_map>
 #include <string_view>
 #include <algorithm>
@@ -122,6 +123,8 @@ enum HttpReqLifetimeStage:uint8_t{
 
     __ReqLifetimeStageCount
 };
+
+using HttpResponseBody=RxChainBuffer;
 
 class HttpHeaderFields{
 public:

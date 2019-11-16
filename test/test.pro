@@ -5,4 +5,4 @@ SUBDIRS += \
     UnitTest/HttpParseTest \
     UnitTest/ThreadPoolTest \
     UnitTest/TimerTest\
-    UnitTest/RequestPipelineTest\
+#    UnitTest/RequestPipelineTest\

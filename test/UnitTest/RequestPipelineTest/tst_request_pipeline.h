@@ -4,9 +4,9 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 #include <gmock/gmock.h>
-#include "../../../src/Protocol/HTTP/HttpParser.h"
-#include "../../../src/Protocol/HTTP/HttpRequest.h"
-#include "../../../src/Protocol/HTTP/HttpDefines.h"
+//#include "../../../src/Protocol/HTTP/HttpParser.h"
+//#include "../../../src/Protocol/HTTP/HttpRequest.h"
+//#include "../../../src/Protocol/HTTP/HttpDefines.h"
 
 using namespace testing;
 

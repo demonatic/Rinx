@@ -43,18 +43,14 @@ public:
     struct rebind{ typedef ObjectAllocator<U> other; };
 
     T *allocate(size_type n, const void *hint=nullptr){
-#ifdef _DEBUG
         assert(n==1);
-#endif
         T *addr=static_cast<T*>(pool_.malloc());
         if(!addr) throw std::bad_alloc();
         return addr;
     }
 
     void deallocate(T *ptr, size_type n){
-#ifdef _DEBUG
         assert(n==1);
-#endif
         if(ptr){
             pool_.free(ptr);
         }

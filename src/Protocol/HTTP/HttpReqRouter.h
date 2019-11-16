@@ -7,7 +7,7 @@
 #include "HttpRequest.h"
 #include "HttpResponse.h"
 
-class HttpRequestPipeline;
+class HttpRequestQueue;
 class RxProtoHttp1Processor;
 
 using HttpReqHandler=std::function<void(HttpRequest&,HttpResponse&)>;
@@ -31,7 +31,7 @@ struct HttpRoute{
 
 class HttpRequestRouter
 {
-    friend HttpRequestPipeline;
+    friend HttpRequestQueue;
     friend RxProtoHttp1Processor;
     #define as_index(_enum) Util::to_index(_enum)
     static constexpr auto stage_count=as_index(HttpReqLifetimeStage::__ReqLifetimeStageCount);

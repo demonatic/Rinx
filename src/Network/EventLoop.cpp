@@ -17,15 +17,15 @@ bool RxEventLoop::init()
         return false;
     }
 
-    _event_fd={RxFD_EVENT,RxFDHelper::Event::create_event_fd()};
-    if(_event_fd.raw_fd==-1){
+    _event_fd=RxFDHelper::Event::create_event_fd();
+    if(_event_fd.raw==-1){
         LOG_WARN<<"create event fd failed";
         return false;
     }
 
     //register event fd read handler
-    set_event_handler(_event_fd.fd_type,Rx_EVENT_READ,[this](const RxEvent &event_data)->RxHandlerRc{
-        if(!RxFDHelper::Event::read_event_fd(event_data.Fd.raw_fd)){
+    set_event_handler(_event_fd.type,Rx_EVENT_READ,[this](const RxEvent &event_data)->RxHandlerRc{
+        if(!RxFDHelper::Event::read_event_fd(event_data.Fd)){
             LOG_WARN<<"read event fd failed, eventloop_id="<<_id;
             return RX_HANDLER_ERR;
         }
@@ -74,7 +74,9 @@ int RxEventLoop::start_event_loop()
     while(_is_running){
         do_prepare();
         check_timers();
-        poll_and_dispatch_io();
+
+        int timeout=get_poll_timeout();
+        poll_and_dispatch_io(timeout);
         run_defers();
     }
     quit();
@@ -105,7 +107,7 @@ void RxEventLoop::set_loop_prepare(RxEventLoop::ReactorCallback loop_prepare_cb)
 
 void RxEventLoop::wake_up_loop()
 {
-    if(!RxFDHelper::Event::write_event_fd(_event_fd.raw_fd)){
+    if(!RxFDHelper::Event::write_event_fd(_event_fd)){
         LOG_WARN<<"eventloop write event fd failed, eventloop_id="<<_id<<" Reason:"<<errno<<' '<<strerror(errno);
     }
 }
@@ -117,16 +119,22 @@ void RxEventLoop::do_prepare()
     }
 }
 
+int RxEventLoop::get_poll_timeout()
+{
+    uint64_t timeout=_timer_heap.get_timeout_interval();
+    return timeout!=0?static_cast<int>(timeout):-1;
+}
+
 void RxEventLoop::quit()
 {
-    RxFDHelper::close(_event_fd.raw_fd);
+    RxFDHelper::close(_event_fd);
     _eventloop_epoll.destroy();
     LOG_INFO<<"QUIT EventLoop "<<get_id();
 }
 
-int RxEventLoop::poll_and_dispatch_io()
+int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)
 {
-    int nfds=_eventloop_epoll.wait();
+    int nfds=_eventloop_epoll.wait(timeout_millsec);
 
     switch(nfds){
         case Epoll_Error:
@@ -145,13 +153,13 @@ int RxEventLoop::poll_and_dispatch_io()
 
     for(int i=0;i<nfds;i++){
         RxEvent rx_event;
-        rx_event.Fd.raw_fd=static_cast<int>(ep_events[i].data.u64);
-        rx_event.Fd.fd_type=static_cast<RxFDType>(ep_events[i].data.u64>>32);
+        rx_event.Fd.raw=static_cast<int>(ep_events[i].data.u64);
+        rx_event.Fd.type=static_cast<RxFDType>(ep_events[i].data.u64>>32);
         rx_event.eventloop=this;
 
         const std::vector<RxEventType> rx_event_types=RxEventPoller::get_rx_event_types(ep_events[i]);
         for(auto rx_ev_type:rx_event_types){
-            EventHandler &ev_handler=_event_handlers[rx_ev_type][rx_event.Fd.fd_type];
+            EventHandler &ev_handler=_event_handlers[rx_ev_type][rx_event.Fd.type];
             if(!ev_handler)
                 continue;
 
@@ -161,7 +169,7 @@ int RxEventLoop::poll_and_dispatch_io()
             }
             else if(rc==RX_HANDLER_ERR){
                 LOG_WARN<<"io_poll handler doesn't exist or exec failed. "
-                "event_type="<<rx_ev_type<<" fd_type="<<rx_event.Fd.fd_type<<" fd="<<rx_event.Fd.raw_fd;
+                "event_type="<<rx_ev_type<<" fd_type="<<rx_event.Fd.type<<" fd="<<rx_event.Fd.raw;
             }
             else break;
         }

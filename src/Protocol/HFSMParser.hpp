@@ -92,7 +92,7 @@ public:
         _curr_state->on_entry();
     }
 
-    /// @brief
+    /// @brief try to extract one request in each call
     template<typename InputIterator>
     ParseRes parse(InputIterator begin,InputIterator end,void *request){
         ParseRes parse_res;

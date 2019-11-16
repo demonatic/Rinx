@@ -9,7 +9,7 @@
 
 
 /// @brief for HTTP1.1
-class HttpRequestPipeline{
+class HttpRequestQueue{
 
     struct PipelineNode{
         PipelineNode(RxConnection *conn):request(conn),response(conn){}
@@ -19,8 +19,8 @@ class HttpRequestPipeline{
     };
 
 public:
-    HttpRequestPipeline(RxConnection *conn);
-    HttpRequestPipeline(const HttpRequestPipeline &pipeline)=default;
+    HttpRequestQueue(RxConnection *conn);
+    HttpRequestQueue(const HttpRequestQueue &pipeline)=default;
 
     bool empty() const;
     PipelineNode& front();

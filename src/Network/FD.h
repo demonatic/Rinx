@@ -8,9 +8,10 @@
 #include <vector>
 #include <string>
 
-enum RxFDType:uint32_t{
+enum RxFDType{
     RxFD_LISTEN=0,
     RxFD_CLIENT_STREAM,
+    RxFD_EPOLL,
     RxFD_EVENT,
     RxFD_REGULAR_FILE,
     RxFD_INVALID,
@@ -19,17 +20,18 @@ enum RxFDType:uint32_t{
 };
 
 struct RxFD{
-    RxFDType fd_type;
-    int raw_fd;
-    bool operator==(const RxFD &other){
-        return this->fd_type==other.fd_type&&this->raw_fd==other.raw_fd;
-    }
-    bool operator!=(const RxFD &other){
-        return !((*this)==other);
-    }
+    int raw;
+    RxFDType type;
+
+    constexpr RxFD(RxFDType type,int fd):raw(fd),type(type){}
+    constexpr RxFD():raw(-1),type(RxFDType::RxFD_INVALID){}
+
+    constexpr operator int() {return raw;}
+    constexpr bool operator==(const RxFD &other) {return this->type==other.type&&this->raw==other.raw;}
+    constexpr bool operator!=(const RxFD &other) {return !((*this)==other);}
 };
 
-constexpr static RxFD InvalidRxFD={RxFDType::RxFD_INVALID,-1};
+constexpr static RxFD RxInvalidFD={RxFDType::RxFD_INVALID,-1};
 
 enum class RxAcceptRc{
     ACCEPTING,
@@ -50,42 +52,43 @@ enum class RxWriteRc{
     ERROR
 };
 
+// TODO change int fd to RxFD
 namespace RxFDHelper{
 
-    /// @brief close the fd and reset fd to -1
+    /// @brief close the fd and reset fd to InvalidFD
     /// @return whether the close operation is executed successfully
-    bool close(int &fd) noexcept;
+    bool close(RxFD &fd) noexcept;
 
     /// @brief check whether the fd is -1
-    bool is_open(int fd) noexcept;
+    bool is_open(RxFD fd) noexcept;
 
     namespace Stream{
-        int create_stream() noexcept;
+        RxFD create_client_stream() noexcept;
+        RxFD create_serv_sock() noexcept;
 
-        bool shutdown_both(int fd) noexcept;
+        bool shutdown_both(RxFD fd) noexcept;
 
-        bool bind(int fd,const char *host,const int port) noexcept;
-        bool listen(int fd) noexcept;
-        int accept(int fd,RxAcceptRc &accept_res) noexcept;
+        bool bind(RxFD fd,const char *host,const int port) noexcept;
+        bool listen(RxFD fd) noexcept;
+        RxFD accept(RxFD fd,RxAcceptRc &accept_res) noexcept;
 
-        bool set_tcp_nodelay(int fd,const bool nodelay) noexcept;
-        bool set_nonblock(int fd,const bool nonblock) noexcept;
+        bool set_tcp_nodelay(RxFD fd,const bool nodelay) noexcept;
+        bool set_nonblock(RxFD fd,const bool nonblock) noexcept;
 
-        ssize_t read(int fd,void *buffer,size_t n,RxReadRc &read_res);
-        ssize_t readv(int fd,std::vector<struct iovec> &io_vec,RxReadRc &read_res);
+        ssize_t read(RxFD fd,void *buffer,size_t n,RxReadRc &read_res);
+        ssize_t readv(RxFD fd,std::vector<struct iovec> &io_vec,RxReadRc &read_res);
 
-        ssize_t write(int fd,void *buffer,size_t n,RxWriteRc &write_res);
-        ssize_t writev(int fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res);
+        ssize_t write(RxFD fd,void *buffer,size_t n,RxWriteRc &write_res);
+        ssize_t writev(RxFD fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res);
 
     };
 
     namespace Event{
-        int create_event_fd() noexcept;
+        RxFD create_event_fd() noexcept;
 
-        bool read_event_fd(int fd);
-        bool write_event_fd(int fd);
+        bool read_event_fd(RxFD fd);
+        bool write_event_fd(RxFD fd);
     }
-
 
     namespace RegFile{
         /// @return if the file is opened successfully
@@ -93,6 +96,19 @@ namespace RxFDHelper{
 
         long get_file_length(RxFD fd);
     }
+
+    class File{
+    public:
+        File(const std::string &path,bool create=false);
+        ~File();
+
+        long get_len() const;
+        RxFD get_fd() const;
+
+    private:
+        RxFD _file_fd;
+    };
+
 }
 
 
