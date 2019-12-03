@@ -51,7 +51,7 @@ public:
         long total=std::distance(buf.begin(),buf.end());
         long n_left=total;
         do{
-            HttpParse::HttpParser::ParseRes parse_res=parser.parse(buf.begin()+total-n_left,buf.end(),&req);
+            HttpParse::HttpParser::ProcessStat parse_res=parser.parse(buf.begin()+total-n_left,buf.end(),&req);
             n_left=parse_res.n_remaining;
 
             if(parse_res.got_complete_request){

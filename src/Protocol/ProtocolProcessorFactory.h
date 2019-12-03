@@ -4,12 +4,12 @@
 #include <memory>
 #include "ProtocolProcessor.h"
 
-class RxProtoProcFactory
+class RxProtocolFactory
 {
 public:
-    RxProtoProcFactory();
+    RxProtocolFactory();
     virtual std::unique_ptr<RxProtoProcessor> new_proto_processor(RxConnection *conn)=0;
-    virtual ~RxProtoProcFactory();
+    virtual ~RxProtocolFactory();
 };
 
 #endif // PROTOCOLPROCESSORFACTORY_H

@@ -1,13 +1,19 @@
 #include "Buffer.h"
+#include "../Util/Util.h"
 
 size_t ChainBuffer::buf_slice_num() const
 {
-    return _buf_slice_list.size();
+    return _buf_slice_list.size();  //TO IMPORVE cost 0.24
 }
 
 size_t ChainBuffer::readable_size()
 {
     return readable_end()-readable_begin();
+}
+
+bool ChainBuffer::empty()
+{
+    return this->readable_size()==0;
 }
 
 ssize_t ChainBuffer::read_from_fd(RxFD fd,RxReadRc &res)
@@ -42,7 +48,7 @@ bool ChainBuffer::read_from_regular_file(RxFD regular_file_fd, size_t length, si
     try{
         auto buf_file=BufferBase::create<BufferFile>(regular_file_fd,offset+length);
         BufferSlice file(buf_file,offset,offset+length);
-        this->push_buf_slice(file);
+        this->_buf_slice_list.emplace_back(std::move(file));
     }
     catch(std::bad_alloc &e){
         LOG_WARN<<"err when read from regular file "<<regular_file_fd.raw<<' '<<e.what();
@@ -70,26 +76,6 @@ ssize_t ChainBuffer::write_to_fd(RxFD fd,RxWriteRc &res)
         this->commit_consume(bytes);
     }
     return bytes;
-}
-
-ChainBuffer::read_iterator ChainBuffer::readable_begin()
-{
-    return read_iterator(this,_buf_slice_list.begin(),_buf_slice_list.front().read_pos());
-}
-
-ChainBuffer::read_iterator ChainBuffer::readable_end()
-{
-    return read_iterator(this,_buf_slice_list.end(),nullptr);
-}
-
-ChainBuffer::buf_slice_iterator ChainBuffer::slice_begin()
-{
-    return _buf_slice_list.begin();
-}
-
-ChainBuffer::buf_slice_iterator ChainBuffer::slice_end()
-{
-    return _buf_slice_list.end();
 }
 
 void ChainBuffer::append(const char *data, size_t length)
@@ -136,22 +122,17 @@ long ChainBuffer::append(std::istream &istream,long length)
     return total_read;
 }
 
-void ChainBuffer::append(ChainBuffer &buf)
+void ChainBuffer::append(ChainBuffer &&buf)
 {
     for(buf_slice_iterator it=buf.slice_begin();it!=buf.slice_end();++it){
-        this->_buf_slice_list.emplace_back(std::move((*it)));
+        this->_buf_slice_list.emplace_back(std::move(*it));
     }
-    buf.free();
+    buf.clear();
 }
 
-BufferSlice& ChainBuffer::get_head()
+void ChainBuffer::append(BufferSlice slice)
 {
-    return _buf_slice_list.front();
-}
-
-BufferSlice& ChainBuffer::get_tail()
-{
-    return _buf_slice_list.back();
+    this->_buf_slice_list.emplace_back(std::move(slice));
 }
 
 std::unique_ptr<ChainBuffer> ChainBuffer::create_chain_buffer()
@@ -159,7 +140,7 @@ std::unique_ptr<ChainBuffer> ChainBuffer::create_chain_buffer()
     return std::make_unique<ChainBuffer>();
 }
 
-void ChainBuffer::free()
+void ChainBuffer::clear()
 {
     _buf_slice_list.clear();
 }
@@ -176,10 +157,8 @@ void ChainBuffer::commit_consume(size_t n_bytes)
         else{
             size_t read_space=buf_slice.readable_size();
             buf_slice.advance_read(read_space);
-            //TODO add low chunk num thresh
-            if(this->pop_unused_buf_slice()){
-                it_head=_buf_slice_list.begin();
-            }
+             _buf_slice_list.pop_front();
+             it_head=_buf_slice_list.begin();
             n_bytes-=read_space;
         }
     }
@@ -192,32 +171,20 @@ ChainBuffer ChainBuffer::slice(read_iterator begin,read_iterator end)
     while(length){
         size_t slice_len=std::min(static_cast<size_t>(begin._p_end-begin._p_cur),length);
         size_t start_pos=static_cast<size_t>(begin._p_cur-begin._p_start);
-        sliced.push_buf_slice(BufferSlice(begin._it_buf_slice->get_buf_raw_ptr(),start_pos,start_pos+slice_len));
+        _buf_slice_list.emplace_back(BufferSlice(begin._it_buf_slice->get_buf_raw_ptr(),start_pos,start_pos+slice_len));
         length-=slice_len;
         begin+=slice_len;
     }
     return sliced;
 }
 
-void ChainBuffer::push_buf_slice(BufferSlice slice)
-{
-    _buf_slice_list.emplace_back(std::move(slice));
-}
-
-bool ChainBuffer::pop_unused_buf_slice(bool force)
-{
-    if(this->buf_slice_num()&&this->get_head().readable_size()!=0&&!force){
-        return false;
-    }
-    _buf_slice_list.pop_front();
-    return true;
-}
 
 void ChainBuffer::check_need_expand()
 {
     if(!buf_slice_num()||get_tail().writable_size()==0){
-        BufferSlice slice(BufferBase::create<BufferFixed<>>());
-        push_buf_slice(slice);
+        BufferBase::Ptr fixed_buf=BufferBase::create<BufferFixed<>>();
+        BufferSlice slice(fixed_buf);
+        _buf_slice_list.emplace_back(std::move(slice));
     }
 }
 
@@ -233,3 +200,35 @@ ChainBuffer &ChainBuffer::operator<<(const char c)
     return *this;
 }
 
+ChainBuffer::read_iterator ChainBuffer::readable_begin()
+{
+    if(_buf_slice_list.empty()){
+        return readable_end();
+    }
+    return read_iterator(this,_buf_slice_list.begin(),_buf_slice_list.front().read_pos());
+}
+
+ChainBuffer::read_iterator ChainBuffer::readable_end()
+{
+    return read_iterator(this,_buf_slice_list.end(),nullptr);
+}
+
+ChainBuffer::buf_slice_iterator ChainBuffer::slice_begin()
+{
+    return _buf_slice_list.begin();
+}
+
+ChainBuffer::buf_slice_iterator ChainBuffer::slice_end()
+{
+    return _buf_slice_list.end();
+}
+
+BufferSlice& ChainBuffer::get_head()
+{
+    return _buf_slice_list.front();
+}
+
+BufferSlice& ChainBuffer::get_tail()
+{
+    return _buf_slice_list.back();
+}

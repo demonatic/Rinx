@@ -4,7 +4,7 @@
 #include "EventLoop.h"
 #include "../3rd/NanoLog/NanoLog.h"
 
-RxEventPoller::RxEventPoller():_epoll_fd(),_events(nullptr),_max_event_num(0)
+RxEventPoller::RxEventPoller():_epoll_fd(),_ep_events(nullptr),_max_event_num(0)
 {
 
 }
@@ -28,8 +28,8 @@ bool RxEventPoller::create(int max_event_num)
         return false;
     }
 
-    _events=static_cast<epoll_event*>(malloc(sizeof(struct epoll_event)*max_event_num));
-    if(_events==nullptr){
+    _ep_events=static_cast<epoll_event*>(malloc(sizeof(struct epoll_event)*max_event_num));
+    if(_ep_events==nullptr){
         LOG_WARN<<"malloc epoll events failed";
         return false;
     }
@@ -39,7 +39,7 @@ bool RxEventPoller::create(int max_event_num)
 
 bool RxEventPoller::is_initialized() const noexcept
 {
-    return RxFDHelper::is_open(_epoll_fd)&&_events!=nullptr;
+    return RxFDHelper::is_open(_epoll_fd)&&_ep_events!=nullptr;
 }
 
 void RxEventPoller::destroy() noexcept
@@ -48,15 +48,15 @@ void RxEventPoller::destroy() noexcept
         RxFDHelper::close(_epoll_fd);
     }
 
-    if(_events!=nullptr){
-        free(_events);
-        _events=nullptr;
+    if(_ep_events!=nullptr){
+        free(_ep_events);
+        _ep_events=nullptr;
     }
 }
 
 int RxEventPoller::wait(int timeout_millsec)
 {
-    int nfds=::epoll_wait(_epoll_fd.raw,_events,_max_event_num,timeout_millsec);
+    int nfds=::epoll_wait(_epoll_fd.raw,_ep_events,_max_event_num,timeout_millsec);
     if(nfds==0){
         nfds=Epoll_Timeout;
     }
@@ -69,7 +69,7 @@ int RxEventPoller::wait(int timeout_millsec)
 
 epoll_event *RxEventPoller::get_epoll_events() const noexcept
 {
-    return _events;
+    return _ep_events;
 }
 
 bool RxEventPoller::add_fd_event(const RxFD Fd,const std::vector<RxEventType> &event_type)
@@ -95,7 +95,7 @@ bool RxEventPoller::del_fd_event(const RxFD Fd)
     return true;
 }
 
-std::vector<RxEventType> RxEventPoller::get_rx_event_types(const epoll_event &ep_event) noexcept
+std::vector<RxEventType> RxEventPoller::get_rx_event_types(const epoll_event &ep_event) const noexcept
 {
     std::vector<RxEventType> rx_event_types;
     uint32_t evt=ep_event.events;
@@ -106,19 +106,18 @@ std::vector<RxEventType> RxEventPoller::get_rx_event_types(const epoll_event &ep
     /// 4. if remote only shutdown(SHUT_WR), epoll will return nothing
 
     if(evt&(EPOLLHUP|EPOLLERR|EPOLLRDHUP)){
-       rx_event_types.push_back(Rx_EVENT_ERROR);
+       rx_event_types.emplace_back(Rx_EVENT_ERROR);
     }
     if(evt&EPOLLIN){
-        rx_event_types.push_back(Rx_EVENT_READ);
+        rx_event_types.emplace_back(Rx_EVENT_READ);
     }
     if(evt&EPOLLOUT){
-        rx_event_types.push_back(Rx_EVENT_WRITE);
+        rx_event_types.emplace_back(Rx_EVENT_WRITE);
     }
-
     return rx_event_types;
 }
 
-void RxEventPoller::set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) noexcept
+void RxEventPoller::set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) const noexcept
 {
     ep_event.events|=EPOLLET;
     for(RxEventType rx_event:rx_events){

@@ -1,5 +1,5 @@
-#ifndef REACTOR_H
-#define REACTOR_H
+#ifndef EVENTLOOP_H
+#define EVENTLOOP_H
 
 #include <functional>
 #include <memory>
@@ -11,18 +11,21 @@
 #include "TimerHeap.h"
 #include "../RinxDefines.h"
 #include "../Util/Mutex.h"
+#include "../Util/ThreadPool.h"
 #include "../Server/Signal.h"
 
+using g_threadpool=RxSingeleton<RxThreadPool>;
 ///
-/// \brief The RxReactor class is an EventLoop that manage handles,it includes:
+/// \brief The RxEventLoop class is an Reactor that manage handles,it includes:
 ///     1.handles: to represents sockets or fds
 ///     2.Synchronous Event Demultiplexer: Epoll Object
 ///     3.Event handler: interface to handle events
 ///     4.Timers management
+///     5.async task post
 class RxEventLoop
 {
 public:
-    using ReactorCallback=std::function<void(RxEventLoop*)>;
+    using LoopCallback=std::function<void(RxEventLoop*)>;
     using DeferCallback=std::function<void()>;
 
 public:
@@ -33,11 +36,11 @@ public:
 
     bool init();
 
-    bool monitor_fd_event(const RxFD Fd,const std::vector<RxEventType> &rx_events);
-    bool unmonitor_fd_event(const RxFD Fd);
+    bool register_fd(const RxFD Fd,const std::vector<RxEventType> &rx_events);
+    bool unregister_fd(const RxFD Fd);
 
-    bool set_event_handler(RxFDType fd_type,RxEventType event_type,EventHandler handler) noexcept;
-    bool remove_event_handler(RxFDType fd_type,RxEventType event_type) noexcept;
+    void set_event_handler(RxFDType fd_type,RxEventType event_type,EventHandler handler) noexcept;
+    void remove_event_handler(RxFDType fd_type,RxEventType event_type) noexcept;
 
     int start_event_loop();
     /// @brief stop eventloop asynchronously
@@ -45,7 +48,7 @@ public:
 
     void queue_work(DeferCallback cb);
 
-    void set_loop_prepare(ReactorCallback loop_prepare_cb) noexcept;
+    void set_loop_prepare(LoopCallback loop_prepare_cb) noexcept;
 
     template<typename F1,typename F2,typename ...Args>
     std::enable_if_t<false==std::is_same_v<void,std::invoke_result_t<F1,Args...>>>
@@ -86,11 +89,11 @@ private:
     uint8_t _id;
     std::atomic_bool _is_running;
 
-    ReactorCallback _on_loop_prepare;
+    LoopCallback _on_loop_prepare;
 
-    RxEventPoller _eventloop_epoll;
-    ReactorCallback _on_timeout;
-    EventHandler _event_handlers[RxEventType::Rx_EVENT_TYPE_MAX][RxFDType::__RxFD_TYPE_COUNT];
+    RxEventPoller _event_poller;
+    LoopCallback _on_timeout;
+    EventHandler _event_handlers[RxEventType::__Rx_EVENT_TYPE_MAX][RxFDType::__RxFD_TYPE_COUNT];
 
     RxFD _event_fd;
 
@@ -102,4 +105,4 @@ private:
 };
 
 
-#endif // REACTOR_H
+#endif // EVENTLOOP_H

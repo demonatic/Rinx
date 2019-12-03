@@ -16,6 +16,8 @@ public:
     using value_type=uint8_t;
     using Ptr=std::shared_ptr<BufferBase>;
 
+    virtual ~BufferBase()=default;
+
     template<typename T,typename ...Args>
     static Ptr create(Args... args){
          return rx_pool_make_shared<T>(std::forward<Args>(args)...);
@@ -37,7 +39,7 @@ protected:
 };
 
 /// @class provide a buffer of fixed size
-template<size_t N=RX_BUFFER_CHUNK_SIZE>
+template<size_t N=RxBufferChunkSize>
 class BufferFixed:public BufferBase{
 public:
     BufferFixed(){
@@ -137,10 +139,11 @@ public:
     ~ChainBuffer()=default;
 
     static std::unique_ptr<ChainBuffer> create_chain_buffer();
-    void free();
+    void clear();
 
     size_t buf_slice_num() const;
     size_t readable_size();
+    bool empty();
 
     /// @brief read data as many as possible(no greater than 65535+n) from fd(socket,file...) to buffer
     ssize_t read_from_fd(RxFD fd,RxReadRc &res);
@@ -178,7 +181,9 @@ public:
     long append(std::istream &istream,long length);
 
     /// @brief append the buf_slices of parameter buf to this
-    void append(ChainBuffer &buf);
+    void append(ChainBuffer &&buf);
+
+    void append(BufferSlice slice);
 
     ChainBuffer& operator<<(const char c);
     ChainBuffer& operator<<(const std::string &arg);
@@ -209,11 +214,8 @@ public:
         return *this;
     }
 
-    void push_buf_slice(BufferSlice slice);
-
 private:
-    bool pop_unused_buf_slice(bool force=false);
-    void check_need_expand();
+    inline void check_need_expand();
 };
 
 using RxChainBuffer=ChainBuffer;

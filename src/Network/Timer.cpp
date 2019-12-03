@@ -3,12 +3,18 @@
 #include "TimerHeap.h"
 
 
-RxTimer::RxTimer(RxEventLoop *eventloop):_eventloop_belongs(eventloop),
-    _id(std::numeric_limits<uint64_t>::max()),_duration(0),
-    _heap_index(std::numeric_limits<size_t>::max()),
-    _is_active(false),_is_repeat(false)
+RxTimer::RxTimer(RxEventLoop *eventloop):_id(std::numeric_limits<uint64_t>::max()),
+    _heap_index(std::numeric_limits<size_t>::max()),_duration(0),
+    _is_active(false),_is_repeat(false),_eventloop_belongs(eventloop)
 {
 
+}
+
+RxTimer::~RxTimer()
+{
+    if(this->is_active()){
+        stop();
+    }
 }
 
 TimerID RxTimer::start_timer(uint64_t milliseconds, TimerCallback expiry_action,bool repeat)

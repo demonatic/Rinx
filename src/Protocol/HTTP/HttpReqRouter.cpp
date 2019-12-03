@@ -1,34 +1,47 @@
 #include "HttpReqRouter.h"
+#include "HttpRequest.h"
+#include "HttpResponse.h"
 #include <filesystem>
 
-#define HTTP_ROUTE_FUNC_DEFINE(Method) \
-void HttpRequestRouter::Method(HttpRoute::RegexOrderable uri, HttpReqLifetimeStage stage,HttpReqHandler stage_handler)\
-{\
-    HttpRoute route{HttpMethod::Method,uri};\
-    set_route(route,stage,stage_handler);\
-}
-
-HTTP_ROUTE_FUNC_DEFINE(GET)
-HTTP_ROUTE_FUNC_DEFINE(HEAD)
-HTTP_ROUTE_FUNC_DEFINE(POST)
-HTTP_ROUTE_FUNC_DEFINE(PUT)
-HTTP_ROUTE_FUNC_DEFINE(DELETE)
-HTTP_ROUTE_FUNC_DEFINE(PATCH)
-HTTP_ROUTE_FUNC_DEFINE(OPTIONS)
-
-std::array<HttpRequestRouter::MethodUriMap,HttpRequestRouter::stage_count> HttpRequestRouter::_router;
-
-bool HttpRequestRouter::route_request(HttpRequest &req,HttpResponse &resp,HttpReqLifetimeStage lifetime_stage)
+template<typename T>
+const T* HttpRouter::route(const typename HandlerMap<T>::type &map, const HttpRequest &req)
 {
-    HttpReqHandler req_handler=get_route_handler(req,lifetime_stage);
-    if(req_handler){
-        req_handler(req,resp);
-        return true;
+    const T *t=nullptr;
+    for(auto &regex_pair:map){
+        std::smatch uri_match;
+        if(std::regex_match(req.uri,uri_match,regex_pair.first)){
+            t=&regex_pair.second;
+            break;
+        }
     }
-    return false;
+    return t;
 }
 
-void HttpRequestRouter::default_static_file_handler(HttpRequest &req,HttpResponse &resp)
+void HttpRouter::route_to_responder(HttpRequest &req,HttpResponse &resp) const
+{
+    size_t array_index=Util::to_index(req.method);
+
+    const Responder *responder=route<Responder>(_responders[array_index],req);
+    if(!responder)
+        return;
+
+    (*responder)(req,resp,*resp._gen);
+}
+
+void HttpRouter::install_filters(HttpRequest &req, HttpResponse &resp) const
+{
+    const FilterHBList *filter_hb_list=route<FilterHBList>(_filters,req);
+    if(!filter_hb_list)
+        return;
+
+    ChainFilter header_filters(req,filter_hb_list->header_filter_list);
+    resp.install_header_filters(header_filters);
+
+    ChainFilter body_filters(req,filter_hb_list->body_filter_list);
+    resp.install_body_filters(body_filters);
+}
+
+void HttpRouter::default_static_file_handler(HttpRequest &req,HttpResponse &resp) const
 {
     static const std::filesystem::path web_root_path=WebRootPath;
     static const std::filesystem::path default_web_page=DefaultWebPage;
@@ -36,14 +49,14 @@ void HttpRequestRouter::default_static_file_handler(HttpRequest &req,HttpRespons
     std::filesystem::path authentic_path;
     try {
         //remove prefix to concat path
-        std::string_view request_file(req.uri());
+        std::string_view request_file(req.uri);
         while(request_file.front()=='/'){
             request_file.remove_prefix(1);
         }
         authentic_path=web_root_path/request_file;
 
         //check weather authentic_path is in root path
-        if(std::distance(web_root_path.begin(),web_root_path.end())>std::distance(authentic_path.begin(),authentic_path.end())
+        if(std::distance(web_root_path.begin(),web_root_path.end())>std::distance(authentic_path.begin(),authentic_path.end()) //TO IMPROVE
                 ||!std::equal(web_root_path.begin(),web_root_path.end(),authentic_path.begin())){
             throw std::invalid_argument("request uri must be in web root path");
         }
@@ -54,30 +67,36 @@ void HttpRequestRouter::default_static_file_handler(HttpRequest &req,HttpRespons
             throw std::runtime_error("file not found");
 
     }catch (std::exception &e) {
-         LOG_INFO<<"cannot serve file: "<<req.uri()<<" exception:"<<e.what()<<" with authentic path="<<authentic_path;
-         resp.NotFound_404();
+         LOG_INFO<<"cannot serve file: "<<req.uri<<" exception:"<<e.what()<<" with authentic path="<<authentic_path;
+         resp.send_status(HttpStatusCode::NOT_FOUND);
          return;
     }
-//    std::cout<<"authentic path="<<authentic_path<<std::endl;
-    if(!resp.send_file(authentic_path.string())){
-        //TODO close conn
+
+    if(!resp.send_file_direct(req._conn_belongs,authentic_path)){ //WebRootPath+'/'+DefaultWebPage
+        LOG_WARN<<"send file direct failed "<<errno<<' '<<strerror(errno);
+        req.close_connection();
+        return;
+        //TODO 是否应该让request_handler 返回 bool
     }
 }
 
-void HttpRequestRouter::set_route(const HttpRoute &route, HttpReqLifetimeStage stage,HttpReqHandler stage_handler)
+void HttpRouter::set_responder_route(const Route &route,const Responder responder)
 {
-    _router[as_index(stage)][as_index(route.method)].emplace(route.uri,stage_handler);
+    if(responder){
+       _responders[Util::to_index(route.method)][route.uri]=responder;
+    }
 }
 
-HttpReqHandler HttpRequestRouter::get_route_handler(HttpRequest &req, HttpReqLifetimeStage lifetime_stage)
+void HttpRouter::set_header_filter_route(const Route::RoutableURI uri, const ChainFilter::Filter filter)
 {
-    auto &uri_map=_router[as_index(lifetime_stage)][as_index(req.method())];
-    for(auto &regex_pair:uri_map){
-        std::smatch uri_match;
-        if(std::regex_match(req.uri(),uri_match,regex_pair.first)){
-            HttpReqHandler &req_handler=regex_pair.second;
-            return req_handler;
-        }
+    if(filter){
+        _filters[uri].header_filter_list.emplace_back(std::move(filter));
     }
-    return nullptr;
+}
+
+void HttpRouter::set_body_filter_route(const HttpRouter::Route::RoutableURI uri, const ChainFilter::Filter filter)
+{
+    if(filter){
+        _filters[uri].body_filter_list.emplace_back(std::move(filter));
+    }
 }

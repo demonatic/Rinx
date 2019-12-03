@@ -38,9 +38,9 @@ size_t RxWorkerThreadLoops::get_thread_num() const noexcept
     return _eventloop_threads.size();
 }
 
-RxEventLoop* RxWorkerThreadLoops::get_eventloop(size_t index)
+RxEventLoop& RxWorkerThreadLoops::get_eventloop(size_t index)
 {
-    return index<_eventloop_threads.size()?_eventloop_threads[index].eventloop.get():nullptr;
+    return *_eventloop_threads[index].eventloop;
 }
 
 

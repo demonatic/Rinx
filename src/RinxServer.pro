@@ -20,8 +20,8 @@ SOURCES += \
         Network/FD.cpp \
         Network/Timer.cpp \
         Network/TimerHeap.cpp \
+        Protocol/HTTP/Http1ProtoProcessor.cpp \
         Protocol/HTTP/HttpParser.cpp \
-        Protocol/HTTP/HttpPipeline.cpp \
         Protocol/HTTP/HttpReqRouter.cpp \
         Protocol/HTTP/HttpRequest.cpp \
         Protocol/HTTP/HttpResponse.cpp \
@@ -47,9 +47,9 @@ HEADERS += \
         Network/Timer.h \
         Network/TimerHeap.h \
         Protocol/HFSMParser.hpp \
+        Protocol/HTTP/Http1ProtoProcessor.h \
         Protocol/HTTP/HttpDefines.h \
         Protocol/HTTP/HttpParser.h \
-        Protocol/HTTP/HttpPipeline.h \
         Protocol/HTTP/HttpReqRouter.h \
         Protocol/HTTP/HttpRequest.h \
         Protocol/HTTP/HttpResponse.h \
@@ -65,7 +65,6 @@ HEADERS += \
         Util/Mutex.h \
         Util/Noncopyable.h \
         Util/ObjectAllocator.hpp \
-        Util/OnceCall.h \
         Util/Singeleton.h \
         Util/ThreadPool.h \
         Util/Util.h

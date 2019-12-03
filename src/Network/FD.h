@@ -26,27 +26,27 @@ struct RxFD{
     constexpr RxFD(RxFDType type,int fd):raw(fd),type(type){}
     constexpr RxFD():raw(-1),type(RxFDType::RxFD_INVALID){}
 
-    constexpr operator int() {return raw;}
-    constexpr bool operator==(const RxFD &other) {return this->type==other.type&&this->raw==other.raw;}
-    constexpr bool operator!=(const RxFD &other) {return !((*this)==other);}
+    constexpr operator int() const{return raw;}
+    constexpr bool operator==(const RxFD &other) const {return this->type==other.type&&this->raw==other.raw;}
+    constexpr bool operator!=(const RxFD &other) const {return !((*this)==other);}
 };
 
 constexpr static RxFD RxInvalidFD={RxFDType::RxFD_INVALID,-1};
 
-enum class RxAcceptRc{
+enum class RxAcceptRc:uint8_t{
     ACCEPTING,
     ALL_ACCEPTED,
     FAILED,
     ERROR
 };
 
-enum class RxReadRc{
+enum class RxReadRc:uint8_t{
     OK,
     CLOSED,
     ERROR,
 };
 
-enum class RxWriteRc{
+enum class RxWriteRc:uint8_t{
     OK,
     SYS_SOCK_BUFF_FULL,
     ERROR

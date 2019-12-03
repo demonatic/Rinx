@@ -55,7 +55,7 @@ bool RxThreadPool::Queue<T>::empty() const
 
 RxThreadPool::RxThreadPool (size_t thread_num):_stop(false),_index(0)
 {
-    for(size_t i=0;i<thread_num;i++){
+    for(size_t i=0;i<thread_num;i++){ //TODO
         _workers.emplace_back(std::make_unique<ThreadWorker>());
     }
     for(size_t i=0;i<thread_num;i++){

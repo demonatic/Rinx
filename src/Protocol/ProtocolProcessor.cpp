@@ -6,7 +6,7 @@ RxProtoProcessor::~RxProtoProcessor()
 
 }
 
-RxConnection *RxProtoProcessor::conn_belongs()
+RxConnection *RxProtoProcessor::get_connection()
 {
     return _conn_belongs;
 }

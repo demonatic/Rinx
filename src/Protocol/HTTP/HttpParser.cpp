@@ -37,11 +37,10 @@ void StateRequestLine::consume(size_t length,iterable_bytes iterable, void *requ
                 if(likely(c=='\n')){
                     HttpRequest *http_request=static_cast<HttpRequest*>(request);
                     Util::to_upper(_stored_method);
-                    http_request->method()=to_http_method(_stored_method);
+                    http_request->method=to_http_method(_stored_method);
                     Util::to_upper(_stored_version);
-                    http_request->version()=to_http_version(_stored_version);
-                    http_request->uri()=std::move(_stored_uri);
-
+                    http_request->version=to_http_version(_stored_version);
+                    http_request->uri=std::move(_stored_uri);
                     ctx.transit_super_state(GET_ID(StateHeader));
                 }
                 else{
@@ -78,7 +77,7 @@ void StateHeader::consume(size_t length,iterable_bytes iterable, void *request)
                     _sub_state=S_EXPECT_FIELD_END;
                     Util::to_lower(_header_field_key);
                     Util::to_lower(_header_field_val);
-                    http_request->headers().add(std::move(_header_field_key),std::move(_header_field_val));
+                    http_request->headers.add(std::move(_header_field_key),std::move(_header_field_val));
                 }
                 else{
                     _header_field_val.push_back(c);
@@ -108,10 +107,10 @@ void StateHeader::consume(size_t length,iterable_bytes iterable, void *request)
                 if(likely(c=='\n')){
                     ctx.add_event(ParseEvent::HeaderReceived);
 
-                    if(auto content_len=http_request->headers().field_val("content-length")){
+                    if(auto content_len=http_request->headers.field_val("content-length")){
                         ctx.transit_super_state(GET_ID(StateContentLength),atoi(content_len.value().c_str())); //TODO try catch
                     }
-                    else if(auto header_key=http_request->headers().field_val("transfer-encoding")){
+                    else if(auto header_key=http_request->headers.field_val("transfer-encoding")){
                         ctx.transit_super_state(GET_ID(StateChunk));
                     }
                     else{

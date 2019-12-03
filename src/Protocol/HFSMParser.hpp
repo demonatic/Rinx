@@ -83,7 +83,7 @@ public:
     template<typename IteratorType>
     using InputDataRange=std::pair<IteratorType,IteratorType>;
 
-    struct ParseRes{
+    struct ProcessStat{
         bool got_complete_request=false;
         size_t n_remaining;
     };
@@ -94,8 +94,8 @@ public:
 
     /// @brief try to extract one request in each call
     template<typename InputIterator>
-    ParseRes parse(InputIterator begin,InputIterator end,void *request){
-        ParseRes parse_res;
+    ProcessStat parse(InputIterator begin,InputIterator end,void *request){
+        ProcessStat parse_res;
         InputIterator cur=begin,next=begin;
 
         while(cur!=end&&!parse_res.got_complete_request){
@@ -115,9 +115,9 @@ public:
                 }
             }
             if(consume_ctx.next_super_state){
-                size_t event_id=(*consume_ctx.next_super_state).first;
+                size_t state_id=(*consume_ctx.next_super_state).first;
                 std::any &super_state_ctx=(*consume_ctx.next_super_state).second;
-                this->transit_super_state(event_id,super_state_ctx);
+                this->transit_super_state(state_id,super_state_ctx);
                 //we assume that a complete request has got if the _curr_state go back to the initial super state
                 parse_res.got_complete_request=_curr_state->get_id()==0?true:false;
             }
@@ -130,8 +130,6 @@ public:
 
     template<typename Fun>
     void on_event(const int event,const Fun &fun){
-        static_assert(std::is_same<typename function_traits<Fun>::return_type,void>::value,
-                      "event callback return type must be void");
         using stl_func_type=std::function<typename function_traits<Fun>::function_type>;
         _event_map[event]=std::make_shared<stl_func_type>(fun);
     }
@@ -166,18 +164,17 @@ private:
         });
     }
 
-
+    /// @return false if there is error occur on event handler
     template<typename ...Args>
     bool emit_event(const int event,Args &&...args){
         auto it=_event_map.find(event);
         if(it==_event_map.end())
-            return false;
+            return true;
 
-        typedef std::function<void(decltype(std::forward<Args>(args))...)> fun_type;
+        typedef std::function<bool(decltype(std::forward<Args>(args))...)> fun_type;
         fun_type &f=*static_cast<fun_type*>(it->second.get());
 
-        f(std::forward<Args>(args)...);
-        return true;
+        return f(std::forward<Args>(args)...);
     }
 
 private:

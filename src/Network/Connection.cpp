@@ -13,46 +13,56 @@ RxConnection::~RxConnection()
     }
 }
 
-void RxConnection::init(const RxFD fd,RxEventLoop *eventloop)
+bool RxConnection::init(const RxFD fd,RxEventLoop &eventloop,RxProtocolFactory &factory)
 {
     _rx_fd=fd;
     _input_buf=RxChainBuffer::create_chain_buffer();
     _output_buf=RxChainBuffer::create_chain_buffer();
-    _eventloop_belongs=eventloop;
+    _eventloop_belongs=&eventloop;
+    set_proto_processor(factory.new_proto_processor(this));
+
+    if(!eventloop.register_fd(fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR})){
+        this->close();
+        LOG_WARN<<"monitor fd "<<fd.raw<<" failed";
+        return false;
+    }
+    return true;
 }
 
-ssize_t RxConnection::recv(RxReadRc &read_res)
+RxConnection::RecvRes RxConnection::recv()
 {
-    if(unlikely(!_input_buf)){
-        read_res=RxReadRc::ERROR;
-        LOG_WARN<<"try to read to an empty input buffer";
-        return -1;
-    }
-    return _input_buf->read_from_fd(_rx_fd,read_res);
+    RecvRes res;
+    res.recv_len=_input_buf->read_from_fd(_rx_fd,res.code);
+    return res;
 }
 
-ssize_t RxConnection::send(RxWriteRc &write_res)
+RxConnection::SendRes RxConnection::send()
 {
-    if(unlikely(!_output_buf)){
-        write_res=RxWriteRc::ERROR;
-        LOG_WARN<<"try to read from an empty output buffer";
-        return -1;
-    }
-    return _output_buf->write_to_fd(_rx_fd,write_res);
+    std::cout<<"@RxConn send"<<std::endl;
+    SendRes res;
+    res.send_len=_output_buf->write_to_fd(_rx_fd,res.code);
+    return res;
 }
 
 void RxConnection::close()
 {
     if(_rx_fd!=RxInvalidFD){
-        _eventloop_belongs->unmonitor_fd_event(_rx_fd);
+        _eventloop_belongs->unregister_fd(_rx_fd);
         _input_buf.reset();
         _output_buf.reset();
-        _proto_processor.reset();
         _eventloop_belongs=nullptr;
-        data.reset();
+        _proto_processor.reset();
         //must put close at the end, or it would cause race condition
-        RxFDHelper::close(_rx_fd);
+        std::cout<<"@RxConnection::close()"<<std::endl;
+        if(!RxFDHelper::close(this->_rx_fd)){
+            LOG_WARN<<"fd "<<_rx_fd.raw<<" close failed, errno "<<errno<<' '<<strerror(errno);
+        }
     }
+}
+
+bool RxConnection::is_open() const
+{
+    return RxFDHelper::is_open(_rx_fd);
 }
 
 RxProtoProcessor& RxConnection::get_proto_processor() const
@@ -75,12 +85,12 @@ void RxConnection::set_proto_processor(std::unique_ptr<RxProtoProcessor> &&proce
     _proto_processor.swap(processor);
 }
 
-RxChainBuffer& RxConnection::get_input_buf()
+RxChainBuffer& RxConnection::get_input_buf() const
 {
     return *_input_buf;
 }
 
-RxChainBuffer& RxConnection::get_output_buf()
+RxChainBuffer& RxConnection::get_output_buf() const
 {
     return *_output_buf;
 }

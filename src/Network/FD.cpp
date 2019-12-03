@@ -29,12 +29,13 @@ bool Stream::shutdown_both(RxFD fd) noexcept
 
 bool close(RxFD &fd) noexcept
 {
+    bool ok=false;
+    int t_raw=fd.raw;
     if(is_open(fd)){
-        int raw=fd.raw;
         fd=RxInvalidFD;
-        return ::close(raw)==0;
+        ok=::close(t_raw)==0;
     }
-    return false;
+    return ok;
 }
 
 bool is_open(RxFD fd) noexcept

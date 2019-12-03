@@ -1,11 +1,11 @@
 #include "ProtocolProcessorFactory.h"
 
-RxProtoProcFactory::RxProtoProcFactory()
+RxProtocolFactory::RxProtocolFactory()
 {
 
 }
 
-RxProtoProcFactory::~RxProtoProcFactory()
+RxProtocolFactory::~RxProtocolFactory()
 {
 
 }

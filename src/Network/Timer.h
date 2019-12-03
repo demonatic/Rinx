@@ -10,12 +10,14 @@ class RxEventLoop;
 using TimerID=uint64_t;
 using TimerCallback=std::function<void()>;
 
-/// The caller need to hold and manage the RxTimer object
+/// A RAII oneshot/repeated Timer class
+/// The caller need to hold the RxTimer object
 class RxTimer
 {
     friend class RxTimerHeap;
 public:
     RxTimer(RxEventLoop *eventloop);
+    ~RxTimer();
 
     TimerID start_timer(uint64_t milliseconds,TimerCallback expiry_action,bool repeat=false);
     void stop();
@@ -32,9 +34,9 @@ private:
 
 private:
     TimerID _id;
+    size_t _heap_index;
 
     uint64_t _duration;
-    size_t _heap_index;
 
     bool _is_active;
     bool _is_repeat;

@@ -23,7 +23,7 @@ public:
     void stop();
 
     size_t get_thread_num() const noexcept;
-    RxEventLoop* get_eventloop(size_t index);
+    RxEventLoop& get_eventloop(size_t index);
 
     void for_each(std::function<void(RxThreadID,RxEventLoop*)> f);
 

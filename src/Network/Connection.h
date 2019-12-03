@@ -7,31 +7,33 @@
 #include "Buffer.h"
 #include "../Util/Util.h"
 #include "../RinxDefines.h"
-#include "../Protocol/ProtocolProcessor.h"
+#include "../Protocol/ProtocolProcessorFactory.h"
 
 class RxConnection:public RxNoncopyable
 {
 public:
+    struct RecvRes{RxReadRc code; ssize_t recv_len;};
+    struct SendRes{RxWriteRc code; ssize_t send_len;};
+public:
     RxConnection();
     ~RxConnection();
-    void init(const RxFD fd,RxEventLoop *eventloop);
 
-    ssize_t recv(RxReadRc &read_res);
-    ssize_t send(RxWriteRc &write_res);
+    bool init(const RxFD fd,RxEventLoop &eventloop,RxProtocolFactory &factory);
+
+    RecvRes recv();
+    SendRes send();
 
     void close();
+    bool is_open() const;
 
-    RxChainBuffer& get_input_buf();
-    RxChainBuffer& get_output_buf();
+    RxChainBuffer& get_input_buf() const;
+    RxChainBuffer& get_output_buf() const;
 
     RxProtoProcessor& get_proto_processor() const;
     RxEventLoop* get_eventloop() const;
     RxFD get_rx_fd() const;
 
     void set_proto_processor(std::unique_ptr<RxProtoProcessor> &&processor) noexcept;
-
-public:
-    std::any data;
 
 private:
     RxFD _rx_fd;

@@ -7,23 +7,16 @@
 
 class RxConnection;
 
-enum class ProcessStatus{
-    OK=0,
-    Proto_Parse_Error,
-    Request_Incoming,
-    Request_Handler_Error,
-};
-
 class RxProtoProcessor
 {
 public:
     RxProtoProcessor(RxConnection *conn):_conn_belongs(conn){}
     virtual ~RxProtoProcessor();
 
-    RxConnection *conn_belongs();
+    RxConnection *get_connection();
 
-    virtual ProcessStatus process_read_data(RxConnection *conn,RxChainBuffer &input_buf)=0;
-    virtual ProcessStatus handle_write_prepared(RxConnection *conn,RxChainBuffer &output_buf)=0;
+    virtual bool process_read_data(RxConnection *conn,RxChainBuffer &input_buf)=0;
+    virtual bool handle_write_prepared(RxConnection *conn,RxChainBuffer &output_buf)=0;
 
 protected:
     RxConnection *_conn_belongs;

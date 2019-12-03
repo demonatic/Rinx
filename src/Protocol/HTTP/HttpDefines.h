@@ -2,7 +2,6 @@
 #define HTTPDEFINES_H
 
 #include "../../Util/Util.h"
-#include "../../Util/OnceCall.h"
 #include "../../Network/Buffer.h"
 #include <unordered_map>
 #include <string_view>
@@ -94,7 +93,7 @@ static std::string to_http_status_code_str(HttpStatusCode status_code){
 }
 
 enum class HttpMethod:uint8_t{
-    GET,
+    GET=0,
     POST,
     HEAD,
     PUT,
@@ -108,23 +107,26 @@ enum class HttpMethod:uint8_t{
 };
 
 enum class HttpVersion:uint8_t{
-    UNKNOWN=0,
-    VERSION_1_0,
+    VERSION_1_0=0,
     VERSION_1_1,
     VERSION_2,
+    UNKNOWN,
+
+    __HttpVersionCount
 };
 
 ///Http request lifetime stage
-enum HttpReqLifetimeStage:uint8_t{
+enum HttpReqStage:uint8_t{
     WaitingForHeader,
     HeaderReceived,
     RequestReceived, //the whole reqeust has received
     RequestCompleted, //reponse is fully sent
-
-    __ReqLifetimeStageCount
 };
 
-using HttpResponseBody=RxChainBuffer;
+struct HttpStatusLine{
+    HttpStatusCode status_code;
+    HttpVersion version;
+};
 
 class HttpHeaderFields{
 public:
@@ -135,7 +137,7 @@ public:
         _headers.emplace(std::move(field_name),std::move(field_val));
     }
 
-    void set_entire(std::unordered_multimap<std::string, std::string> header){
+    void set(std::unordered_multimap<std::string, std::string> header){
         _headers=std::move(header);
     }
 
@@ -167,87 +169,40 @@ private:
     HeaderMap _headers;
 };
 
+static constexpr size_t MethodCount=Util::to_index(HttpMethod::__HttpMethodCount);
+static const std::array<std::string,MethodCount> str_methods{"GET","POST","HEAD","PUT","PATCH","DELETE","OPTIONS","ANY","UNDEFINED"};
+
 inline HttpMethod to_http_method(const std::string &str_method){
     HttpMethod method=HttpMethod::UNDEFINED;
-    if(str_method=="GET"){
-        method=HttpMethod::GET;
-    }
-    else if(str_method=="POST"){
-        method=HttpMethod::POST;
-    }
-    else if(str_method=="HEAD"){
-        method=HttpMethod::HEAD;
-    }
-    else if(str_method=="PUT"){
-        method=HttpMethod::PUT;
-    }
-    else if(str_method=="PATCH"){
-        method=HttpMethod::PATCH;
-    }
-    else if(str_method=="DELETE"){
-        method=HttpMethod::DELETE;
+    for(uint8_t i=0;i<MethodCount;i++){
+        if(str_methods[i]==str_method){
+            method=HttpMethod(i);
+            break;
+        }
     }
     return method;
 }
 
 inline std::string to_http_method_str(const HttpMethod method){
-    std::string str_method;
-    if(method==HttpMethod::GET){
-        str_method="GET";
-    }
-    else if(method==HttpMethod::POST){
-        str_method="POST";
-    }
-    else if(method==HttpMethod::HEAD){
-        str_method="HEAD";
-    }
-    else if(method==HttpMethod::PUT){
-        str_method="PUT";
-    }
-    else if(method==HttpMethod::PATCH){
-        str_method="PATCH";
-    }
-    else if(method==HttpMethod::DELETE){
-        str_method="DELETE";
-    }
-    else{
-        str_method="UNDEFINED";
-    }
-    return str_method;
+    return str_methods[Util::to_index(method)];
 }
 
+static constexpr size_t VersionCount=Util::to_index(HttpVersion::__HttpVersionCount);
+static const std::array<std::string,VersionCount> str_versions{"HTTP/1.0","HTTP/1.1","HTTP/2","UNKNOWN"};
+
 inline HttpVersion to_http_version(const std::string &str_version){
-    HttpVersion version;
-    if(str_version=="HTTP/1.0"){
-        version=HttpVersion::VERSION_1_0;
-    }
-    else if(str_version=="HTTP/1.1"){
-        version=HttpVersion::VERSION_1_1;
-    }
-    else if(str_version=="HTTP/2"){
-        version=HttpVersion::VERSION_2;
-    }
-    else{
-        version=HttpVersion::UNKNOWN;
+    HttpVersion version=HttpVersion::UNKNOWN;
+    for(uint8_t i=0;i<VersionCount;i++){
+        if(str_versions[i]==str_version){
+            version=HttpVersion(i);
+            break;
+        }
     }
     return version;
 }
 
 inline std::string to_http_version_str(HttpVersion version){
-    std::string str_version;
-    if(version==HttpVersion::VERSION_1_0){
-        str_version="HTTP/1.0";
-    }
-    else if(version==HttpVersion::VERSION_1_1){
-        str_version="HTTP/1.1";
-    }
-    else if(version==HttpVersion::VERSION_2){
-        str_version="HTTP/2";
-    }
-    else{
-        str_version="UNKNOWN";
-    }
-    return str_version;
+    return str_versions[Util::to_index(version)];
 }
 
 inline const char *CRLF="\r\n";
@@ -282,5 +237,7 @@ inline std::string get_mimetype_by_filename(const std::string &filename)
     auto const it_mime=mime_types.find(file_extension);
     return it_mime==mime_types.end()?std::string("application/octet-stream"):it_mime->second;
 }
+
+using HttpResponseBody=RxChainBuffer;
 
 #endif // HTTPDEFINES_H

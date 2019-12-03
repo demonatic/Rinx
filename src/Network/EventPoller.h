@@ -7,34 +7,30 @@
 #include <functional>
 #include "FD.h"
 
-enum RxEventType:uint32_t{
+enum RxEventType:uint8_t{
     Rx_EVENT_READ=0,
     Rx_EVENT_WRITE,
     Rx_EVENT_ERROR,
 
-    Rx_EVENT_TYPE_MAX
+    __Rx_EVENT_TYPE_MAX
 };
 
 class RxEventLoop;
 struct RxEvent{
     RxFD Fd;
+    RxEventType event_type;
     RxEventLoop *eventloop;
 };
 
-enum RxHandlerRc{
-    Rx_HANDLER_OK=0,
-    Rx_HANDLER_EXIT_ALL,
-    RX_HANDLER_ERR
-};
-using EventHandler=std::function<RxHandlerRc(const RxEvent &event_data)>;
+using EventHandler=std::function<bool(const RxEvent &event_data)>;
 
-#define Epoll_Timeout 0
-#define Epoll_Interrupted -1
-#define Epoll_Error -2
 
 class RxEventLoop;
 class RxEventPoller
 {
+public:
+    static constexpr int Epoll_Timeout=0,Epoll_Interrupted=-1,Epoll_Error=-2;
+
 public:
     RxEventPoller();
     ~RxEventPoller();
@@ -53,12 +49,12 @@ public:
     bool add_fd_event(const RxFD Fd,const std::vector<RxEventType> &event_type);
     bool del_fd_event(const RxFD Fd);
 
-    static std::vector<RxEventType> get_rx_event_types(const epoll_event &ep_event) noexcept;
-    static void set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) noexcept;
+    std::vector<RxEventType> get_rx_event_types(const epoll_event &ep_event) const noexcept;
+    void set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) const noexcept;
 
 private:
     RxFD _epoll_fd;
-    struct epoll_event *_events;
+    struct epoll_event *_ep_events;
 
     int _max_event_num;
 };
