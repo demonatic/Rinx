@@ -31,7 +31,7 @@ private:
 
 private:
     static volatile sig_atomic_t _signo;
-    static RxSignal _signals[RX_SIGNO_MAX];
+    static RxSignal _signals[SignoMax];
 
 
 };

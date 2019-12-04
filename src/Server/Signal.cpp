@@ -2,7 +2,7 @@
 #include "../Network/EventLoop.h"
 
 
-RxSignal RxSignalManager::_signals[RX_SIGNO_MAX];
+RxSignal RxSignalManager::_signals[SignoMax];
 volatile sig_atomic_t RxSignalManager::_signo=0;
 
 

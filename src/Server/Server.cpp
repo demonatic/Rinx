@@ -1,7 +1,7 @@
 #include "Server.h"
 #include "Signal.h"
 #include <iostream>
-RxServer::RxServer(uint32_t max_connection):_start(false),_max_connection(max_connection),_max_once_accept_count(128),
+RxServer::RxServer():_start(false),_max_connection(MaxConnectionNum),_max_once_accept_count(128),
     _main_eventloop(0),_sub_eventloop_threads(IOWorkerNum),_connection_list(_max_connection)
 {
    _start=this->init_eventloops();
@@ -25,7 +25,7 @@ void RxServer::stop()
 void RxServer::enable_accept()
 {
     for(auto &pair:_listen_ports){
-        RxListenPort &listen_port=pair.first;
+        RxListener &listen_port=pair.first;
         _main_eventloop.register_fd(listen_port.serv_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR});
         LOG_INFO<<"server enable listen on port "<<listen_port.port;
     }
@@ -34,7 +34,7 @@ void RxServer::enable_accept()
 void RxServer::disable_accept()
 {
     for(auto &pair:_listen_ports){
-        RxListenPort &listen_port=pair.first;
+        RxListener &listen_port=pair.first;
         _main_eventloop.unregister_fd(listen_port.serv_fd);
         LOG_INFO<<"server disable listen on port "<<listen_port.port;
     }

@@ -1,15 +1,17 @@
 #ifndef RINXDEFINES_H
 #define RINXDEFINES_H
 
-#include "Util/Singeleton.h"
+#include <string>
 
-constexpr size_t RxBufferChunkSize=4096;
-constexpr size_t RxOutputBufSliceThresh=10;
-
-constexpr int RX_SIGNO_MAX=128;
-
+///Server
+constexpr size_t SignoMax=128;
 constexpr size_t IOWorkerNum=1;
 constexpr size_t ThreadPoolWorkerNum=8;
+constexpr size_t MaxConnectionNum=65535;
+
+///Network
+constexpr size_t BufferChunkSize=4096;
+constexpr size_t OutputBufSliceThresh=10;
 
 ///HTTP
 const std::string WebRootPath="/home/demonatic/Projects/web_test_send";
