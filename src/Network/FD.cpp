@@ -14,12 +14,14 @@ namespace RxFDHelper {
 
 RxFD Stream::create_client_stream() noexcept
 {
-    return RxFD(RxFDType::RxFD_CLIENT_STREAM,::socket(AF_INET,SOCK_STREAM,0));
+    int fd=::socket(AF_INET,SOCK_STREAM,0);
+    return RxFD(fd!=-1?RxFDType::FD_CLIENT_STREAM:RxFDType::FD_INVALID,fd);
 }
 
 RxFD Stream::create_serv_sock() noexcept
 {
-    return RxFD(RxFDType::RxFD_LISTEN,::socket(AF_INET,SOCK_STREAM,0));
+    int fd=::socket(AF_INET,SOCK_STREAM,0);
+    return RxFD(fd!=-1?RxFDType::FD_LISTEN:RxFDType::FD_INVALID,fd);
 }
 
 bool Stream::shutdown_both(RxFD fd) noexcept
@@ -45,7 +47,7 @@ bool is_open(RxFD fd) noexcept
 
 bool Stream::bind(RxFD fd,const char *host,const int port) noexcept
 {
-    assert(fd.type==RxFDType::RxFD_LISTEN);
+    assert(fd.type==RxFDType::FD_LISTEN);
     struct sockaddr_in sock_addr{
         AF_INET,
         htons(static_cast<uint16_t>(port)),
@@ -62,13 +64,13 @@ bool Stream::bind(RxFD fd,const char *host,const int port) noexcept
 
 bool Stream::listen(RxFD fd) noexcept
 {
-    assert(fd.type==RxFDType::RxFD_LISTEN);
+    assert(fd.type==RxFDType::FD_LISTEN);
     return 0==::listen(fd.raw,SOMAXCONN);
 }
 
 RxFD Stream::accept(RxFD fd,RxAcceptRc &accept_res) noexcept
 {
-    assert(fd.type==RxFDType::RxFD_LISTEN);
+    assert(fd.type==RxFDType::FD_LISTEN);
     int client_fd=-1;
     do{
         client_fd=::accept(fd.raw,static_cast<struct sockaddr*>(nullptr),static_cast<socklen_t*>(nullptr));
@@ -90,7 +92,7 @@ RxFD Stream::accept(RxFD fd,RxAcceptRc &accept_res) noexcept
         }
     }while(client_fd<0&&errno==EINTR);
 
-    return RxFD(RxFDType::RxFD_CLIENT_STREAM,client_fd);
+    return RxFD(RxFDType::FD_CLIENT_STREAM,client_fd);
 }
 
 bool Stream::set_tcp_nodelay(RxFD fd,const bool nodelay) noexcept
@@ -189,17 +191,18 @@ ssize_t Stream::writev(RxFD fd,std::vector<struct iovec> &io_vec,RxWriteRc &writ
 
 RxFD Event::create_event_fd() noexcept
 {
-    return RxFD(RxFDType::RxFD_EVENT,::eventfd(0,EFD_NONBLOCK));
+    int fd=::eventfd(0,EFD_NONBLOCK);
+    return RxFD(fd!=-1?RxFDType::FD_EVENT:RxFDType::FD_INVALID,fd);
 }
 
 bool Event::write_event_fd(RxFD fd)
 {
-    assert(fd.type==RxFD_EVENT);
+    assert(fd.type==FD_EVENT);
     return ::eventfd_write(fd.raw,1)!=-1;
 }
 
 bool Event::read_event_fd(RxFD fd){
-    assert(fd.type==RxFD_EVENT);
+    assert(fd.type==FD_EVENT);
     uint64_t data;
     int ret=::eventfd_read(fd.raw,&data);
     return ret!=-1&&data!=0;
@@ -211,13 +214,13 @@ bool RegFile::open(const std::string &path,RxFD &fd,bool create)
     if(raw_fd==-1){
        return false;
     }
-    fd=RxFD(RxFD_REGULAR_FILE,raw_fd);
+    fd=RxFD(FD_REGULAR_FILE,raw_fd);
     return true;
 }
 
 long RegFile::get_file_length(RxFD fd)
 {
-    assert(fd.type==RxFD_REGULAR_FILE);
+    assert(fd.type==FD_REGULAR_FILE);
     struct ::stat st;
     int rc=::fstat(fd.raw,&st);
     return rc==-1?rc:st.st_size;

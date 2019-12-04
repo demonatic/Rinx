@@ -27,7 +27,7 @@ void RxServer::enable_accept()
     for(auto &pair:_listen_ports){
         RxListenPort &listen_port=pair.first;
         _main_eventloop.register_fd(listen_port.serv_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR});
-        LOG_INFO<<"server listen on port "<<listen_port.port;
+        LOG_INFO<<"server enable listen on port "<<listen_port.port;
     }
 }
 
@@ -59,11 +59,11 @@ bool RxServer::init_eventloops()
         LOG_WARN<<"Fail to start main eventloop";
         return false;
     }
-    _main_eventloop.set_event_handler(RxFD_LISTEN,Rx_EVENT_READ,std::bind(&RxServer::on_acceptable,this,std::placeholders::_1));
+    _main_eventloop.set_event_handler(FD_LISTEN,Rx_EVENT_READ,std::bind(&RxServer::on_acceptable,this,std::placeholders::_1));
 
     _sub_eventloop_threads.for_each([this](RxThreadID,RxEventLoop *eventloop){
-        eventloop->set_event_handler(RxFD_CLIENT_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
-        eventloop->set_event_handler(RxFD_CLIENT_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
+        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
+        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
     });
     if(!_sub_eventloop_threads.start()){
         LOG_WARN<<"Fail to start sub eventloops";

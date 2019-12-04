@@ -12,41 +12,41 @@ TEST(sock_rw_test, testset)
 {
     std::unique_ptr<ChainBuffer> buf=ChainBuffer::create_chain_buffer();
     RxReadRc read_res;
-    ssize_t read_bytes=buf->read_from_fd(RxFD{RxFDType::RxFD_REGULAR_FILE,STDIN_FILENO},read_res);
+    ssize_t read_bytes=buf->read_from_fd(RxFD{RxFDType::FD_REGULAR_FILE,STDIN_FILENO},read_res);
     EXPECT_EQ(read_res, RxReadRc::OK);
-    std::cout<<"begin-end distance="<<buf->readable_end()-buf->readable_begin()<<std::endl;
-    EXPECT_EQ(read_bytes,buf->readable_end()-buf->readable_begin());
-    EXPECT_EQ(read_bytes-read_bytes/2,buf->readable_end()-(buf->readable_begin()+read_bytes/2));
+    std::cout<<"begin-end distance="<<buf->end()-buf->begin()<<std::endl;
+    EXPECT_EQ(read_bytes,buf->end()-buf->begin());
+    EXPECT_EQ(read_bytes-read_bytes/2,buf->end()-(buf->begin()+read_bytes/2));
 
     std::cout<<"buf ref num="<<buf->buf_slice_num()<<std::endl;
 
     std::cout<<"[print ++]"<<std::endl;
     std::vector<int> read_plus_plus,read_plus_equal,read_reverse_minus_minus,read_reverse_minus_equal;
-    for(auto it=buf->readable_begin();it!=buf->readable_end();++it){
+    for(auto it=buf->begin();it!=buf->end();++it){
         read_plus_plus.push_back(*it);
         std::cout<<*it;
     }
 
     std::cout<<"[print +=1]"<<std::endl;
-    for(auto it=buf->readable_begin();it!=buf->readable_end();it+=1){
+    for(auto it=buf->begin();it!=buf->end();it+=1){
         read_plus_equal.push_back(*it);
         std::cout<<*it;
     }
 
     std::cout<<std::endl<<"[print --]"<<std::endl;
-    for(auto it=--buf->readable_end();;--it){
+    for(auto it=--buf->end();;--it){
         read_reverse_minus_minus.push_back(*it);
         std::cout<<*it;
-        if(it==buf->readable_begin()){
+        if(it==buf->begin()){
             break;
         }
     }
 
     std::cout<<std::endl<<"[print -=1]"<<std::endl;
-    for(auto it=--buf->readable_end();;){
+    for(auto it=--buf->end();;){
         read_reverse_minus_equal.push_back(*it);
         std::cout<<*it;
-        if(it==buf->readable_begin()){
+        if(it==buf->begin()){
             break;
         }
         it-=1;
@@ -60,7 +60,7 @@ TEST(sock_rw_test, testset)
 
     RxWriteRc write_res;
     std::cout<<std::endl<<"about to write fd------"<<std::endl;
-    ssize_t write_bytes=buf->write_to_fd(RxFD{RxFDType::RxFD_REGULAR_FILE,STDOUT_FILENO},write_res);
+    ssize_t write_bytes=buf->write_to_fd(RxFD{RxFDType::FD_REGULAR_FILE,STDOUT_FILENO},write_res);
     std::cout<<"has written fd------"<<std::endl;
     std::cout<<"read "<<read_bytes<<"  write "<<write_bytes<<std::endl;
     EXPECT_EQ(write_res, RxWriteRc::OK);
@@ -89,7 +89,7 @@ TEST(file_rw_test,testset){
 
     std::string join_str=prepend+source_str.substr(offset)+append;
     size_t i=0;
-    for(auto it=buf->readable_begin();it!=buf->readable_end();++it){
+    for(auto it=buf->begin();it!=buf->end();++it){
         std::cout<<*it;
         EXPECT_EQ(*it,join_str[i++]);
     }
@@ -105,7 +105,7 @@ TEST(file_rw_test,testset){
     EXPECT_EQ(RxFDHelper::RegFile::open("./write_file.txt",file_write_check),true);
     buf->read_from_regular_file(file_write_check,RxFDHelper::RegFile::get_file_length(file_write_check));
     size_t j=0;
-    for(auto it=buf->readable_begin();it!=buf->readable_end();++it){
+    for(auto it=buf->begin();it!=buf->end();++it){
         std::cout<<*it;
         EXPECT_EQ(*it,join_str[j++]);
     }
@@ -121,7 +121,7 @@ TEST(write_data_test,testset){
     char array[]="c_array";
     *buf<<"string_literal"<<"|"<<str<<"|"<<array<<"|"<<p<<"|"<<i<<"|"<<d;
     RxWriteRc write_res;
-    buf->write_to_fd(RxFD{RxFDType::RxFD_REGULAR_FILE,STDOUT_FILENO},write_res);
+    buf->write_to_fd(RxFD{RxFDType::FD_REGULAR_FILE,STDOUT_FILENO},write_res);
 }
 
 TEST(slice_test,testset){
@@ -129,10 +129,10 @@ TEST(slice_test,testset){
     std::string content="0123456789abcdefg";
     buf<<content;
     size_t offset=3;
-    ChainBuffer sliced=buf.slice(buf.readable_begin()+offset,buf.readable_begin()+offset+8);
+    ChainBuffer sliced=buf.slice(buf.begin()+offset,buf.begin()+offset+8);
     std::cout<<"-----sliced content print:-------"<<std::endl;
-    for(auto it=sliced.readable_begin();it!=sliced.readable_end();++it){
-        EXPECT_EQ(content[it-sliced.readable_begin()+offset],*it);
+    for(auto it=sliced.begin();it!=sliced.end();++it){
+        EXPECT_EQ(content[it-sliced.begin()+offset],*it);
         std::cout<<*it;
     }
     std::cout<<std::endl;

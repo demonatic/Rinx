@@ -9,12 +9,12 @@
 #include <string>
 
 enum RxFDType{
-    RxFD_LISTEN=0,
-    RxFD_CLIENT_STREAM,
-    RxFD_EPOLL,
-    RxFD_EVENT,
-    RxFD_REGULAR_FILE,
-    RxFD_INVALID,
+    FD_LISTEN=0,
+    FD_CLIENT_STREAM,
+    FD_EPOLL,
+    FD_EVENT,
+    FD_REGULAR_FILE,
+    FD_INVALID,
 
     __RxFD_TYPE_COUNT,
 };
@@ -24,14 +24,14 @@ struct RxFD{
     RxFDType type;
 
     constexpr RxFD(RxFDType type,int fd):raw(fd),type(type){}
-    constexpr RxFD():raw(-1),type(RxFDType::RxFD_INVALID){}
+    constexpr RxFD():raw(-1),type(RxFDType::FD_INVALID){}
 
     constexpr operator int() const{return raw;}
     constexpr bool operator==(const RxFD &other) const {return this->type==other.type&&this->raw==other.raw;}
     constexpr bool operator!=(const RxFD &other) const {return !((*this)==other);}
 };
 
-constexpr static RxFD RxInvalidFD={RxFDType::RxFD_INVALID,-1};
+constexpr static RxFD RxInvalidFD={RxFDType::FD_INVALID,-1};
 
 enum class RxAcceptRc:uint8_t{
     ACCEPTING,

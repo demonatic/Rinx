@@ -122,7 +122,7 @@ private:
 };
 
 template<class ChunkIteratorType,class ByteType>
-class BufferReadableIterator;
+class BufferReadIterator;
 
 ///buffer only expand its size when try to write things in it
 class ChainBuffer{
@@ -132,7 +132,7 @@ private:
 
 public:
     using buf_slice_iterator=decltype(_buf_slice_list)::iterator;
-    using read_iterator=BufferReadableIterator<buf_slice_iterator,BufferSlice::value_type>;
+    using read_iterator=BufferReadIterator<buf_slice_iterator,BufferSlice::value_type>;
     friend read_iterator;
 
     ChainBuffer()=default;
@@ -155,14 +155,14 @@ public:
     /// @brief write all data in buffer to fd(socket,file...)
     ssize_t write_to_fd(RxFD fd,RxWriteRc &res);
 
-    read_iterator readable_begin();
-    read_iterator readable_end();
+    read_iterator begin();
+    read_iterator end();
 
     buf_slice_iterator slice_begin();
     buf_slice_iterator slice_end();
 
-    BufferSlice& get_head();
-    BufferSlice& get_tail();
+    BufferSlice& get_head_slice();
+    BufferSlice& get_tail_slice();
 
     /// @brief commit that n_bytes has been consumed by the caller, and the corresponding space in buffer could be freed
     void commit_consume(size_t n_bytes);
@@ -214,6 +214,7 @@ public:
         return *this;
     }
 
+    //TODO char
 private:
     inline void check_need_expand();
 };
@@ -221,7 +222,7 @@ private:
 using RxChainBuffer=ChainBuffer;
 
 template<class BufSliceIteratorType,class ByteType>
-class BufferReadableIterator:public std::iterator<
+class BufferReadIterator:public std::iterator<
         std::input_iterator_tag,
         ByteType,
         std::ptrdiff_t,
@@ -231,16 +232,16 @@ class BufferReadableIterator:public std::iterator<
 {
 public:
     using buf_slice_type=BufferSlice;
-    using self_type=BufferReadableIterator<BufSliceIteratorType,ByteType>;
+    using self_type=BufferReadIterator<BufSliceIteratorType,ByteType>;
 
-    using difference_type=typename BufferReadableIterator::difference_type;
-    using value_type=typename BufferReadableIterator::value_type;
-    using reference=typename BufferReadableIterator::reference;
+    using difference_type=typename BufferReadIterator::difference_type;
+    using value_type=typename BufferReadIterator::value_type;
+    using reference=typename BufferReadIterator::reference;
 
     friend ChainBuffer;
 
 public:
-    BufferReadableIterator(ChainBuffer *chain_buf,BufSliceIteratorType it_buf_slice,value_type *cur):
+    BufferReadIterator(ChainBuffer *chain_buf,BufSliceIteratorType it_buf_slice,value_type *cur):
         _chain_buf(chain_buf),_it_buf_slice(it_buf_slice),_p_cur(cur)
     {
         if(it_buf_slice!=chain_buf->slice_end()){

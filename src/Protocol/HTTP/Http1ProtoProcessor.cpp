@@ -27,11 +27,11 @@ bool RxProtoHttp1Processor::process_read_data(RxConnection *conn,RxChainBuffer &
     /// 只有defer_content_provider结束后才能进行后续处理
     bool err=false;
 
-    size_t n_left=input_buf.readable_end()-input_buf.readable_begin();
+    size_t n_left=input_buf.end()-input_buf.begin();
     std::cout<<"n_left="<<n_left<<" request_complete"<<_got_a_complete_req<<std::endl;
     while(n_left&&!err&&!_got_a_complete_req){ //当没有收到一个完整的request时进行parse
         std::cout<<"Start parsing"<<std::endl;
-        HttpParser::ProcessStat proc_stat=_request_parser.parse(input_buf.readable_begin(),input_buf.readable_end(),&_req);
+        HttpParser::ProcessStat proc_stat=_request_parser.parse(input_buf.begin(),input_buf.end(),&_req);
 
         input_buf.commit_consume(n_left-proc_stat.n_remaining);
         n_left=proc_stat.n_remaining;

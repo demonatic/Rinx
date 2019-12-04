@@ -21,7 +21,7 @@ bool RxEventPoller::create(int max_event_num)
     if(is_initialized())
         return true;
 
-    _epoll_fd=RxFD(RxFD_EPOLL,::epoll_create(1));
+    _epoll_fd=RxFD(FD_EPOLL,::epoll_create(1));
 
     if(_epoll_fd.raw<0){
         LOG_WARN<<"create epoll failed. Error"<<errno<<strerror(errno);
