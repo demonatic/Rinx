@@ -10,6 +10,13 @@
 /// 2.当HttpParser发现一个HttpRequest到来后先截断剩余input_buffer内的数据，即每次最多提取出一个完整的HttpRequest，
 /// 如果一次无法响应完则先不继续读input_buffer内的数据进行处理(EventLoop在socket有read事件时仍然会把数据append到input_buffer)，
 /// 当connection.data字段（即HttpRequest）中的标志位表明request complete时才能重置request对象，继续处理下一个连接
+///
+
+
+using Action=ContentGenerator::ProvideAction;
+using Done=ContentGenerator::ProvideDone;
+using AsyncTask=ContentGenerator::AsyncTask;
+
 class RxProtocolHttp1Factory:public RxProtocolFactory
 {
 public:
@@ -29,8 +36,8 @@ public:
 
 #undef HTTP_ROUTE_FUNC_DECLARE
 
-    RxProtocolHttp1Factory& header_filter(const HttpRouter::Route::RoutableURI &uri,const ChainFilter::Filter filter);
-    RxProtocolHttp1Factory& body_filter(const HttpRouter::Route::RoutableURI &uri,const ChainFilter::Filter filter);
+    RxProtocolHttp1Factory& head_filter(const HttpRouter::Route::RoutableURI &uri,const HeadFilter filter);
+    RxProtocolHttp1Factory& body_filter(const HttpRouter::Route::RoutableURI &uri,const BodyFilter filter);
 
 private:
     HttpRouter _router;

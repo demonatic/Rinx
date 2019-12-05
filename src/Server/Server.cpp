@@ -18,6 +18,7 @@ void RxServer::stop()
 //        disable_accept();
         _sub_eventloop_threads.stop();
         _main_eventloop.stop_event_loop();
+        g_threadpool::get_instance()->stop();
         _start=false;
     }
 }

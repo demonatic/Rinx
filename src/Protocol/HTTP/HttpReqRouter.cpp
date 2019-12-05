@@ -25,7 +25,7 @@ void HttpRouter::route_to_responder(HttpRequest &req,HttpResponse &resp) const
     if(!responder)
         return;
 
-    (*responder)(req,resp,*resp._gen);
+    (*responder)(req,resp);
 }
 
 void HttpRouter::install_filters(HttpRequest &req, HttpResponse &resp) const
@@ -34,10 +34,10 @@ void HttpRouter::install_filters(HttpRequest &req, HttpResponse &resp) const
     if(!filter_hb_list)
         return;
 
-    ChainFilter header_filters(req,filter_hb_list->header_filter_list);
-    resp.install_header_filters(header_filters);
+    HttpResponse::ChainFilter<HeadFilter> head_filters(req,filter_hb_list->head_filter_list);
+    resp.install_head_filters(head_filters);
 
-    ChainFilter body_filters(req,filter_hb_list->body_filter_list);
+    HttpResponse::ChainFilter<BodyFilter> body_filters(req,filter_hb_list->body_filter_list);
     resp.install_body_filters(body_filters);
 }
 
@@ -87,14 +87,14 @@ void HttpRouter::set_responder_route(const Route &route,const Responder responde
     }
 }
 
-void HttpRouter::set_header_filter_route(const Route::RoutableURI uri, const ChainFilter::Filter filter)
+void HttpRouter::set_head_filter_route(const Route::RoutableURI uri, const HeadFilter filter)
 {
     if(filter){
-        _filters[uri].header_filter_list.emplace_back(std::move(filter));
+        _filters[uri].head_filter_list.emplace_back(std::move(filter));
     }
 }
 
-void HttpRouter::set_body_filter_route(const HttpRouter::Route::RoutableURI uri, const ChainFilter::Filter filter)
+void HttpRouter::set_body_filter_route(const HttpRouter::Route::RoutableURI uri, const BodyFilter filter)
 {
     if(filter){
         _filters[uri].body_filter_list.emplace_back(std::move(filter));

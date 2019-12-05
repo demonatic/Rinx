@@ -55,15 +55,28 @@ bool RxThreadPool::Queue<T>::empty() const
 
 RxThreadPool::RxThreadPool (size_t thread_num):_stop(false),_index(0)
 {
-    for(size_t i=0;i<thread_num;i++){ //TODO
+    for(size_t i=0;i<thread_num;i++){
         _workers.emplace_back(std::make_unique<ThreadWorker>());
     }
-    for(size_t i=0;i<thread_num;i++){
-        _workers[i]->thread=std::thread([this,i,thread_num](){
+    this->start();
+}
+
+RxThreadPool::~RxThreadPool()
+{
+    if(!_stop){
+        this->stop();
+    }
+}
+
+void RxThreadPool::start()
+{
+    size_t worker_num=_workers.size();
+    for(size_t i=0;i<worker_num;i++){
+        _workers[i]->thread=std::thread([this,i,worker_num](){
             while(!_stop){
                 try_get_one_task:
-                for(size_t n=i;n<i+thread_num;n++){
-                    size_t index=n%thread_num;
+                for(size_t n=i;n<i+worker_num;n++){
+                    size_t index=n%worker_num;
                     std::optional<Task> task=_workers[index]->task_queue.try_pop();
                     if(task.has_value()){
                         (*task)();
@@ -79,13 +92,6 @@ RxThreadPool::RxThreadPool (size_t thread_num):_stop(false),_index(0)
                     [&self,this]()->bool{return !self.task_queue.empty()||!self.is_idle||_stop;});
             }
        });
-    }
-}
-
-RxThreadPool::~RxThreadPool()
-{
-    if(!_stop){
-        this->stop();
     }
 }
 

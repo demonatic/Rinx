@@ -39,7 +39,7 @@ protected:
 };
 
 /// @class provide a buffer of fixed size
-template<size_t N=RxBufferChunkSize>
+template<size_t N=BufferChunkSize>
 class BufferFixed:public BufferBase{
 public:
     BufferFixed(){
@@ -190,7 +190,7 @@ public:
 
     template<typename Arg>
     typename std::enable_if_t<
-        std::is_integral_v<Arg>||std::is_floating_point_v<Arg>,ChainBuffer&> operator<<(Arg arg)
+        std::is_integral_v<Arg>||std::is_floating_point_v<Arg>,ChainBuffer&> operator<<(const Arg arg)
     {
         std::string str=std::to_string(arg);
         return *this<<str;

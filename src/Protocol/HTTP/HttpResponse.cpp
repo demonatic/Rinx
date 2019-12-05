@@ -53,7 +53,7 @@ bool HttpResponse::send_file_direct(RxConnection *conn,const std::string &filena
 
 HttpResponse::HttpResponse(RxConnection *conn):
     _status_line(HttpStatusLine{HttpStatusCode::OK,HttpVersion::VERSION_1_1},ComponentStatus::NOT_SET),
-    _headers({},ComponentStatus::NOT_SET),_gen(std::make_shared<ContentGenerator>(conn))
+    _headers({},ComponentStatus::NOT_SET),_generator(nullptr),_conn_belongs(conn)
 {
 
 }
@@ -66,53 +66,58 @@ bool HttpResponse::empty() const
 void HttpResponse::clear()
 {
     _status_line.second=ComponentStatus::NOT_SET;
+    _headers.first.clear();
     _headers.second=ComponentStatus::NOT_SET;
     _body.clear();
-    RxConnection *conn=_gen->_conn_belongs;
-    _gen=std::make_shared<ContentGenerator>(conn);
+    if(_generator){
+        _generator=std::make_shared<ContentGenerator>(_conn_belongs);
+    }
+
 }
 
-void HttpResponse::flush(RxChainBuffer &output_buf)
+bool HttpResponse::flush(RxChainBuffer &output_buf)
 {
-    if(this->_status_line.second==ComponentStatus::SET){
+    if(_status_line.second==ComponentStatus::SET){
         const HttpStatusLine &status_line=this->_status_line.first;
         output_buf<<to_http_version_str(status_line.version)<<' '<<to_http_status_code_str(status_line.status_code)<<CRLF;
         this->_status_line.second=ComponentStatus::SENT;
     }
 
-    if(this->_headers.second==ComponentStatus::SET){
-        if(!(_header_filters)(this)){
-            // TODO fail to exec all filters
+    if(_headers.second==ComponentStatus::SET){
+        if(!(_header_filters)(_status_line.first,_headers.first)){ // fail to exec all filters
+            return false;
         }
         for(auto &header:this->_headers.first){
             output_buf<<header.first<<": "<<header.second<<CRLF;
         }
         output_buf<<CRLF;
-
         this->_headers.second=ComponentStatus::SENT;
     }
 
-    _gen->try_provide_once(this->body());
+    if(_generator){
+        _generator->try_provide_once(_body);
+    }
 
-    if(!this->body().empty()){
-        if(!(_body_filters)(this)){
-            // TODO fail to exec all filters
+    if(!_body.empty()){
+        if(!(_body_filters)(_body)){
+            return false;
         }
         output_buf.append(std::move(_body)); //TODO
     }
 
-//    std::cout<<"@HttpResponse flush content:"<<std::endl;
-//    for(auto it=output_buf.readable_begin();it!=output_buf.readable_end();it++){
-//        std::cout<<*it;
-//    }
-//    std::cout<<std::endl;
+    std::cout<<"@HttpResponse flush content:"<<std::endl;
+    for(auto it=output_buf.begin();it!=output_buf.end();it++){
+        std::cout<<*it;
+    }
+    std::cout<<std::endl;
+    return true;
 }
 
 
 void ContentGenerator::try_provide_once(HttpResponseBody &body)
 {
     //        std::cout<<"@try_provide_once "<<std::endl;
-    if(_status==Status::Providing&&body.buf_slice_num()<RxOutputBufSliceThresh){ //TO IMPROVE
+    if(_status==Status::Providing&&body.buf_slice_num()<OutputBufSliceThresh){
         BufAllocator allocator=[&](size_t length_expect)->uint8_t*{
             auto buf_ptr=BufferBase::create<BufferMalloc>(length_expect);
             BufferSlice slice(buf_ptr,0,buf_ptr->length());

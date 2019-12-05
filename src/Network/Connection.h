@@ -33,7 +33,7 @@ public:
     RxEventLoop* get_eventloop() const;
     RxFD get_rx_fd() const;
 
-    void set_proto_processor(std::unique_ptr<RxProtoProcessor> &&processor) noexcept;
+    void set_proto_processor(std::unique_ptr<RxProtoProcessor> processor) noexcept;
 
 private:
     RxFD _rx_fd;

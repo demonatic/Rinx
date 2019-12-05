@@ -114,7 +114,10 @@ bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &outpu
 {
     err=false;
     for(;;){
-        _resp.flush(output_buf);
+        if(!_resp.flush(output_buf)){
+            err=true;
+            break;
+        }
 
         if(output_buf.empty()){
             std::cout<<"empty output buf"<<std::endl;
@@ -131,7 +134,7 @@ bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &outpu
         if(send_res.code==RxWriteRc::ERROR||_req.is_conn_mark_closed()){
             std::cout<<"errr"<<std::endl;
             err=true;
-            return true;
+            break;
        }
     }
     return _got_a_complete_req&&!_resp.has_block_operation();

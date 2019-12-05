@@ -25,13 +25,13 @@ std::unique_ptr<RxProtoProcessor> RxProtocolHttp1Factory::new_proto_processor(Rx
     return http1_processor;
 }
 
-RxProtocolHttp1Factory &RxProtocolHttp1Factory::header_filter(const HttpRouter::Route::RoutableURI &uri, const ChainFilter::Filter filter)
+RxProtocolHttp1Factory &RxProtocolHttp1Factory::head_filter(const HttpRouter::Route::RoutableURI &uri, const HeadFilter filter)
 {
-    _router.set_header_filter_route(uri,filter);
+    _router.set_head_filter_route(uri,filter);
     return *this;
 }
 
-RxProtocolHttp1Factory &RxProtocolHttp1Factory::body_filter(const HttpRouter::Route::RoutableURI &uri, const ChainFilter::Filter filter)
+RxProtocolHttp1Factory &RxProtocolHttp1Factory::body_filter(const HttpRouter::Route::RoutableURI &uri, const BodyFilter filter)
 {
     _router.set_body_filter_route(uri,filter);
     return *this;

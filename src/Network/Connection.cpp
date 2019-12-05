@@ -8,7 +8,7 @@ RxConnection::RxConnection():_rx_fd(RxInvalidFD),_eventloop_belongs(nullptr)
 
 RxConnection::~RxConnection()
 {
-    if(_rx_fd.raw!=-1){
+    if(_rx_fd!=RxFDType::FD_INVALID){
         close();
     }
 }
@@ -80,7 +80,7 @@ RxFD RxConnection::get_rx_fd() const
     return _rx_fd;
 }
 
-void RxConnection::set_proto_processor(std::unique_ptr<RxProtoProcessor> &&processor) noexcept
+void RxConnection::set_proto_processor(std::unique_ptr<RxProtoProcessor> processor) noexcept
 {
     _proto_processor.swap(processor);
 }

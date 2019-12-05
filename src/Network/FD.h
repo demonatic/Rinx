@@ -8,7 +8,7 @@
 #include <vector>
 #include <string>
 
-enum RxFDType{
+enum RxFDType:uint8_t{
     FD_LISTEN=0,
     FD_CLIENT_STREAM,
     FD_EPOLL,
@@ -20,8 +20,8 @@ enum RxFDType{
 };
 
 struct RxFD{
-    int raw;
     RxFDType type;
+    int raw;
 
     constexpr RxFD(RxFDType type,int fd):raw(fd),type(type){}
     constexpr RxFD():raw(-1),type(RxFDType::FD_INVALID){}

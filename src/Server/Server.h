@@ -15,7 +15,7 @@
 class RxServer
 {
 public:
-    RxServer(uint32_t max_connection=65535);
+    RxServer();
     ~RxServer();
 
     template<typename ProtoFactory>

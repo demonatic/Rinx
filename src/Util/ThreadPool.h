@@ -44,6 +44,7 @@ public:
     RxThreadPool(size_t thread_num);
     ~RxThreadPool();
 
+    void start();
     void stop();
 
     template<typename F,typename ...Args>

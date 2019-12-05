@@ -1,49 +1,13 @@
 #ifndef HTTPREQHANDLERENGINE_H
 #define HTTPREQHANDLERENGINE_H
 
-#include "HttpDefines.h"
 #include <regex>
 #include <map>
 #include <mutex>
-
+#include "HttpResponse.h"
 class HttpRequest;
 class HttpResponse;
-class ContentGenerator;
 class RxProtoHttp1Processor;
-
-/// callable objects to generate response
-using Responder=std::function<void(HttpRequest &req,HttpResponse &resp,ContentGenerator &generator)>;
-/// callable objects to filter response
-struct ChainFilter{
-    using Next=std::function<void()>;
-    using Filter=std::function<void(HttpRequest &req,HttpResponse &resp,Next next)>;
-
-    ChainFilter(){}
-    ChainFilter(HttpRequest &req,const std::list<Filter> &filters):_req(&req),_filters(&filters){}
-
-    /// @brief execute the filters in sequence and return true if all filters are executed successfully
-    bool operator()(HttpResponse *resp) const{
-        if(!_filters)
-            return true;
-
-        auto it=_filters->cbegin();
-        while(it!=_filters->cend()){
-            const Filter &filter=*it;
-            filter(*_req,*resp,[&](){
-                ++it;
-            });
-        }
-        return it==_filters->cend();
-    }
-
-    operator bool(){
-        return _req&&_filters;
-    }
-
-private:
-    HttpRequest *_req;
-    const std::list<Filter> *_filters;
-};
 
 class HttpRouter
 {
@@ -62,8 +26,8 @@ public:
 public:
     /// Setters
     void set_responder_route(const Route &route,const Responder responder);
-    void set_header_filter_route(const Route::RoutableURI uri,const ChainFilter::Filter filter);
-    void set_body_filter_route(const Route::RoutableURI uri,const ChainFilter::Filter filter);
+    void set_head_filter_route(const Route::RoutableURI uri,const HeadFilter filter);
+    void set_body_filter_route(const Route::RoutableURI uri,const BodyFilter filter);
 
 public:
     /// Getters
@@ -80,8 +44,8 @@ private:
     const static T* route(const typename HandlerMap<T>::type &map,const HttpRequest &req);
 
     struct FilterHBList{
-        std::list<ChainFilter::Filter> header_filter_list;
-        std::list<ChainFilter::Filter> body_filter_list;
+        std::list<HeadFilter> head_filter_list;
+        std::list<BodyFilter> body_filter_list;
     };
     std::array<HandlerMap<Responder>::type,MethodCount> _responders; //use after receive a complete request
     HandlerMap<FilterHBList>::type _filters; // use on output the response

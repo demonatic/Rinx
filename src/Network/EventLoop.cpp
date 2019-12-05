@@ -4,9 +4,7 @@
 #include "../3rd/NanoLog/NanoLog.h"
 #include <string.h>
 
-RxEventLoop::RxEventLoop(uint8_t id):_id(id),_is_running(false),
-    _event_handlers{{nullptr}} //FIX THIS
-
+RxEventLoop::RxEventLoop(uint8_t id):_id(id),_is_running(false),_event_handlers{}
 {
 
 }

@@ -12,6 +12,7 @@
 #include "../RinxDefines.h"
 #include "../Util/Mutex.h"
 #include "../Util/ThreadPool.h"
+#include "../Util/Singeleton.h"
 #include "../Server/Signal.h"
 
 using g_threadpool=RxSingeleton<RxThreadPool>;
