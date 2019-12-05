@@ -36,15 +36,15 @@ int main(){
     });
 
     /// if next() doesn't be called, the connection will force to be closed
-    http1.head_filter("/",[](HttpRequest &req,HttpStatusLine &status_line,HttpHeaderFields &headers,Next next){
+    http1.head_filter("/",[](HttpRequest &req,HttpResponseHead &head,Next next){
         std::cout<<"@filter head 1 called"<<std::endl;
-        headers.add("Server","Rinx");
+        head.header_fields.add("Server","Rinx");
         next();
     });
 
-    http1.head_filter("/",[](HttpRequest &req,HttpStatusLine &status_line,HttpHeaderFields &headers,Next next){
+    http1.head_filter("/",[](HttpRequest &req,HttpResponseHead &head,Next next){
         std::cout<<"@filter head 2 called"<<std::endl;
-        headers.add("Host","localhost");
+        head.header_fields.add("Host","localhost");
         next();
     });
 

@@ -14,8 +14,9 @@ using Responder=std::function<void(HttpRequest &req,HttpResponse &resp)>;
 
 /// callable objects to filter response
 using Next=std::function<void()>;
+using HeadFilter=std::function<void(HttpRequest &req,HttpResponseHead &head,Next next)>;
 using BodyFilter=std::function<void(HttpRequest &req,HttpResponseBody &body,Next next)>;
-using HeadFilter=std::function<void(HttpRequest &req,HttpStatusLine &status_line,HttpHeaderFields &headers,Next next)>;
+
 
 struct ContentGenerator:public std::enable_shared_from_this<ContentGenerator>{
     ContentGenerator(RxConnection *conn):_status(Status::Done),_conn_belongs(conn){
@@ -55,28 +56,24 @@ class HttpResponse{
         ChainFilter(HttpRequest &req,const std::list<Filter> &filters):_req(&req),_filters(&filters){}
 
         /// @brief execute the filters in sequence and return true if all filters are executed successfully
-
         template<typename ...FilterArgs>
         bool operator()(FilterArgs&& ...args) const{
             if(!_filters)
                 return true;
 
-            auto it=_filters->cbegin();
-            for(;it!=_filters->cend();++it){
+            auto it_filter=_filters->cbegin();
+            for(;it_filter!=_filters->cend();++it_filter){
                 bool next=false;
-                const Filter &filter=*it;
-                filter(*_req,std::forward<FilterArgs>(args)...,[&](){
+                (*it_filter)(*_req,std::forward<FilterArgs>(args)...,[&](){
                     next=true;
                 });
                 if(!next) break;
             }
-            return it==_filters->cend();
+            return it_filter==_filters->cend();
         }
-
         operator bool(){
             return _req&&_filters;
         }
-
     private:
         HttpRequest *_req;
         const std::list<Filter> *_filters;
@@ -86,24 +83,23 @@ public:
     HttpResponse(RxConnection *conn);
 
     HttpResponse& status_code(HttpStatusCode stat_code){
-        HttpStatusLine &stat_line=_status_line.first;
-        stat_line.status_code=stat_code;
-        _status_line.second=ComponentStatus::SET;
+        _head.status_line.status_code=stat_code;
+        _stat.status_line=ComponentStatus::SET;
         return *this;
     }
 
     HttpResponse& headers(std::string name,std::string val){
-        if(_status_line.second==ComponentStatus::NOT_SET){
+        if(_stat.status_line==ComponentStatus::NOT_SET){
             throw std::runtime_error("HttpResponse: please set status code before add any header");
         }
 
-        _headers.first.add(std::move(name),std::move(val));
-        _headers.second=ComponentStatus::SET;
+        _head.header_fields.add(std::move(name),std::move(val));
+        _stat.header_fields=ComponentStatus::SET;
         return *this;
     }
 
     HttpResponseBody &body(){
-        if(_status_line.second==ComponentStatus::NOT_SET||_headers.second==ComponentStatus::NOT_SET){
+        if(_stat.status_line==ComponentStatus::NOT_SET||_stat.header_fields==ComponentStatus::NOT_SET){
             throw std::runtime_error("HttpResponse: please set request line and headers before set body");
         }
         return _body;
@@ -156,9 +152,16 @@ private:
 private:
     enum class ComponentStatus{ NOT_SET,SET,SENT };
 
-    std::pair<HttpStatusLine,ComponentStatus> _status_line;
-    std::pair<HttpHeaderFields,ComponentStatus> _headers;
+    HttpResponseHead _head;
+    struct HeadStatus{
+        ComponentStatus status_line=ComponentStatus::NOT_SET;
+        ComponentStatus header_fields=ComponentStatus::NOT_SET;
+    }_stat;
+
+//    std::pair<HttpStatusLine,ComponentStatus> _status_line;
+//    std::pair<HttpHeaderFields,ComponentStatus> _headers;
     HttpResponseBody _body;
+
 
 private:
     std::shared_ptr<ContentGenerator> _generator;

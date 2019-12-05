@@ -169,6 +169,15 @@ private:
     HeaderMap _headers;
 };
 
+struct HttpResponseHead{
+    HttpStatusLine status_line;
+    HttpHeaderFields header_fields;
+};
+
+using HttpRequestBody=RxChainBuffer;
+using HttpResponseBody=RxChainBuffer;
+
+
 static constexpr size_t MethodCount=Util::to_index(HttpMethod::__HttpMethodCount);
 static const std::array<std::string,MethodCount> str_methods{"GET","POST","HEAD","PUT","PATCH","DELETE","OPTIONS","ANY","UNDEFINED"};
 
@@ -238,6 +247,5 @@ inline std::string get_mimetype_by_filename(const std::string &filename)
     return it_mime==mime_types.end()?std::string("application/octet-stream"):it_mime->second;
 }
 
-using HttpResponseBody=RxChainBuffer;
 
 #endif // HTTPDEFINES_H

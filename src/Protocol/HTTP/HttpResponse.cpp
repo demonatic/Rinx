@@ -52,22 +52,21 @@ bool HttpResponse::send_file_direct(RxConnection *conn,const std::string &filena
 }
 
 HttpResponse::HttpResponse(RxConnection *conn):
-    _status_line(HttpStatusLine{HttpStatusCode::OK,HttpVersion::VERSION_1_1},ComponentStatus::NOT_SET),
-    _headers({},ComponentStatus::NOT_SET),_generator(nullptr),_conn_belongs(conn)
+    _head{{HttpStatusCode::OK,HttpVersion::VERSION_1_1},{}},_generator(nullptr),_conn_belongs(conn)
 {
 
 }
 
 bool HttpResponse::empty() const
 {
-    return _status_line.second==ComponentStatus::NOT_SET||_headers.second==ComponentStatus::NOT_SET;
+    return _stat.status_line==ComponentStatus::NOT_SET||_stat.header_fields==ComponentStatus::NOT_SET;
 }
 
 void HttpResponse::clear()
 {
-    _status_line.second=ComponentStatus::NOT_SET;
-    _headers.first.clear();
-    _headers.second=ComponentStatus::NOT_SET;
+    _stat.status_line=ComponentStatus::NOT_SET;
+    _head.header_fields.clear();
+    _stat.header_fields=ComponentStatus::NOT_SET;
     _body.clear();
     if(_generator){
         _generator=std::make_shared<ContentGenerator>(_conn_belongs);
@@ -77,21 +76,21 @@ void HttpResponse::clear()
 
 bool HttpResponse::flush(RxChainBuffer &output_buf)
 {
-    if(_status_line.second==ComponentStatus::SET){
-        const HttpStatusLine &status_line=this->_status_line.first;
+    if(_stat.status_line==ComponentStatus::SET){
+        const HttpStatusLine &status_line=this->_head.status_line;
         output_buf<<to_http_version_str(status_line.version)<<' '<<to_http_status_code_str(status_line.status_code)<<CRLF;
-        this->_status_line.second=ComponentStatus::SENT;
+        this->_stat.status_line=ComponentStatus::SENT;
     }
 
-    if(_headers.second==ComponentStatus::SET){
-        if(!(_header_filters)(_status_line.first,_headers.first)){ // fail to exec all filters
+    if(_stat.header_fields==ComponentStatus::SET){
+        if(!(_header_filters)(_head)){ // fail to exec all filters
             return false;
         }
-        for(auto &header:this->_headers.first){
+        for(auto &header:this->_head.header_fields){
             output_buf<<header.first<<": "<<header.second<<CRLF;
         }
         output_buf<<CRLF;
-        this->_headers.second=ComponentStatus::SENT;
+        this->_stat.header_fields=ComponentStatus::SENT;
     }
 
     if(_generator){

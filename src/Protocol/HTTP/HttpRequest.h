@@ -29,7 +29,7 @@ public:
     HttpVersion version;
     HttpHeaderFields headers;
 
-    HttpResponseBody body;
+    HttpRequestBody body;
 
 private:
     bool _conn_mark_closed;
