@@ -5,6 +5,7 @@
 #include <memory>
 #include <functional>
 #include <type_traits>
+#include <iomanip>
 #include <assert.h>
 #include <iostream>
 
@@ -108,91 +109,21 @@ inline bool hex_str_to_size_t(const std::string &hex_string, size_t &hex)
 }
 
 template<typename T>
-struct TypeErasedIterator:std::iterator<
-        std::input_iterator_tag,T,
-        std::ptrdiff_t,
-        T*,
-        T& >
+inline std::string int_to_hex(T i)
 {
-    struct IErase{
-        virtual T& get_elm()=0;
-        virtual void advance()=0;
-        virtual bool equal(const IErase &it) const=0;
-        virtual IErase* clone() const=0;
-    };
+   std::stringstream stream;
+   stream << std::hex << i;
+   return stream.str();
+}
 
-    template<class It>
-    struct EraseImpl:IErase{
-        EraseImpl(It &&it):_it(std::forward<It>(it)){}
-        EraseImpl(const EraseImpl&)=default;
-        It _it;
-        virtual T& get_elm() override{ return *_it; }
-        virtual void advance() override{ ++_it; }
-        virtual bool equal(const IErase &other) const override{ return static_cast<EraseImpl const&>(other)._it==_it; }
-        virtual IErase* clone() const override{ return new EraseImpl(*this);}
-    };
-
-    template<typename It,
-             class=std::enable_if<
-                std::is_convertible<typename std::iterator_traits<It>::reference,T>{}>>
-    TypeErasedIterator(It &&it):_erased_it(std::make_unique<EraseImpl<It>>(std::forward<It>(it))) {}
-
-    TypeErasedIterator(TypeErasedIterator &&other)=default;
-    TypeErasedIterator()=default;
-
-    bool operator==(const TypeErasedIterator &other){
-        return _erased_it->equal(*other._erased_it);
+inline std::optional<size_t> str_to_size_t(const std::string &str){
+    std::optional<size_t> val;
+    try {
+        val.emplace(std::stoull(str));
+    } catch (std::exception &) {
+        val=std::nullopt;
     }
-
-    bool operator!=(const TypeErasedIterator &other){
-        return !(*this==other);
-    }
-
-    TypeErasedIterator(TypeErasedIterator const& other){
-        this->_erased_it.reset(other._erased_it?other._erased_it->clone():nullptr);
-    }
-
-
-    TypeErasedIterator& operator++(){
-        _erased_it->advance();
-        return *this;
-    }
-
-    TypeErasedIterator operator++(int){
-        auto tmp=*this;
-        ++(*this);
-        return tmp;
-    }
-
-    T& operator*() const{
-        return _erased_it->get_elm();
-    }
-
-private:
-    std::unique_ptr<IErase> _erased_it;
-};
-
-template<typename T>
-class ErasedDeleter:std::function<void(T*)>{
-public:
-    ErasedDeleter():std::function<void(T*)>(
-        [](T* t){delete t;}
-    ){}
-};
-
-template<typename T>
-using ErasedUptr=std::unique_ptr<T,ErasedDeleter<T>>;
-
-using unique_void_ptr = std::unique_ptr<void, void(*)(void const*)>;
-
-template<typename T>
-auto unique_void(T * ptr) -> unique_void_ptr
-{
-    return unique_void_ptr(ptr, [](void const * data) {
-         T const * p = static_cast<T const*>(data);
-         std::cout << "{" << *p << "} located at [" << p <<  "] is being deleted.\n";
-         delete p;
-    });
+    return val;
 }
 
 }

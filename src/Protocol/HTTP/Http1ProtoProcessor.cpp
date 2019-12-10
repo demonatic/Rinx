@@ -3,19 +3,21 @@
 RxProtoHttp1Processor::RxProtoHttp1Processor(RxConnection *conn,HttpRouter *router):
     RxProtoProcessor(conn),_router(router),_got_a_complete_req(false),_req(conn),_resp(conn),_read_timer(conn->get_eventloop())
 {
-#define REGISTER_PARSER_EVENT_CB(ParserEvent,callback)\
-    _request_parser.on_event(HttpParse::ParserEvent,[this](InputDataRange src,HttpRequest *req){\
-        callback(src,req); \
-    })
+    _request_parser.on_event(HttpParse::HeaderReceived,[this](HttpReqImpl *req){
+        on_header_recv(req);
+    });
 
-    REGISTER_PARSER_EVENT_CB(HeaderReceived,on_header_recv);
-    REGISTER_PARSER_EVENT_CB(OnPartofBody,on_part_of_body);
-    REGISTER_PARSER_EVENT_CB(RequestReceived,on_request_recv);
-    REGISTER_PARSER_EVENT_CB(ParseError,on_parse_error);
+    _request_parser.on_event(HttpParse::OnPartofBody,[this](HttpReqImpl *req,SkippedRange data){
+        on_part_of_body(req,data);
+    });
 
-#undef REGISTER_PARSER_EVENT_CB
+    _request_parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *req){
+        on_request_recv(req);
+    });
 
-
+    _request_parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *req){
+        on_parse_error(req);
+    });
 //    this->set_timeout(ReadHeaderTimeout); //not ok
 }
 
@@ -50,8 +52,10 @@ bool RxProtoHttp1Processor::process_read_data(RxConnection *conn,RxChainBuffer &
 bool RxProtoHttp1Processor::handle_write_prepared(RxConnection *conn, RxChainBuffer &output_buf)
 {
     //send data that already in the output buffer first
+    std::cout<<"@handle_write_prepared"<<std::endl;
     while(!output_buf.empty()){
         RxConnection::SendRes res=conn->send();
+        std::cout<<"write_prepar send="<<res.send_len<<std::endl;
         if(res.code==RxWriteRc::ERROR){
             LOG_WARN<<"errno when send on fd "<<conn->get_rx_fd().raw<<" errno:"<<errno<<' '<<strerror(errno);
             return false;
@@ -67,7 +71,7 @@ bool RxProtoHttp1Processor::handle_write_prepared(RxConnection *conn, RxChainBuf
     return err;
 }
 
-void RxProtoHttp1Processor::on_header_recv(InputDataRange src, HttpRequest *http_request)
+void RxProtoHttp1Processor::on_header_recv(HttpReqImpl *http_request)
 {
     std::cout<<"HeaderReceived"<<std::endl;
 
@@ -76,14 +80,14 @@ void RxProtoHttp1Processor::on_header_recv(InputDataRange src, HttpRequest *http
 
 }
 
-void RxProtoHttp1Processor::on_part_of_body(InputDataRange src, HttpRequest *http_request)
+void RxProtoHttp1Processor::on_part_of_body(HttpReqImpl *http_request,SkippedRange data)
 {
-    http_request->body.append(http_request->get_input_buf().slice(src.first,src.second));
+    http_request->body().append(http_request->get_input_buf().slice(data.first,data.second));
 }
 
-void RxProtoHttp1Processor::on_request_recv(InputDataRange src, HttpRequest *http_request)
+void RxProtoHttp1Processor::on_request_recv(HttpReqImpl *http_request)
 {
-    std::cout<<"RequestReceived uri="<<http_request->uri<<std::endl;
+    std::cout<<"RequestReceived uri="<<http_request->uri()<<std::endl;
 
     _router->route_to_responder(*http_request,_resp);
 
@@ -96,7 +100,7 @@ void RxProtoHttp1Processor::on_request_recv(InputDataRange src, HttpRequest *htt
     this->set_timeout(KeepAliveTimeout);
 }
 
-void RxProtoHttp1Processor::on_parse_error(InputDataRange src, HttpRequest *http_request)
+void RxProtoHttp1Processor::on_parse_error(HttpReqImpl *http_request)
 {
     LOG_INFO<<"parse request error, closing connection..";
     _resp.send_status(HttpStatusCode::BAD_REQUEST);
@@ -132,11 +136,12 @@ bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &outpu
         }
 
         if(send_res.code==RxWriteRc::ERROR||_req.is_conn_mark_closed()){
-            std::cout<<"errr"<<std::endl;
+            std::cout<<"errr mark close="<<_req.is_conn_mark_closed()<<" errno="<<strerror(errno)<<std::endl;
             err=true;
             break;
        }
     }
+    std::cout<<"has blocking oepration "<<_resp.has_block_operation()<<std::endl;
     return _got_a_complete_req&&!_resp.has_block_operation();
 }
 

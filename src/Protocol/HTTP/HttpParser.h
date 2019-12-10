@@ -79,7 +79,7 @@ public:
 
     virtual void on_entry(const std::any &context) override{
         this->_length_got=0;
-        this->_length_expect=std::any_cast<int>(context);
+        this->_length_expect=std::any_cast<size_t>(context);
     }
 
 private:

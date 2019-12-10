@@ -12,11 +12,6 @@
 /// 当connection.data字段（即HttpRequest）中的标志位表明request complete时才能重置request对象，继续处理下一个连接
 ///
 
-
-using Action=ContentGenerator::ProvideAction;
-using Done=ContentGenerator::ProvideDone;
-using AsyncTask=ContentGenerator::AsyncTask;
-
 class RxProtocolHttp1Factory:public RxProtocolFactory
 {
 public:

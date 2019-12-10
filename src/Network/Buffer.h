@@ -11,12 +11,12 @@
 #include "../RinxDefines.h"
 #include "../3rd/NanoLog/NanoLog.h"
 
-class BufferBase{
+class BufferRaw{
 public:
     using value_type=uint8_t;
-    using Ptr=std::shared_ptr<BufferBase>;
+    using Ptr=std::shared_ptr<BufferRaw>;
 
-    virtual ~BufferBase()=default;
+    virtual ~BufferRaw()=default;
 
     template<typename T,typename ...Args>
     static Ptr create(Args... args){
@@ -32,7 +32,7 @@ public:
     }
 
 protected:
-    BufferBase():_p_data(nullptr),_len(0){}
+    BufferRaw():_p_data(nullptr),_len(0){}
 
     value_type *_p_data;
     size_t _len;
@@ -40,7 +40,7 @@ protected:
 
 /// @class provide a buffer of fixed size
 template<size_t N=BufferChunkSize>
-class BufferFixed:public BufferBase{
+class BufferFixed:public BufferRaw{
 public:
     BufferFixed(){
         _len=N;
@@ -50,7 +50,7 @@ private:
     uint8_t _data[N];
 };
 
-class BufferMalloc:public BufferBase{
+class BufferMalloc:public BufferRaw{
 public:
     BufferMalloc(size_t length){
         _p_data=static_cast<value_type*>(::malloc(length));
@@ -63,7 +63,7 @@ public:
 };
 
 /// @class provide a mmap of a regular file
-class BufferFile:public BufferBase{
+class BufferFile:public BufferRaw{
 public:
     BufferFile(int fd,size_t length){
         _p_data=static_cast<value_type*>(::mmap(nullptr,length,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0));
@@ -83,9 +83,9 @@ class BufferSlice
 {
     friend ChainBuffer;
 public:
-    using value_type=typename BufferBase::value_type;
+    using value_type=typename BufferRaw::value_type;
 
-    BufferSlice(typename BufferBase::Ptr buf_raw,size_t start_pos=0,size_t end_pos=0):
+    BufferSlice(typename BufferRaw::Ptr buf_raw,size_t start_pos=0,size_t end_pos=0):
         _start_pos(start_pos),_end_pos(end_pos),_buf_ptr(buf_raw)
     {
 
@@ -118,7 +118,7 @@ private:
 private:
     size_t _start_pos;
     size_t _end_pos;
-    typename BufferBase::Ptr _buf_ptr;
+    typename BufferRaw::Ptr _buf_ptr;
 };
 
 template<class ChunkIteratorType,class ByteType>
@@ -216,7 +216,7 @@ public:
 
     //TODO char
 private:
-    inline void check_need_expand();
+    void check_need_expand();
 };
 
 using RxChainBuffer=ChainBuffer;

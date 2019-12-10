@@ -37,44 +37,54 @@ public:
 
     bool init();
 
-    bool register_fd(const RxFD Fd,const std::vector<RxEventType> &rx_events);
-    bool unregister_fd(const RxFD Fd);
+    /// @brief watch any event within param events on this fd
+    bool register_fd(const RxFD fd,const std::vector<RxEventType> &events);
+    /// @brief unwatch any event on this fd
+    bool unregister_fd(const RxFD fd);
 
+    /// @brief set callback when fd of type fd_type has event of event_type occurs
     void set_event_handler(RxFDType fd_type,RxEventType event_type,EventHandler handler) noexcept;
     void remove_event_handler(RxFDType fd_type,RxEventType event_type) noexcept;
 
     int start_event_loop();
+
     /// @brief stop eventloop asynchronously
     void stop_event_loop();
 
+    /// @brief thread safe function to queue a work into the eventloop,
+    /// which will be executed after io handlers being dispatched
     void queue_work(DeferCallback cb);
 
+    /// @brief set the function being called
     void set_loop_prepare(LoopCallback loop_prepare_cb) noexcept;
 
+    /// @brief post the task_func into a thread pool with task paramater ...task_args
+    /// upon thread pool finish execution, queue the finish_cb which accept the execution result of task as a parameter
     template<typename F1,typename F2,typename ...Args>
     std::enable_if_t<false==std::is_same_v<void,std::invoke_result_t<F1,Args...>>>
-    async(F1 &&task_func,F2 &&finish_cb,Args&& ...task_args){
-        g_threadpool::get_instance()->post([this,task_func,&task_args...,finish_cb](){
+    async(F1 &&task,F2 &&finish_callback,Args&& ...task_args){
+        g_threadpool::get_instance()->post([this,task,&task_args...,finish_callback](){
             using task_ret_t=std::invoke_result_t<F1,Args...>;
-            //TODO is it safe to reference as they are in a different call stack?
-            task_ret_t res=task_func(std::forward<Args...>(task_args)...);
-            this->queue_work([finish_cb,&res](){
-                finish_cb(res);
+            task_ret_t res=task(std::forward<Args>(task_args)...);
+            this->queue_work([=](){
+                finish_callback(res);
             });
         });
     }
 
+    /// @brief same as above with task of none return value
     template<typename F1,typename F2,typename ...Args>
     std::enable_if_t<true==std::is_same_v<void,std::invoke_result_t<F1,Args...>>>
-    async(F1 &&task_func,F2 &&finish_cb,Args&& ...task_args){
-        g_threadpool::get_instance()->post([this,task_func,&task_args...,finish_cb](){
-            task_func(std::forward<Args...>(task_args)...);
-            this->queue_work([finish_cb](){
-                finish_cb();
+    async(F1 &&task,F2 &&finish_callback,Args&& ...task_args){
+        g_threadpool::get_instance()->post([this,task,&task_args...,finish_callback](){
+            task(std::forward<Args>(task_args)...);
+            this->queue_work([=](){
+                finish_callback();
             });
         });
     }
 
+    ///@brief wake up the loop which possibily is being blocked at poll_and_dispatch_io
     void wake_up_loop();
 
 private:
@@ -94,7 +104,7 @@ private:
 
     RxEventPoller _event_poller;
     LoopCallback _on_timeout;
-    EventHandler _event_handlers[RxEventType::__Rx_EVENT_TYPE_MAX][RxFDType::__RxFD_TYPE_COUNT];
+    EventHandler _handler_table[RxEventType::__Rx_EVENT_TYPE_MAX][RxFDType::__RxFD_TYPE_COUNT];
 
     RxFD _event_fd;
 

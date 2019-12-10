@@ -21,6 +21,6 @@ const std::string ServerName="Rinx";
 
 constexpr uint64_t ReadHeaderTimeout=5; //sec
 constexpr uint64_t ReadBodyTimeout=8; //sec
-constexpr uint64_t KeepAliveTimeout=15; //sec
+constexpr uint64_t KeepAliveTimeout=15000; //sec
 
 #endif // RINXDEFINES_H

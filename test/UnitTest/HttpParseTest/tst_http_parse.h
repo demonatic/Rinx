@@ -13,32 +13,33 @@ using HttpParse::HttpParser;
 
 class ParserCallback{
 public:
-    using InputDataRange=std::pair<std::vector<uint8_t>::iterator,std::vector<uint8_t>::iterator>;
+    using SkippedRange=std::pair<std::vector<uint8_t>::iterator,std::vector<uint8_t>::iterator>;
 
     virtual ~ParserCallback()=default;
 
-    virtual void recv_header_callback(HttpRequest &request){(void)request;}
+    virtual void recv_header_callback(HttpReqImpl &request){(void)request;}
 
-    virtual void parse_error_callback(HttpRequest &request){(void)request;}
+    virtual void parse_error_callback(HttpReqImpl &request){(void)request;}
 
     void parse(std::vector<uint8_t> &buf){
 
-        parser.on_event(HttpParse::HeaderReceived,[this](InputDataRange origin_data,HttpRequest *http_request){
+        parser.on_event(HttpParse::HeaderReceived,[this](HttpReqImpl *http_request,SkippedRange origin_data){
             std::cout<<"@recv header cb"<<std::endl;
             http_request->debug_print_header();
             this->recv_header_callback(*http_request);
             http_request->clear();
         });
-        parser.on_event(HttpParse::RequestReceived,[this](InputDataRange origin_data,HttpRequest *http_request){
+        parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *http_request,SkippedRange origin_data){
             std::cout<<"@recv whole request cb"<<std::endl;
         });
 
-        parser.on_event(HttpParse::ParseError,[this](InputDataRange origin_data,HttpRequest *http_request){
+        parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *http_request,SkippedRange origin_data){
             std::cout<<"@parse error cb"<<std::endl;
             this->parse_error_callback(*http_request);
+            exit(-1);
         });
 
-        parser.on_event(HttpParse::OnPartofBody,[](InputDataRange origin_data,HttpRequest *http_request){
+        parser.on_event(HttpParse::OnPartofBody,[](HttpReqImpl *http_request,SkippedRange origin_data){
              size_t body_length=origin_data.second-origin_data.first;
              std::cout<<"body length ="<<body_length<<std::endl;
              for(auto it=origin_data.first;it!=origin_data.second;++it){
@@ -47,7 +48,7 @@ public:
              std::cout<<std::endl;
         });
 
-        HttpRequest req{nullptr};
+        HttpReqImpl req{nullptr};
         long total=std::distance(buf.begin(),buf.end());
         long n_left=total;
         do{
@@ -67,8 +68,8 @@ public:
 
 class MockParserCallBack:public ParserCallback{
 public:
-    MOCK_METHOD1(recv_header_callback,void(HttpRequest &request));
-    MOCK_METHOD1(parse_error_callback,void(HttpRequest &request));
+    MOCK_METHOD1(recv_header_callback,void(HttpReqImpl &request));
+    MOCK_METHOD1(parse_error_callback,void(HttpReqImpl &request));
 };
 
 TEST(http_parse, dataset)
@@ -104,6 +105,8 @@ TEST(http_parse, dataset)
                          "CiXin Liu-Wandering Earth\r\n"
                          "f\r\n"
                          "Part-Time Lover\r\n"
+                         "b\r\n"
+                         "Hello World\r\n"
                          "0\r\n"
                          "\r\n"
                              "GET /fiction.txt HTTP/1.0\r\n"

@@ -1,46 +1,31 @@
 #include "HttpRequest.h"
 #include <iostream>
 
-void HttpRequest::clear()
+void HttpReqInternal::clear()
 {
-    version=HttpVersion::UNKNOWN;
-    method=HttpMethod::UNDEFINED;
-    uri.clear();
-    headers.clear();
-    body.clear();
-    _conn_mark_closed=false;
+    _data->_version=HttpVersion::UNKNOWN;
+    _data->_method=HttpMethod::UNDEFINED;
+    _data->_uri.clear();
+    _data->_headers.clear();
+    _data->_body.clear();
+//    _conn_mark_closed=false;
 }
 
 void HttpRequest::debug_print_header()
 {
     std::cout<<"----------------------"<<std::endl;
-    std::cout<<"[method] "<<to_http_method_str(method)<<std::endl;
-    std::cout<<"[uri] "<<uri<<std::endl;
-    std::cout<<"[version] "<<to_http_version_str(version)<<std::endl;
+    std::cout<<"[method] "<<to_http_method_str(_data->_method)<<std::endl;
+    std::cout<<"[uri] "<<_data->_uri<<std::endl;
+    std::cout<<"[version] "<<to_http_version_str(_data->_version)<<std::endl;
     std::cout<<"[header fields]"<<std::endl;
-    for(auto field:headers){
-        std::cout<<"<"<<field.first<<">:<"<<field.second<<">"<<std::endl;
+    for(const auto &[field_name,field_val]:_data->_headers){
+        std::cout<<"<"<<field_name<<">:<"<<field_val<<">"<<std::endl;
     }
     std::cout<<"----------------------"<<std::endl;
-
 }
 
-void HttpRequest::close_connection()
+bool HttpReqInternal::is_conn_mark_closed() const
 {
-    this->_conn_mark_closed=true;
+    return static_cast<const HttpReqImpl*>(this)->_conn_mark_closed;
 }
 
-bool HttpRequest::is_conn_mark_closed() const
-{
-    return this->_conn_mark_closed;
-}
-
-RxChainBuffer &HttpRequest::get_input_buf() const
-{
-    return _conn_belongs->get_input_buf();
-}
-
-RxChainBuffer &HttpRequest::get_output_buf() const
-{
-    return _conn_belongs->get_output_buf();
-}

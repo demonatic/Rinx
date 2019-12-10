@@ -21,19 +21,19 @@ public:
     void prepare_for_next_req();
 
 protected:
-    using InputDataRange=HttpParser::InputDataRange<RxChainBuffer::read_iterator>;
+    using SkippedRange=HttpParser::SkippedRange<RxChainBuffer::read_iterator>;
 
     /// callback when get http header on socket stream
-    void on_header_recv(InputDataRange src,HttpRequest *http_request);
+    void on_header_recv(HttpReqImpl *http_request);
 
     /// callback when get part of http body on socket stream
-    void on_part_of_body(InputDataRange src,HttpRequest *http_request);
+    void on_part_of_body(HttpReqImpl *http_request,SkippedRange data);
 
     /// callback when a complete request has received
-    void on_request_recv(InputDataRange src,HttpRequest *http_request);
+    void on_request_recv(HttpReqImpl *http_request);
 
     /// callback when an http protocol parse error occurs
-    void on_parse_error(InputDataRange src,HttpRequest *http_request);
+    void on_parse_error(HttpReqImpl *http_request);
 
 private:
 
@@ -61,8 +61,8 @@ private:
     const HttpRouter *_router;
 
     bool _got_a_complete_req;
-    HttpRequest _req;
-    HttpResponse _resp;
+    HttpReqImpl _req;
+    HttpRespImpl _resp;
 
     RxTimer _read_timer;
 };

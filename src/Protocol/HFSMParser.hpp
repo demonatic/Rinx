@@ -38,7 +38,7 @@ public:
         }
 
     private:
-        std::optional<size_t> n_step_over;
+        size_t n_step_over=0;
         std::optional<std::vector<int>> events;
         std::optional<std::pair<SuperStateID,Context>> next_super_state;
 
@@ -81,7 +81,7 @@ class HFSMParser
 {
 public:
     template<typename IteratorType>
-    using InputDataRange=std::pair<IteratorType,IteratorType>;
+    using SkippedRange=std::pair<IteratorType,IteratorType>;
 
     struct ProcessStat{
         bool got_complete_request=false;
@@ -104,14 +104,22 @@ public:
             _curr_state->consume(end-cur,[&](SuperState::elm_handler<Byte> f){
                 for(;next!=end;++next){
                     f(*next,consume_ctx);
-                    if(consume_ctx.interrupt_iteartion){++next; break;}
+                    if(consume_ctx.interrupt_iteartion){
+                        if(!consume_ctx.n_step_over) next++;
+                        break;
+                    }
                 }
             },request);
 
-            size_t n_consumed=next-cur+(consume_ctx.n_step_over.has_value()?consume_ctx.n_step_over.value()-1:0);
+            size_t n_consumed=next-cur+consume_ctx.n_step_over;
             if(consume_ctx.events){
                 for(int event:consume_ctx.events.value()){
-                    this->emit_event(event,InputDataRange<InputIterator>(cur,cur+n_consumed),request);
+                    if(!consume_ctx.n_step_over){
+                        this->emit_event(event,request);
+                    }
+                    else{
+                        this->emit_event(event,request,SkippedRange<InputIterator>(next,cur+n_consumed));
+                    }
                 }
             }
             if(consume_ctx.next_super_state){

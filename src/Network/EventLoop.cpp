@@ -4,7 +4,7 @@
 #include "../3rd/NanoLog/NanoLog.h"
 #include <string.h>
 
-RxEventLoop::RxEventLoop(uint8_t id):_id(id),_is_running(false),_event_handlers{}
+RxEventLoop::RxEventLoop(uint8_t id):_id(id),_is_running(false),_handler_table{}
 {
 
 }
@@ -22,7 +22,7 @@ bool RxEventLoop::init()
     }
 
     //register event fd read handler
-    set_event_handler(_event_fd.type,Rx_EVENT_READ,[this](const RxEvent &event_data)->bool{
+    set_event_handler(_event_fd.type,Rx_EVENT_READ,[this](const RxEvent &event_data){
         if(!RxFDHelper::Event::read_event_fd(event_data.Fd)){
             LOG_WARN<<"read event fd failed, eventloop_id="<<_id;
             return false;
@@ -32,26 +32,6 @@ bool RxEventLoop::init()
     register_fd(_event_fd,{Rx_EVENT_READ});
 
     return true;
-}
-
-bool RxEventLoop::register_fd(const RxFD Fd, const std::vector<RxEventType> &rx_events)
-{
-    return this->_event_poller.add_fd_event(Fd,rx_events);
-}
-
-bool RxEventLoop::unregister_fd(const RxFD Fd)
-{
-    return this->_event_poller.del_fd_event(Fd);
-}
-
-void RxEventLoop::set_event_handler(RxFDType fd_type, RxEventType event_type, EventHandler handler) noexcept
-{
-    _event_handlers[event_type][fd_type]=handler;
-}
-
-void RxEventLoop::remove_event_handler(RxFDType fd_type, RxEventType event_type) noexcept
-{
-    _event_handlers[event_type][fd_type]=nullptr;
 }
 
 int RxEventLoop::start_event_loop()
@@ -87,23 +67,10 @@ void RxEventLoop::queue_work(RxEventLoop::DeferCallback cb)
     wake_up_loop();
 }
 
-void RxEventLoop::set_loop_prepare(RxEventLoop::LoopCallback loop_prepare_cb) noexcept
-{
-    _on_loop_prepare=loop_prepare_cb;
-}
-
-
 void RxEventLoop::wake_up_loop()
 {
     if(!RxFDHelper::Event::write_event_fd(_event_fd)){
         LOG_WARN<<"eventloop write event fd failed, eventloop_id="<<_id<<" Reason:"<<errno<<' '<<strerror(errno);
-    }
-}
-
-void RxEventLoop::do_prepare()
-{
-    if(this->_on_loop_prepare){
-        _on_loop_prepare(this);
     }
 }
 
@@ -137,7 +104,7 @@ int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)
             const std::vector<RxEventType> rx_event_types=_event_poller.get_rx_event_types(ep_events[i]);
             for(RxEventType rx_event_type:rx_event_types){
                 rx_event.event_type=rx_event_type;
-                EventHandler event_handler=_event_handlers[rx_event.event_type][rx_event.Fd.type];
+                EventHandler event_handler=_handler_table[rx_event.event_type][rx_event.Fd.type];
                 if(!event_handler)
                     continue;
 
@@ -182,6 +149,39 @@ void RxEventLoop::run_defers()
 
     for(const DeferCallback &defer_cb:defers){
         defer_cb();
+    }
+}
+
+bool RxEventLoop::register_fd(const RxFD fd, const std::vector<RxEventType> &events)
+{
+    return this->_event_poller.add_fd_event(fd,events);
+}
+
+bool RxEventLoop::unregister_fd(const RxFD fd)
+{
+    return this->_event_poller.del_fd_event(fd);
+}
+
+void RxEventLoop::set_event_handler(RxFDType fd_type, RxEventType event_type, EventHandler handler) noexcept
+{
+    _handler_table[event_type][fd_type]=handler;
+}
+
+void RxEventLoop::remove_event_handler(RxFDType fd_type, RxEventType event_type) noexcept
+{
+    _handler_table[event_type][fd_type]=nullptr;
+}
+
+
+void RxEventLoop::set_loop_prepare(RxEventLoop::LoopCallback loop_prepare_cb) noexcept
+{
+    _on_loop_prepare=loop_prepare_cb;
+}
+
+void RxEventLoop::do_prepare()
+{
+    if(_on_loop_prepare){
+        _on_loop_prepare(this);
     }
 }
 

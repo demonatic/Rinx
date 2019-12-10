@@ -4,9 +4,9 @@
 #include <regex>
 #include <map>
 #include <mutex>
+#include "HttpRequest.h"
 #include "HttpResponse.h"
-class HttpRequest;
-class HttpResponse;
+
 class RxProtoHttp1Processor;
 
 class HttpRouter
@@ -31,17 +31,17 @@ public:
 
 public:
     /// Getters
-    void route_to_responder(HttpRequest &req,HttpResponse &resp) const;
-    void install_filters(HttpRequest &req,HttpResponse &resp) const;
+    void route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const;
+    void install_filters(HttpReqImpl &req,HttpRespImpl &resp) const;
 
-    void default_static_file_handler(HttpRequest &req,HttpResponse &resp) const;
+    void default_static_file_handler(HttpReqImpl &req,HttpRespImpl &resp) const;
 
 private:
     template<typename T> struct HandlerMap{
         using type=std::map<Route::RoutableURI,T>;
     };
     template<typename T>
-    const static T* route(const typename HandlerMap<T>::type &map,const HttpRequest &req);
+    const static T* route(const typename HandlerMap<T>::type &map,const HttpReqImpl &req);
 
     struct FilterHBList{
         std::list<HeadFilter> head_filter_list;

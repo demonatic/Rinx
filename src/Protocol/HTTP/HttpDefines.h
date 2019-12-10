@@ -84,7 +84,7 @@ static void init_http_status_table(){
 #undef TABLE_ENTRY_INSERT
 }
 
-static std::string to_http_status_code_str(HttpStatusCode status_code){
+inline std::string to_http_status_code_str(HttpStatusCode status_code){
     static std::once_flag init_flag;
     std::call_once(init_flag,[](){
         init_http_status_table();
@@ -176,7 +176,6 @@ struct HttpResponseHead{
 
 using HttpRequestBody=RxChainBuffer;
 using HttpResponseBody=RxChainBuffer;
-
 
 static constexpr size_t MethodCount=Util::to_index(HttpMethod::__HttpMethodCount);
 static const std::array<std::string,MethodCount> str_methods{"GET","POST","HEAD","PUT","PATCH","DELETE","OPTIONS","ANY","UNDEFINED"};

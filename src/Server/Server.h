@@ -71,7 +71,6 @@ private:
     uint16_t _max_once_accept_count;
     uint16_t _eventloop_num;
 
-    std::thread _acceptor_thread;
     RxEventLoop _main_eventloop;
     RxWorkerThreadLoops _sub_eventloop_threads;
 

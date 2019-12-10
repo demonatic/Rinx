@@ -41,7 +41,7 @@ bool HttpResponse::send_file_direct(RxConnection *conn,const std::string &filena
              .headers("Content-Length",std::to_string(send_length))
              .headers("Content-Type",get_mimetype_by_filename(filename));
 
-        this->flush(conn->get_output_buf());
+        static_cast<HttpRespImpl*>(this)->flush(conn->get_output_buf());
 
         return conn->send().code==RxWriteRc::OK&&
                 ::sendfile(conn->get_rx_fd().raw,file.get_fd().raw,(off64_t*)&offset,send_length)!=-1;
@@ -51,74 +51,61 @@ bool HttpResponse::send_file_direct(RxConnection *conn,const std::string &filena
     }
 }
 
-HttpResponse::HttpResponse(RxConnection *conn):
-    _head{{HttpStatusCode::OK,HttpVersion::VERSION_1_1},{}},_generator(nullptr),_conn_belongs(conn)
-{
-
-}
-
-bool HttpResponse::empty() const
-{
-    return _stat.status_line==ComponentStatus::NOT_SET||_stat.header_fields==ComponentStatus::NOT_SET;
-}
-
 void HttpResponse::clear()
 {
-    _stat.status_line=ComponentStatus::NOT_SET;
-    _head.header_fields.clear();
-    _stat.header_fields=ComponentStatus::NOT_SET;
-    _body.clear();
-    if(_generator){
-        _generator=std::make_shared<ContentGenerator>(_conn_belongs);
+    _data->stat.status_line=Status::NOT_SET;
+    _data->head.header_fields.clear();
+    _data->stat.header_fields=Status::NOT_SET;
+    _data->body.clear();
+    if(_data->generator){
+        _data->generator=std::make_shared<ContentGenerator>(_data->conn_belongs);
     }
 
 }
 
-bool HttpResponse::flush(RxChainBuffer &output_buf)
+bool HttpRespInternal::flush(RxChainBuffer &output_buf)
 {
-    if(_stat.status_line==ComponentStatus::SET){
-        const HttpStatusLine &status_line=this->_head.status_line;
+    if(_data->stat.status_line==Status::SET){
+        const HttpStatusLine &status_line=_data->head.status_line;
         output_buf<<to_http_version_str(status_line.version)<<' '<<to_http_status_code_str(status_line.status_code)<<CRLF;
-        this->_stat.status_line=ComponentStatus::SENT;
+        _data->stat.status_line=Status::SENT;
     }
 
-    if(_stat.header_fields==ComponentStatus::SET){
-        if(!(_header_filters)(_head)){ // fail to exec all filters
+    if(_data->stat.header_fields==Status::SET){
+        if(!(_data->header_filters)(_data->head)){ // fail to exec all filters
             return false;
         }
-        for(auto &header:this->_head.header_fields){
-            output_buf<<header.first<<": "<<header.second<<CRLF;
+        for(const auto &[field_name,field_val]:_data->head.header_fields){
+            output_buf<<field_name<<": "<<field_val<<CRLF;
         }
         output_buf<<CRLF;
-        this->_stat.header_fields=ComponentStatus::SENT;
+        this->_data->stat.header_fields=Status::SENT;
     }
 
-    if(_generator){
-        _generator->try_provide_once(_body);
+    if(_data->generator){
+        _data->generator->try_provide_once(_data->body);
     }
 
-    if(!_body.empty()){
-        if(!(_body_filters)(_body)){
+    if(!_data->body.empty()){
+        if(!(_data->body_filters)(_data->body)){
             return false;
         }
-        output_buf.append(std::move(_body)); //TODO
+        output_buf.append(std::move(_data->body));
     }
 
-    std::cout<<"@HttpResponse flush content:"<<std::endl;
-    for(auto it=output_buf.begin();it!=output_buf.end();it++){
-        std::cout<<*it;
-    }
-    std::cout<<std::endl;
+//    std::cout<<"@HttpResponse flush content:"<<std::endl;
+//    for(auto it=output_buf.begin();it!=output_buf.end();it++){
+//        std::cout<<*it;
+//    }
+//    std::cout<<std::endl;
     return true;
 }
 
-
-void ContentGenerator::try_provide_once(HttpResponseBody &body)
+void HttpRespData::ContentGenerator::try_provide_once(HttpResponseBody &body)
 {
-    //        std::cout<<"@try_provide_once "<<std::endl;
     if(_status==Status::Providing&&body.buf_slice_num()<OutputBufSliceThresh){
         BufAllocator allocator=[&](size_t length_expect)->uint8_t*{
-            auto buf_ptr=BufferBase::create<BufferMalloc>(length_expect);
+            auto buf_ptr=BufferRaw::create<BufferMalloc>(length_expect);
             BufferSlice slice(buf_ptr,0,buf_ptr->length());
             body.append(slice);
             return buf_ptr->data();
@@ -130,7 +117,7 @@ void ContentGenerator::try_provide_once(HttpResponseBody &body)
     }
 }
 
-void ContentGenerator::set_async_content_provider(std::function<void()> async_task,ContentGenerator::ProvideAction provide_action)
+void HttpRespData::ContentGenerator::set_async_content_provider(HttpRespData::ContentGenerator::AsyncTask async_task, HttpRespData::ContentGenerator::ProvideAction provide_action)
 {
     this->set_status(Status::ExecAsyncTask);
     this->_provide_action=provide_action;
@@ -154,13 +141,8 @@ void ContentGenerator::set_async_content_provider(std::function<void()> async_ta
     });
 }
 
-void ContentGenerator::set_content_provider(ProvideAction provide_action)
+void HttpRespData::ContentGenerator::set_content_provider(HttpRespData::ContentGenerator::ProvideAction provide_action)
 {
     this->set_status(Status::Providing);
     this->_provide_action=provide_action;
 }
-
-
-
-
-

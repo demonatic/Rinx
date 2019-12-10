@@ -25,10 +25,9 @@ void RxServer::stop()
 
 void RxServer::enable_accept()
 {
-    for(auto &pair:_listen_ports){
-        RxListener &listen_port=pair.first;
-        _main_eventloop.register_fd(listen_port.serv_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR});
-        LOG_INFO<<"server enable listen on port "<<listen_port.port;
+    for(const auto &[listener,proto_factory]:_listen_ports){
+        _main_eventloop.register_fd(listener.serv_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR});
+        LOG_INFO<<"server enable listen on port "<<listener.port;
     }
 }
 
@@ -65,6 +64,7 @@ bool RxServer::init_eventloops()
     _sub_eventloop_threads.for_each([this](RxThreadID,RxEventLoop *eventloop){
         eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
         eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
+        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_WRITE,std::bind(&RxServer::on_stream_writable,this,std::placeholders::_1));
     });
     if(!_sub_eventloop_threads.start()){
         LOG_WARN<<"Fail to start sub eventloops";
@@ -111,6 +111,20 @@ bool RxServer::on_acceptable(const RxEvent &event)
             return false;
         }
 
+        int snd_size = 4096;
+        socklen_t optlen = sizeof(snd_size);
+        int err = setsockopt(client_fd.raw, SOL_SOCKET, SO_SNDBUF, &snd_size, optlen);
+        if(err<0){
+            printf("设置发送缓冲区大小错误\n");
+        }
+
+        optlen = sizeof(snd_size);
+        err = getsockopt(client_fd.raw, SOL_SOCKET, SO_SNDBUF,(char *)&snd_size, &optlen);
+        if(err<0){
+            printf("获取接收缓冲区大小错误\n");
+        }
+        std::cout<<"发送缓冲区大小设置为"<<snd_size<<std::endl;
+
         size_t worker_index=client_fd.raw%_sub_eventloop_threads.get_thread_num();
         RxEventLoop &sub_eventloop=_sub_eventloop_threads.get_eventloop(worker_index);
 
@@ -126,11 +140,9 @@ bool RxServer::on_acceptable(const RxEvent &event)
 void RxServer::signal_setup()
 {
     RxSignalManager::on_signal(SIGPIPE,RxSigHandlerIgnore);
-    RxSignalManager::on_signal(SIGBUS,[](int){ // for mmap
-
-    });
+    RxSignalManager::on_signal(SIGBUS,RxSigHandlerIgnore);
     RxSignalManager::on_signal(SIGINT,[this](int signo){
-        std::cout<<"shutdown server..."<<std::endl;
+        LOG_WARN<<"Shutdown Server...";
         this->stop();
     });
 }

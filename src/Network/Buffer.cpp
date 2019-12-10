@@ -46,7 +46,7 @@ ssize_t ChainBuffer::read_from_fd(RxFD fd,RxReadRc &res)
 bool ChainBuffer::read_from_regular_file(RxFD regular_file_fd, size_t length, size_t offset)
 {
     try{
-        auto buf_file=BufferBase::create<BufferFile>(regular_file_fd,offset+length);
+        auto buf_file=BufferRaw::create<BufferFile>(regular_file_fd,offset+length);
         BufferSlice file(buf_file,offset,offset+length);
         this->_buf_slice_list.emplace_back(std::move(file));
     }
@@ -182,7 +182,7 @@ ChainBuffer ChainBuffer::slice(read_iterator begin,read_iterator end)
 void ChainBuffer::check_need_expand()
 {
     if(!buf_slice_num()||get_tail_slice().writable_size()==0){
-        BufferBase::Ptr fixed_buf=BufferBase::create<BufferFixed<>>();
+        BufferRaw::Ptr fixed_buf=BufferRaw::create<BufferFixed<>>();
         BufferSlice slice(fixed_buf);
         _buf_slice_list.emplace_back(std::move(slice));
     }
