@@ -23,26 +23,26 @@ public:
 
     void parse(std::vector<uint8_t> &buf){
 
-        parser.on_event(HttpParse::HeaderReceived,[this](HttpReqImpl *http_request,SkippedRange origin_data){
+        parser.on_event(HttpParse::HeaderReceived,[this](HttpReqImpl *http_request){
             std::cout<<"@recv header cb"<<std::endl;
             http_request->debug_print_header();
             this->recv_header_callback(*http_request);
             http_request->clear();
         });
-        parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *http_request,SkippedRange origin_data){
+        parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *http_request){
             std::cout<<"@recv whole request cb"<<std::endl;
         });
 
-        parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *http_request,SkippedRange origin_data){
+        parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *http_request){
             std::cout<<"@parse error cb"<<std::endl;
             this->parse_error_callback(*http_request);
             exit(-1);
         });
 
-        parser.on_event(HttpParse::OnPartofBody,[](HttpReqImpl *http_request,SkippedRange origin_data){
-             size_t body_length=origin_data.second-origin_data.first;
+        parser.on_event(HttpParse::OnPartofBody,[](HttpReqImpl *http_request,SkippedRange data){
+             size_t body_length=data.second-data.first;
              std::cout<<"body length ="<<body_length<<std::endl;
-             for(auto it=origin_data.first;it!=origin_data.second;++it){
+             for(auto it=data.first;it!=data.second;++it){
                  std::cout<<*it;
              }
              std::cout<<std::endl;
@@ -84,7 +84,6 @@ TEST(http_parse, dataset)
                                 "Keep-Alive: 300\r\n"
                                 "Connection: keep-alive\r\n"
                                 "Content-Length: 24\r\n"
-                                "Transfer-Encoding: chunked\r\n"
                                 "\r\n"
                                 "test content length data"
                         "GET /favicon.ico HTTP/1.1\r\n"

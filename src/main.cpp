@@ -1,5 +1,6 @@
 #include "Server/Server.h"
 #include "Protocol/HTTP/ProtocolHttp1.h"
+#include "Protocol/Echo/ProtocolEcho.h"
 
 int main(){
     RxSignalManager::disable_current_thread_signal();
@@ -17,41 +18,42 @@ int main(){
 
     http1.GET("/",[&](HttpRequest &req,HttpResponse &resp){
         std::cout<<"@handler /: HeaderReceived"<<std::endl;
-//        req.debug_print_header();
+        req.debug_print_header();
+        req.debug_print_body();
 
       resp.status_code(HttpStatusCode::OK)
-            .headers("Content-Length",std::to_string(25))  //24  content.size()*2)
+            .headers("Content-Length",std::to_string(14))  //25  content.size()*2)
             .body()<<"Response Data";
 
-        int *round_left=new int(9);
-        resp.content_provider([&,round_left](BufAllocator allocator,ProvideDone done){
-             std::cout<<"@provide fd="<<req.get_conn()->get_rx_fd().raw<<" round_left="<<*round_left<<std::endl;
-             std::string data="large data ";
-             uint8_t *buf=allocator(data.size());
-             std::memcpy(buf,data.c_str(),data.size());
-             done();
-
-//             if((*round_left)--){
-//                 uint8_t *buf=allocator(content.size());
-////                 std::string data="large data";
-//                 std::memcpy(buf,content.c_str(),content.size());
-//             }
-//             else{
-//                 std::cout<<"done.."<<std::endl;
-//                 done();
-//             }
-        });
-
-//        resp.async_content_provider([](){
-//            sleep(0);
-//            std::cout<<"sleep timeout"<<std::endl;
-//        },[&](ContentGenerator::BufAllocator allocator,ContentGenerator::ProvideDone done){
-//             uint8_t *buf=allocator(10);
-//             std::string data="large data";
-//             std::memcpy(buf,data.c_str(),10);
+//        int *round_left=new int(9);
+//        resp.content_provider([&,round_left](BufAllocator allocator,ProvideDone done){
+//             std::cout<<"@provide fd="<<req.get_conn()->get_rx_fd().raw<<" round_left="<<*round_left<<std::endl;
+//             std::string data="large data ";
+//             uint8_t *buf=allocator(data.size());
+//             std::memcpy(buf,data.c_str(),data.size());
 //             done();
-////             req.close_connection();
+
+////             if((*round_left)--){
+////                 uint8_t *buf=allocator(content.size());
+//////                 std::string data="large data";
+////                 std::memcpy(buf,content.c_str(),content.size());
+////             }
+////             else{
+////                 std::cout<<"done.."<<std::endl;
+////                 done();
+////             }
 //        });
+
+////        resp.async_content_provider([](){
+////            sleep(0);
+////            std::cout<<"sleep timeout"<<std::endl;
+////        },[&](ContentGenerator::BufAllocator allocator,ContentGenerator::ProvideDone done){
+////             uint8_t *buf=allocator(10);
+////             std::string data="large data";
+////             std::memcpy(buf,data.c_str(),10);
+////             done();
+//////             req.close_connection();
+////        });
 
     });
 
@@ -79,7 +81,7 @@ int main(){
 
     bool listen_ok=false;
     do{
-       listen_ok=server.listen("0.0.0.0",port++,http1);
+       listen_ok=server.listen("0.0.0.0",port++,http1); //RxProtocolEchoFactory()
     }while(!listen_ok);
 
     return 0;

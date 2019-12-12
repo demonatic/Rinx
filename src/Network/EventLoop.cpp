@@ -29,7 +29,7 @@ bool RxEventLoop::init()
         }
         return true;
     });
-    register_fd(_event_fd,{Rx_EVENT_READ});
+    monitor_fd(_event_fd,{Rx_EVENT_READ});
 
     return true;
 }
@@ -152,12 +152,12 @@ void RxEventLoop::run_defers()
     }
 }
 
-bool RxEventLoop::register_fd(const RxFD fd, const std::vector<RxEventType> &events)
+bool RxEventLoop::monitor_fd(const RxFD fd, const std::vector<RxEventType> &events)
 {
     return this->_event_poller.add_fd_event(fd,events);
 }
 
-bool RxEventLoop::unregister_fd(const RxFD fd)
+bool RxEventLoop::unmonitor_fd(const RxFD fd)
 {
     return this->_event_poller.del_fd_event(fd);
 }
@@ -171,7 +171,6 @@ void RxEventLoop::remove_event_handler(RxFDType fd_type, RxEventType event_type)
 {
     _handler_table[event_type][fd_type]=nullptr;
 }
-
 
 void RxEventLoop::set_loop_prepare(RxEventLoop::LoopCallback loop_prepare_cb) noexcept
 {

@@ -24,6 +24,16 @@ void HttpRequest::debug_print_header()
     std::cout<<"----------------------"<<std::endl;
 }
 
+void HttpRequest::debug_print_body()
+{
+    std::cout<<"-----------body start--------------"<<std::endl;
+    for(auto it=_data->_body.begin();it!=_data->_body.end();++it){
+        std::cout<<*it;
+    }
+    std::cout<<std::endl;
+    std::cout<<"-----------body end--------------"<<std::endl;
+}
+
 bool HttpReqInternal::is_conn_mark_closed() const
 {
     return static_cast<const HttpReqImpl*>(this)->_conn_mark_closed;

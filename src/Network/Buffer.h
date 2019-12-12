@@ -4,7 +4,7 @@
 #include <sys/mman.h>
 #include <array>
 #include <memory>
-#include <list>
+#include <deque>
 #include <cstring>
 #include "FD.h"
 #include "../Util/ObjectAllocator.hpp"
@@ -98,7 +98,7 @@ public:
 
 private:
     value_type *data(){ return _buf_ptr->data(); }
-    auto get_buf_raw_ptr(){ return _buf_ptr; }
+    auto raw_buf_sptr(){ return _buf_ptr; }
 
     void check_index_valid(){
         assert(_start_pos<=_end_pos&&_end_pos<=_buf_ptr->length());
@@ -128,7 +128,7 @@ class BufferReadIterator;
 class ChainBuffer{
 
 private:
-    std::list<BufferSlice> _buf_slice_list;
+    std::deque<BufferSlice> _buf_slice_list;
 
 public:
     using buf_slice_iterator=decltype(_buf_slice_list)::iterator;
@@ -180,7 +180,7 @@ public:
     /// @brief read count bytes from istream to the buffer
     long append(std::istream &istream,long length);
 
-    /// @brief append the buf_slices of parameter buf to this
+    /// @brief append the buf_slices of parameter buf to current buffer
     void append(ChainBuffer &&buf);
 
     void append(BufferSlice slice);
@@ -216,7 +216,7 @@ public:
 
     //TODO char
 private:
-    void check_need_expand();
+    inline void check_need_expand();
 };
 
 using RxChainBuffer=ChainBuffer;
@@ -351,7 +351,6 @@ public:
                 }
 
             }while(step!=0);
-
         }
         else if(step<0){
             do{
@@ -372,7 +371,6 @@ public:
                 }
             }while(step!=0);
         }
-
         return *this;
     }
 
@@ -391,14 +389,22 @@ public:
     }
 
     difference_type operator-(self_type other) const{
+        if(this->_it_buf_slice==other._it_buf_slice){
+            return this->_p_cur-other._p_cur;
+        }
+        self_type tmp=*this;
+        bool flag=false;
+        if(this->_it_buf_slice<other._it_buf_slice||(this->_it_buf_slice==other._it_buf_slice&&this->_p_cur<other._p_cur)){
+            std::swap(tmp,other);
+            flag=true;
+        }
         difference_type diff=-(other._p_cur-other._p_start);
-
         while(other._it_buf_slice!=this->_it_buf_slice){
             diff+=other._p_end-other._p_start;
             other+=other._p_end-other._p_cur;
         }
         difference_type ret=diff+(this->_p_cur-other._p_cur);
-        return ret;
+        return flag?-ret:ret;
     }
 
 private:

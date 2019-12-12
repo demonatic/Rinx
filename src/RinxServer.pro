@@ -47,6 +47,7 @@ HEADERS += \
         Network/Listener.h \
         Network/Timer.h \
         Network/TimerHeap.h \
+        Protocol/Echo/ProtocolEcho.h \
         Protocol/HFSMParser.hpp \
         Protocol/HTTP/Http1ProtoProcessor.h \
         Protocol/HTTP/HttpDefines.h \

@@ -21,7 +21,7 @@ bool RxConnection::init(const RxFD fd,RxEventLoop &eventloop,RxProtocolFactory &
     _eventloop_belongs=&eventloop;
     set_proto_processor(factory.new_proto_processor(this));
 
-    if(!eventloop.register_fd(fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR})){
+    if(!eventloop.monitor_fd(fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR})){
         this->close();
         LOG_WARN<<"monitor fd "<<fd.raw<<" failed";
         return false;
@@ -38,16 +38,18 @@ RxConnection::RecvRes RxConnection::recv()
 
 RxConnection::SendRes RxConnection::send()
 {
-    std::cout<<"@RxConn send"<<std::endl;
     SendRes res;
     res.send_len=_output_buf->write_to_fd(_rx_fd,res.code);
+    if(res.code==RxWriteRc::SYS_SOCK_BUFF_FULL){
+        std::cout<<"@buffer full"<<std::endl;
+    }
     return res;
 }
 
 void RxConnection::close()
 {
     if(_rx_fd!=RxInvalidFD){
-        _eventloop_belongs->unregister_fd(_rx_fd);
+        _eventloop_belongs->unmonitor_fd(_rx_fd);
         _input_buf.reset();
         _output_buf.reset();
         _eventloop_belongs=nullptr;

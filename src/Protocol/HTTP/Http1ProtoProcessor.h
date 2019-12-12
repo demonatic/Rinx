@@ -57,7 +57,7 @@ private:
 
 private:
     HttpParser _request_parser;
-
+    size_t req_count=0;
     const HttpRouter *_router;
 
     bool _got_a_complete_req;

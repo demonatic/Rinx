@@ -38,9 +38,9 @@ public:
     bool init();
 
     /// @brief watch any event within param events on this fd
-    bool register_fd(const RxFD fd,const std::vector<RxEventType> &events);
+    bool monitor_fd(const RxFD fd,const std::vector<RxEventType> &events);
     /// @brief unwatch any event on this fd
-    bool unregister_fd(const RxFD fd);
+    bool unmonitor_fd(const RxFD fd);
 
     /// @brief set callback when fd of type fd_type has event of event_type occurs
     void set_event_handler(RxFDType fd_type,RxEventType event_type,EventHandler handler) noexcept;

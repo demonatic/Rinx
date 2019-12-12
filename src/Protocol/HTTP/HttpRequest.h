@@ -96,6 +96,7 @@ public:
     }
 
     void debug_print_header();
+    void debug_print_body();
 
 private:
     HttpReqData *_data;

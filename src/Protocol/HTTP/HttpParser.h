@@ -19,7 +19,7 @@ class StateRequestLine:public SuperState{
 public:
     StateRequestLine(uint8_t state_id):SuperState(state_id){}
 
-    virtual void consume(size_t length,iterable_bytes iterable,void *request) override;
+    virtual void consume(iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
         _sub_state=S_EXPECT_METHOD;
@@ -47,7 +47,7 @@ class StateHeader:public SuperState{
 public:
     StateHeader(uint8_t state_id):SuperState(state_id){}
 
-    virtual void consume(size_t length,iterable_bytes iterable,void *request) override;
+    virtual void consume(iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
         _sub_state=S_EXPECT_FIELD_KEY;
@@ -75,7 +75,7 @@ class StateContentLength:public SuperState{
 public:
     StateContentLength(uint8_t state_id):SuperState(state_id){}
 
-    virtual void consume(size_t length,iterable_bytes iterable,void *request) override;
+    virtual void consume(iterable_bytes iterable,void *request) override;
 
     virtual void on_entry(const std::any &context) override{
         this->_length_got=0;
@@ -91,7 +91,7 @@ private:
 class StateChunk:public SuperState{
 public:
     StateChunk(uint8_t state_id):SuperState(state_id){}
-    virtual void consume(size_t length,iterable_bytes iterable,void *request) override;
+    virtual void consume(iterable_bytes iterable,void *request) override;
     
     virtual void on_entry(const std::any &context) override{
         _chunk_len_expect=0;

@@ -37,6 +37,9 @@ public:
             interrupt_iteartion=true;
         }
 
+    public:
+        size_t n_left;
+
     private:
         size_t n_step_over=0;
         std::optional<std::vector<int>> events;
@@ -61,7 +64,7 @@ public:
     uint8_t get_id() const{return _id;}
 
     /// @param length: length of the iterable_bytes
-    virtual void consume(size_t length,iterable_bytes iterable,void *request)=0;
+    virtual void consume(iterable_bytes iterable,void *request)=0;
     virtual void on_entry([[maybe_unused]] const std::any &context={}){}
     virtual void on_exit(){}
 
@@ -96,32 +99,34 @@ public:
     template<typename InputIterator>
     ProcessStat parse(InputIterator begin,InputIterator end,void *request){
         ProcessStat parse_res;
-        InputIterator cur=begin,next=begin;
+        InputIterator cur=begin;
 
         while(cur!=end&&!parse_res.got_complete_request){
             SuperState::ConsumeCtx consume_ctx;
-            next=cur;
-            _curr_state->consume(end-cur,[&](SuperState::elm_handler<Byte> f){
-                for(;next!=end;++next){
-                    f(*next,consume_ctx);
+            consume_ctx.n_left=end-cur;
+            _curr_state->consume([&](SuperState::elm_handler<Byte> f){
+                for(;cur!=end;++cur){
+                    f(*cur,consume_ctx);
+                    consume_ctx.n_left--;
                     if(consume_ctx.interrupt_iteartion){
-                        if(!consume_ctx.n_step_over) next++;
+                        if(!consume_ctx.n_step_over) ++cur;
                         break;
                     }
                 }
             },request);
 
-            size_t n_consumed=next-cur+consume_ctx.n_step_over;
             if(consume_ctx.events){
                 for(int event:consume_ctx.events.value()){
                     if(!consume_ctx.n_step_over){
                         this->emit_event(event,request);
                     }
                     else{
-                        this->emit_event(event,request,SkippedRange<InputIterator>(next,cur+n_consumed));
+                        assert(end-cur>=consume_ctx.n_step_over);
+                        this->emit_event(event,request,SkippedRange<InputIterator>(cur,cur+consume_ctx.n_step_over));
                     }
                 }
             }
+
             if(consume_ctx.next_super_state){
                 size_t state_id=(*consume_ctx.next_super_state).first;
                 std::any &super_state_ctx=(*consume_ctx.next_super_state).second;
@@ -129,9 +134,10 @@ public:
                 //we assume that a complete request has got if the _curr_state go back to the initial super state
                 parse_res.got_complete_request=_curr_state->get_id()==0?true:false;
             }
-            cur+=n_consumed;
+            if(consume_ctx.n_step_over){
+                cur+=consume_ctx.n_step_over;
+            }
         }
-
         parse_res.n_remaining=end-cur;
         return parse_res;
     }

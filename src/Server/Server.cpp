@@ -26,7 +26,7 @@ void RxServer::stop()
 void RxServer::enable_accept()
 {
     for(const auto &[listener,proto_factory]:_listen_ports){
-        _main_eventloop.register_fd(listener.serv_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR});
+        _main_eventloop.monitor_fd(listener.serv_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR});
         LOG_INFO<<"server enable listen on port "<<listener.port;
     }
 }
@@ -35,7 +35,7 @@ void RxServer::disable_accept()
 {
     for(auto &pair:_listen_ports){
         RxListener &listen_port=pair.first;
-        _main_eventloop.unregister_fd(listen_port.serv_fd);
+        _main_eventloop.unmonitor_fd(listen_port.serv_fd);
         LOG_INFO<<"server disable listen on port "<<listen_port.port;
     }
 }
@@ -106,24 +106,24 @@ bool RxServer::on_acceptable(const RxEvent &event)
         RxFDHelper::Stream::set_tcp_nodelay(client_fd,true);
 
         RxConnection *conn=this->get_connection(client_fd);
-        //client connection reaches maximum  TODO disable accept?
-        if(conn==nullptr){
+        if(!conn){
+            LOG_WARN<<"Server connections reach maximum limit "<<_max_connection;
             return false;
         }
 
-        int snd_size = 4096;
-        socklen_t optlen = sizeof(snd_size);
-        int err = setsockopt(client_fd.raw, SOL_SOCKET, SO_SNDBUF, &snd_size, optlen);
-        if(err<0){
-            printf("设置发送缓冲区大小错误\n");
-        }
+//        int snd_size = 4096;
+//        socklen_t optlen = sizeof(snd_size);
+//        int err = setsockopt(client_fd.raw, SOL_SOCKET, SO_SNDBUF, &snd_size, optlen);
+//        if(err<0){
+//            printf("设置发送缓冲区大小错误\n");
+//        }
 
-        optlen = sizeof(snd_size);
-        err = getsockopt(client_fd.raw, SOL_SOCKET, SO_SNDBUF,(char *)&snd_size, &optlen);
-        if(err<0){
-            printf("获取接收缓冲区大小错误\n");
-        }
-        std::cout<<"发送缓冲区大小设置为"<<snd_size<<std::endl;
+//        optlen = sizeof(snd_size);
+//        err = getsockopt(client_fd.raw, SOL_SOCKET, SO_SNDBUF,(char *)&snd_size, &optlen);
+//        if(err<0){
+//            printf("获取接收缓冲区大小错误\n");
+//        }
+//        std::cout<<"发送缓冲区大小设置为"<<snd_size<<std::endl;
 
         size_t worker_index=client_fd.raw%_sub_eventloop_threads.get_thread_num();
         RxEventLoop &sub_eventloop=_sub_eventloop_threads.get_eventloop(worker_index);

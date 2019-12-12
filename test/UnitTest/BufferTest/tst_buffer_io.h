@@ -18,6 +18,11 @@ TEST(sock_rw_test, testset)
     EXPECT_EQ(read_bytes,buf->end()-buf->begin());
     EXPECT_EQ(read_bytes-read_bytes/2,buf->end()-(buf->begin()+read_bytes/2));
 
+    for(int i=0;i<read_bytes;i++){
+        auto it=buf->begin()+i;
+        EXPECT_EQ(it-buf->begin(),i);
+    }
+
     std::cout<<"buf ref num="<<buf->buf_slice_num()<<std::endl;
 
     std::cout<<"[print ++]"<<std::endl;
@@ -78,17 +83,22 @@ TEST(file_rw_test,testset){
     std::string prepend="An apple a day keep the doctor away\n";
     std::string append="Now there is no turning back cause mine's dropped off me\n";
     *buf<<prepend;
+    EXPECT_EQ(prepend.size(),buf->readable_size());
     RxFD file_read;
     RxFDHelper::RegFile::open("./test.txt",file_read);
     long file_length=RxFDHelper::RegFile::get_file_length(file_read);
     std::cout<<"read file length="<<file_length<<std::endl;
     int offset=3;
     bool res=buf->read_from_regular_file(file_read,file_length,offset);
+    EXPECT_EQ(prepend.size()+file_length-offset,buf->readable_size());
+
     *buf<<append;
     EXPECT_EQ(res,true);
 
     std::string join_str=prepend+source_str.substr(offset)+append;
+
     size_t i=0;
+    EXPECT_EQ(buf->readable_size(),join_str.size());
     for(auto it=buf->begin();it!=buf->end();++it){
         std::cout<<*it;
         EXPECT_EQ(*it,join_str[i++]);

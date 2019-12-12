@@ -3,7 +3,7 @@
 
 size_t ChainBuffer::buf_slice_num() const
 {
-    return _buf_slice_list.size();  //TO IMPORVE cost 0.24
+    return _buf_slice_list.size();
 }
 
 size_t ChainBuffer::readable_size()
@@ -46,8 +46,8 @@ ssize_t ChainBuffer::read_from_fd(RxFD fd,RxReadRc &res)
 bool ChainBuffer::read_from_regular_file(RxFD regular_file_fd, size_t length, size_t offset)
 {
     try{
-        auto buf_file=BufferRaw::create<BufferFile>(regular_file_fd,offset+length);
-        BufferSlice file(buf_file,offset,offset+length);
+        auto buf_file=BufferRaw::create<BufferFile>(regular_file_fd,length);
+        BufferSlice file(buf_file,offset,length);
         this->_buf_slice_list.emplace_back(std::move(file));
     }
     catch(std::bad_alloc &e){
@@ -157,8 +157,8 @@ void ChainBuffer::commit_consume(size_t n_bytes)
         else{
             size_t read_space=buf_slice.readable_size();
             buf_slice.advance_read(read_space);
-             _buf_slice_list.pop_front();
-             it_head=_buf_slice_list.begin();
+            _buf_slice_list.pop_front();
+            it_head=_buf_slice_list.begin();
             n_bytes-=read_space;
         }
     }
@@ -166,16 +166,18 @@ void ChainBuffer::commit_consume(size_t n_bytes)
 
 ChainBuffer ChainBuffer::slice(read_iterator begin,read_iterator end)
 {
-    ChainBuffer sliced;
+    ChainBuffer slice_buf;
     size_t length=end-begin;
     while(length){
+        auto sptr=begin._it_buf_slice->raw_buf_sptr();
         size_t slice_len=std::min(static_cast<size_t>(begin._p_end-begin._p_cur),length);
-        size_t start_pos=static_cast<size_t>(begin._p_cur-begin._p_start);
-        _buf_slice_list.emplace_back(BufferSlice(begin._it_buf_slice->get_buf_raw_ptr(),start_pos,start_pos+slice_len));
+        size_t start_pos=static_cast<size_t>(begin._p_cur-sptr->data());
+        BufferSlice slice(sptr,start_pos,start_pos+slice_len);
+        slice_buf.append(slice);
         length-=slice_len;
         begin+=slice_len;
     }
-    return sliced;
+    return slice_buf;
 }
 
 

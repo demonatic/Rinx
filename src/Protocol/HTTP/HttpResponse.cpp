@@ -21,7 +21,7 @@ bool HttpResponse::send_file(const std::string &filename,size_t offset)
              .headers("Content-Length",std::to_string(send_length))
              .headers("Content-Type",get_mimetype_by_filename(filename));
 
-        return this->body().read_from_regular_file(file.get_fd(),send_length,offset);
+        return this->body().read_from_regular_file(file.get_fd(),send_length,offset); //TODO changed
     }catch (std::runtime_error &e) {
         LOG_WARN<<e.what();
         return false;
@@ -93,11 +93,11 @@ bool HttpRespInternal::flush(RxChainBuffer &output_buf)
         output_buf.append(std::move(_data->body));
     }
 
-//    std::cout<<"@HttpResponse flush content:"<<std::endl;
-//    for(auto it=output_buf.begin();it!=output_buf.end();it++){
-//        std::cout<<*it;
-//    }
-//    std::cout<<std::endl;
+    std::cout<<"@HttpResponse flush content:"<<std::endl;
+    for(auto it=output_buf.begin();it!=output_buf.end();it++){
+        std::cout<<*it;
+    }
+    std::cout<<std::endl;
     return true;
 }
 

@@ -2,9 +2,9 @@
 
 namespace HttpParse{
 
-void StateRequestLine::consume(size_t length,iterable_bytes iterable, void *request)
+void StateRequestLine::consume(iterable_bytes iterable, void *request)
 {
-    iterable([=](const char c,ConsumeCtx &ctx)->void{ //use macro
+    iterable([=](const char c,ConsumeCtx &ctx){
         switch(this->_sub_state) {
             case S_EXPECT_METHOD:{
                 if(c==' '){
@@ -51,10 +51,10 @@ void StateRequestLine::consume(size_t length,iterable_bytes iterable, void *requ
     });
 }
 
-void StateHeader::consume(size_t length,iterable_bytes iterable, void *request)
+void StateHeader::consume(iterable_bytes iterable, void *request)
 {
     HttpReqImpl *http_request=static_cast<HttpReqImpl*>(request);
-    iterable([=](const char c,ConsumeCtx &ctx)->void{
+    iterable([=](const char c,ConsumeCtx &ctx){
         switch(this->_sub_state) {
             case S_EXPECT_FIELD_KEY:{
                 if(c==':'){
@@ -134,10 +134,11 @@ parse_error:
     });
 }
 
-void StateContentLength::consume(size_t length,iterable_bytes iterable, void *request)
+void StateContentLength::consume(iterable_bytes iterable, void *request)
 {
-    iterable([=](const char,ConsumeCtx &ctx)->void{
-        size_t length_increasement=length+_length_got>=_length_expect?_length_expect-_length_got:length;
+    iterable([=](const char c,ConsumeCtx &ctx){
+        size_t n_left=ctx.n_left;
+        size_t length_increasement=n_left+_length_got>=_length_expect?_length_expect-_length_got:n_left;
         _length_got+=length_increasement;
         ctx.iteration_step_over(length_increasement);
         ctx.add_event(ParseEvent::OnPartofBody);
@@ -149,9 +150,9 @@ void StateContentLength::consume(size_t length,iterable_bytes iterable, void *re
     });
 }
 
-void StateChunk::consume(size_t length, iterable_bytes iterable, void *request)
+void StateChunk::consume(iterable_bytes iterable, void *request)
 {
-    iterable([=](const char c,ConsumeCtx &ctx)->void{
+    iterable([=](const char c,ConsumeCtx &ctx){
         switch(this->_sub_state){
             case S_EXPECT_LENGTH:{
                 if(c!='\r'){
@@ -177,7 +178,8 @@ void StateChunk::consume(size_t length, iterable_bytes iterable, void *request)
             break;
 
             case S_EXPECT_CHUNK_DATA:{
-                size_t length_increasement=_chunk_len_got+length>=_chunk_len_expect?_chunk_len_expect-_chunk_len_got:length;
+                size_t n_left=ctx.n_left;
+                size_t length_increasement=_chunk_len_got+n_left>=_chunk_len_expect?_chunk_len_expect-_chunk_len_got:n_left;
                 _chunk_len_got+=length_increasement;
                 ctx.iteration_step_over(length_increasement);
                 ctx.add_event(HttpParse::OnPartofBody);

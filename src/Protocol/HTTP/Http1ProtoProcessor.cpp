@@ -31,10 +31,12 @@ bool RxProtoHttp1Processor::process_read_data(RxConnection *conn,RxChainBuffer &
 
     size_t n_left=input_buf.end()-input_buf.begin();
     std::cout<<"n_left="<<n_left<<" request_complete"<<_got_a_complete_req<<std::endl;
-    while(n_left&&!err&&!_got_a_complete_req){ //当没有收到一个完整的request时进行parse
-        std::cout<<"Start parsing"<<std::endl;
-        HttpParser::ProcessStat proc_stat=_request_parser.parse(input_buf.begin(),input_buf.end(),&_req);
 
+    while(n_left&&!err&&!_got_a_complete_req){ //当没有收到一个完整的request时进行parse
+        std::cout<<"Start parsing n_left="<<n_left<<std::endl;
+
+        HttpParser::ProcessStat proc_stat=_request_parser.parse(input_buf.begin(),input_buf.end(),&_req);
+        std::cout<<"commit consume="<<n_left-proc_stat.n_remaining<<std::endl;
         input_buf.commit_consume(n_left-proc_stat.n_remaining);
         n_left=proc_stat.n_remaining;
         this->_got_a_complete_req=proc_stat.got_complete_request;
@@ -45,6 +47,7 @@ bool RxProtoHttp1Processor::process_read_data(RxConnection *conn,RxChainBuffer &
         }
     }
     std::cout<<"process read return: "<<!err<<std::endl;
+
 //    assert(!err==1);
     return !err;
 }
@@ -73,21 +76,25 @@ bool RxProtoHttp1Processor::handle_write_prepared(RxConnection *conn, RxChainBuf
 
 void RxProtoHttp1Processor::on_header_recv(HttpReqImpl *http_request)
 {
-    std::cout<<"HeaderReceived"<<std::endl;
+//    std::cout<<"HeaderReceived"<<std::endl;
+    http_request->debug_print_header();
 
 //    this->set_timeout(ReadBodyTimeout); //TODO has body?
-
 
 }
 
 void RxProtoHttp1Processor::on_part_of_body(HttpReqImpl *http_request,SkippedRange data)
 {
-    http_request->body().append(http_request->get_input_buf().slice(data.first,data.second));
+
+    auto body_data=http_request->get_input_buf().slice(data.first,data.second);
+
+    http_request->body().append(std::move(body_data));
+    http_request->debug_print_body();
 }
 
 void RxProtoHttp1Processor::on_request_recv(HttpReqImpl *http_request)
 {
-    std::cout<<"RequestReceived uri="<<http_request->uri()<<std::endl;
+//    std::cout<<"RequestReceived uri="<<http_request->uri()<<std::endl;
 
     _router->route_to_responder(*http_request,_resp);
 
@@ -112,6 +119,8 @@ void RxProtoHttp1Processor::prepare_for_next_req()
     _req.clear();
     _resp.clear();
     _got_a_complete_req=false;
+    req_count++;
+    std::cout<<"req count="<<req_count<<std::endl;
 }
 
 bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &output_buf,bool &err)

@@ -100,18 +100,22 @@ std::vector<RxEventType> RxEventPoller::get_rx_event_types(const epoll_event &ep
     std::vector<RxEventType> rx_event_types;
     uint32_t evt=ep_event.events;
 
+    /// man 7 epoll:If more than one event occurs between epoll_wait calls, they are combined
+    /// @note
     /// 1. if remote callshutdown(SHUT_RD), epoll will return EPOLLIN | EPOLLRDHUP
     /// 2. if remote call shutdown(SHUT_RDWR), epoll will return EPOLLIN | EPOLLRDHUP | EPOLLHUP
     /// 3. if remote send RST, epoll will return EPOLLIN | EPOLLERR | EPOLLHUP
     /// 4. if remote only shutdown(SHUT_WR), epoll will return nothing
-
+    std::cout<<"get_rx_event_types"<<std::endl;
     if(evt&(EPOLLHUP|EPOLLERR|EPOLLRDHUP)){
        rx_event_types.emplace_back(Rx_EVENT_ERROR);
     }
     if(evt&EPOLLIN){
+        std::cout<<"read event"<<std::endl;
         rx_event_types.emplace_back(Rx_EVENT_READ);
     }
     if(evt&EPOLLOUT){
+        std::cout<<"write event"<<std::endl;
         rx_event_types.emplace_back(Rx_EVENT_WRITE);
     }
     return rx_event_types;
@@ -119,13 +123,16 @@ std::vector<RxEventType> RxEventPoller::get_rx_event_types(const epoll_event &ep
 
 void RxEventPoller::set_ep_event(epoll_event &ep_event,const std::vector<RxEventType> &rx_events) const noexcept
 {
-    ep_event.events|=EPOLLET;
-    for(RxEventType rx_event:rx_events){
+    ep_event.events|=EPOLLET;  //use edge trigger
+    for(const RxEventType rx_event:rx_events){
         if(rx_event==Rx_EVENT_READ){
             ep_event.events|=EPOLLIN;
         }
         else if(rx_event==Rx_EVENT_WRITE){
             ep_event.events|=EPOLLOUT;
+        }
+        else{
+            ep_event.events|=EPOLLHUP|EPOLLERR|EPOLLRDHUP;
         }
     }
 
