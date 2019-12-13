@@ -200,7 +200,6 @@ ChainBuffer::read_iterator ChainBuffer::end()
     return read_iterator(this,_buf_slice_list.end(),nullptr);
 }
 
-
 size_t ChainBuffer::buf_slice_num() const
 {
     return _buf_slice_list.size();

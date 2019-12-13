@@ -154,6 +154,7 @@ bool RxServer::on_stream_readable(const RxEvent &event)
 
     switch(read_res.code) {
         case RxReadRc::OK:
+        case RxReadRc::SOCK_RD_BUFF_EMPTY:
             if(!conn->get_proto_processor().process_read_data(conn,conn->get_input_buf())){
 //                assert(false);
                 conn->close();
@@ -179,7 +180,12 @@ bool RxServer::on_stream_writable(const RxEvent &event)
 {
     std::cout<<"@on stream writable"<<std::endl;
     RxConnection *conn=this->get_connection(event.Fd);
-    return conn->get_proto_processor().handle_write_prepared(conn,conn->get_output_buf());
+    if(!conn->sock_writable()){
+        conn->set_sock_to_writable();
+        RxChainBuffer &outputbuf=conn->get_output_buf();
+        return conn->get_proto_processor().handle_write_prepared(conn,outputbuf);
+    }
+    return true;
 }
 
 bool RxServer::on_stream_error(const RxEvent &event)

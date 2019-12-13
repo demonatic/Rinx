@@ -12,27 +12,36 @@
 class RxConnection:public RxNoncopyable
 {
 public:
-    struct RecvRes{RxReadRc code; ssize_t recv_len;};
-    struct SendRes{RxWriteRc code; ssize_t send_len;};
+    struct RecvRes{RxReadRc code; ssize_t recv_len=0;};
+    struct SendRes{RxWriteRc code; ssize_t send_len=0;};
 public:
     RxConnection();
     ~RxConnection();
 
     bool init(const RxFD fd,RxEventLoop &eventloop,RxProtocolFactory &factory);
 
+    /// @brief read as much data as possible in input_buf
+    /// @return the read status and the number of bytes been read
     RecvRes recv();
+    /// @brief write as much data as possible from output_buf
+    /// @return the write status and the number of bytes been written
+    /// either all data is sent or socket send buffer is full and status be SOCK_SD_BUFF_FULL
     SendRes send();
 
     void close();
     bool is_open() const;
 
+    /// @brief test whether socket write buffer is writable, if not, set it to be writable
+    bool sock_writable() const;
+    void set_sock_to_writable();
+
+    RxFD get_rx_fd() const;
+    RxEventLoop* get_eventloop() const;
+
     RxChainBuffer& get_input_buf() const;
     RxChainBuffer& get_output_buf() const;
 
     RxProtoProcessor& get_proto_processor() const;
-    RxEventLoop* get_eventloop() const;
-    RxFD get_rx_fd() const;
-
     void set_proto_processor(std::unique_ptr<RxProtoProcessor> processor) noexcept;
 
 private:
@@ -44,6 +53,7 @@ private:
     std::unique_ptr<RxProtoProcessor> _proto_processor;
     RxEventLoop *_eventloop_belongs;
 
+    bool _sock_writable_flag; //we assume socket buffer to be writable until write return EAGAIN
 };
 
 

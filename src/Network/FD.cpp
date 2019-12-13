@@ -141,8 +141,8 @@ ssize_t Stream::readv(RxFD fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
         read_bytes=::readv(fd.raw,io_vec.data(),io_vec.size());
     }while(read_bytes<0&&errno==EINTR);
 
-    if(unlikely(read_bytes<0)){
-        read_res=RxReadRc::ERROR;
+    if(read_bytes<0){
+        read_res=(errno==EAGAIN?RxReadRc::SOCK_RD_BUFF_EMPTY:RxReadRc::ERROR);
     }
     else if(unlikely(read_bytes==0)){
         read_res=RxReadRc::CLOSED;
@@ -165,7 +165,7 @@ ssize_t Stream::write(RxFD fd, void *buffer, size_t n, RxWriteRc &write_res)
             n_write+=ret;
         }
         else if(n_write<0){
-            write_res=(errno==EAGAIN)?RxWriteRc::SYS_SOCK_BUFF_FULL:RxWriteRc::ERROR;
+            write_res=(errno==EAGAIN)?RxWriteRc::SOCK_SD_BUFF_FULL:RxWriteRc::ERROR;
             break;
         }
     }
@@ -180,8 +180,8 @@ ssize_t Stream::writev(RxFD fd,std::vector<struct iovec> &io_vec,RxWriteRc &writ
         write_bytes=::writev(fd.raw,io_vec.data(),io_vec.size());
     }while(write_bytes<0&&errno==EINTR);
 
-    if(unlikely(write_bytes<0)){
-        write_res=(errno==EAGAIN)?RxWriteRc::SYS_SOCK_BUFF_FULL:RxWriteRc::ERROR;
+    if(write_bytes<0){
+        write_res=(errno==EAGAIN)?RxWriteRc::SOCK_SD_BUFF_FULL:RxWriteRc::ERROR;
     }
     return write_bytes;
 }

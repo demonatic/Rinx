@@ -1,7 +1,7 @@
 #include "Connection.h"
 #include "../3rd/NanoLog/NanoLog.h"
-
-RxConnection::RxConnection():_rx_fd(RxInvalidFD),_eventloop_belongs(nullptr)
+#include <iostream>
+RxConnection::RxConnection():_rx_fd(RxInvalidFD),_eventloop_belongs(nullptr),_sock_writable_flag(true)
 {
 
 }
@@ -9,7 +9,7 @@ RxConnection::RxConnection():_rx_fd(RxInvalidFD),_eventloop_belongs(nullptr)
 RxConnection::~RxConnection()
 {
     if(_rx_fd!=RxFDType::FD_INVALID){
-        close();
+        this->close();
     }
 }
 
@@ -32,15 +32,28 @@ bool RxConnection::init(const RxFD fd,RxEventLoop &eventloop,RxProtocolFactory &
 RxConnection::RecvRes RxConnection::recv()
 {
     RecvRes res;
-    res.recv_len=_input_buf->read_from_fd(_rx_fd,res.code);
+    do{
+        auto n_read=_input_buf->read_from_fd(_rx_fd,res.code);
+        if(n_read>0){
+            res.recv_len+=n_read;
+        }
+    }while(res.code==RxReadRc::OK);
     return res;
 }
 
 RxConnection::SendRes RxConnection::send()
 {
     SendRes res;
-    res.send_len=_output_buf->write_to_fd(_rx_fd,res.code);
-    if(res.code==RxWriteRc::SYS_SOCK_BUFF_FULL){
+    do{
+        auto n_sent=_output_buf->write_to_fd(_rx_fd,res.code);
+        if(n_sent>0){
+            res.send_len+=n_sent;
+        }
+    }
+    while(!_output_buf->empty()&&res.code==RxWriteRc::OK);
+
+    if(res.code==RxWriteRc::SOCK_SD_BUFF_FULL){
+        _sock_writable_flag=false;
         std::cout<<"@buffer full"<<std::endl;
     }
     return res;
@@ -65,6 +78,16 @@ void RxConnection::close()
 bool RxConnection::is_open() const
 {
     return RxFDHelper::is_open(_rx_fd);
+}
+
+bool RxConnection::sock_writable() const
+{
+    return _sock_writable_flag;
+}
+
+void RxConnection::set_sock_to_writable()
+{
+    _sock_writable_flag=true;
 }
 
 RxProtoProcessor& RxConnection::get_proto_processor() const

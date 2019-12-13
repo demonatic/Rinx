@@ -141,7 +141,6 @@ public:
     size_t buf_slice_num() const;
     size_t readable_size();
 
-
     /// @brief read data as many as possible(no greater than 65535+n) from fd(socket,file...) to buffer
     ssize_t read_from_fd(RxFD fd,RxReadRc &res);
 

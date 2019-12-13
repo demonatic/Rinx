@@ -63,7 +63,7 @@ bool RxProtoHttp1Processor::handle_write_prepared(RxConnection *conn, RxChainBuf
             LOG_WARN<<"errno when send on fd "<<conn->get_rx_fd().raw<<" errno:"<<errno<<' '<<strerror(errno);
             return false;
         }
-        if(res.code==RxWriteRc::SYS_SOCK_BUFF_FULL){
+        if(res.code==RxWriteRc::SOCK_SD_BUFF_FULL){
             //continue to send in next writable events
             return true;
         }
@@ -139,7 +139,7 @@ bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &outpu
 
         auto send_res=conn.send();
         std::cout<<"n_send="<<send_res.send_len<<std::endl;
-        if(send_res.code==RxWriteRc::SYS_SOCK_BUFF_FULL){
+        if(send_res.code==RxWriteRc::SOCK_SD_BUFF_FULL){
             std::cout<<"buff full"<<std::endl;
             break;
         }

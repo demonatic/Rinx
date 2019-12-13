@@ -42,13 +42,14 @@ enum class RxAcceptRc:uint8_t{
 
 enum class RxReadRc:uint8_t{
     OK,
+    SOCK_RD_BUFF_EMPTY,
     CLOSED,
     ERROR,
 };
 
 enum class RxWriteRc:uint8_t{
     OK,
-    SYS_SOCK_BUFF_FULL,
+    SOCK_SD_BUFF_FULL,
     ERROR
 };
 

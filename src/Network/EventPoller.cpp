@@ -47,7 +47,6 @@ void RxEventPoller::destroy() noexcept
     if(RxFDHelper::is_open(_epoll_fd)){
         RxFDHelper::close(_epoll_fd);
     }
-
     if(_ep_events!=nullptr){
         free(_ep_events);
         _ep_events=nullptr;
