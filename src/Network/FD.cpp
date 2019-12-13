@@ -152,20 +152,24 @@ ssize_t Stream::readv(RxFD fd, std::vector<iovec> &io_vec,RxReadRc &read_res)
 
 ssize_t Stream::write(RxFD fd, void *buffer, size_t n, RxWriteRc &write_res)
 {
-    ssize_t bytes_written=0;
+    ssize_t n_write=0;
     write_res=RxWriteRc::OK;
 
-    while(bytes_written!=n){
+    while(true){
+        ssize_t ret;
         do{
-            bytes_written=::write(fd.raw,buffer,n);
-        }while(bytes_written<0&&errno==EINTR);
+            ret=::write(fd.raw,static_cast<uint8_t*>(buffer)+n_write,n-n_write);
+        }while(ret<0&&errno==EINTR);
 
-        if(unlikely(bytes_written<0)){
+        if(ret>0){
+            n_write+=ret;
+        }
+        else if(n_write<0){
             write_res=(errno==EAGAIN)?RxWriteRc::SYS_SOCK_BUFF_FULL:RxWriteRc::ERROR;
+            break;
         }
     }
-
-    return bytes_written;
+    return n_write;
 }
 
 ssize_t Stream::writev(RxFD fd,std::vector<struct iovec> &io_vec,RxWriteRc &write_res)
