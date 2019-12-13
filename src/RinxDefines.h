@@ -10,7 +10,7 @@ constexpr size_t ThreadPoolWorkerNum=8;
 constexpr size_t MaxConnectionNum=65535;
 
 ///Network
-constexpr size_t BufferChunkSize=4096;
+constexpr size_t BufferChunkSize=9012;
 constexpr size_t OutputBufSliceThresh=10;
 
 ///HTTP
