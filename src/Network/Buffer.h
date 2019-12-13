@@ -23,13 +23,8 @@ public:
          return rx_pool_make_shared<T>(std::forward<Args>(args)...);
     }
 
-    value_type* data() const{
-        return this->_p_data;
-    }
-
-    size_t length() const{
-        return this->_len;
-    }
+    value_type* data() const{ return this->_p_data; }
+    size_t length() const{ return this->_len; }
 
 protected:
     BufferRaw():_p_data(nullptr),_len(0){}
@@ -139,11 +134,13 @@ public:
     ~ChainBuffer()=default;
 
     static std::unique_ptr<ChainBuffer> create_chain_buffer();
+
     void clear();
+    bool empty();
 
     size_t buf_slice_num() const;
     size_t readable_size();
-    bool empty();
+
 
     /// @brief read data as many as possible(no greater than 65535+n) from fd(socket,file...) to buffer
     ssize_t read_from_fd(RxFD fd,RxReadRc &res);
@@ -160,9 +157,6 @@ public:
 
     buf_slice_iterator slice_begin();
     buf_slice_iterator slice_end();
-
-    BufferSlice& get_head_slice();
-    BufferSlice& get_tail_slice();
 
     /// @brief commit that n_bytes has been consumed by the caller, and the corresponding space in buffer could be freed
     void commit_consume(size_t n_bytes);
@@ -216,7 +210,7 @@ public:
 
     //TODO char
 private:
-    inline void check_need_expand();
+    void check_need_expand();
 };
 
 using RxChainBuffer=ChainBuffer;
@@ -317,7 +311,7 @@ public:
     }
 
     self_type& operator+=(difference_type step){
-        if(_p_cur==nullptr){
+        if(_p_cur==nullptr&&step>0){
             throw std::runtime_error("index out of range");
         }
 

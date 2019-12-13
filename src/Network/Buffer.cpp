@@ -1,28 +1,13 @@
 #include "Buffer.h"
 #include "../Util/Util.h"
 
-size_t ChainBuffer::buf_slice_num() const
-{
-    return _buf_slice_list.size();
-}
-
-size_t ChainBuffer::readable_size()
-{
-    return end()-begin();
-}
-
-bool ChainBuffer::empty()
-{
-    return this->readable_size()==0;
-}
-
 ssize_t ChainBuffer::read_from_fd(RxFD fd,RxReadRc &res)
 {
     this->check_need_expand();
 
     char extra_buff[65535];
     std::vector<struct iovec> io_vecs(2);
-    BufferSlice &tail=get_tail_slice();
+    BufferSlice &tail=_buf_slice_list.back();
     io_vecs[0].iov_base=tail.write_pos();
     io_vecs[0].iov_len=tail.writable_size();
     io_vecs[1].iov_base=extra_buff;
@@ -86,7 +71,7 @@ void ChainBuffer::append(const char *data, size_t length)
     while(bytes_left>0){
         this->check_need_expand();
 
-        BufferSlice &tail=this->get_tail_slice();
+        BufferSlice &tail=this->_buf_slice_list.back();
         if(tail.writable_size()>bytes_left){
             std::copy(pos,pos+bytes_left,tail.write_pos());
             tail.advance_write(bytes_left);
@@ -108,13 +93,13 @@ long ChainBuffer::append(std::istream &istream,long length)
 
     while(length>0){
         this->check_need_expand();
-        long try_to_read=std::min(static_cast<size_t>(length),get_tail_slice().writable_size());
-        istream.read(reinterpret_cast<char*>(get_tail_slice().write_pos()),try_to_read).gcount();
+        long try_to_read=std::min(static_cast<size_t>(length),_buf_slice_list.back().writable_size());
+        istream.read(reinterpret_cast<char*>(_buf_slice_list.back().write_pos()),try_to_read).gcount();
         long actual_read=istream.gcount();
         if(actual_read<=0)
             break;
 
-        get_tail_slice().advance_write(actual_read);
+        _buf_slice_list.back().advance_write(actual_read);
         total_read+=actual_read;
         length-=actual_read;
     }
@@ -183,7 +168,7 @@ ChainBuffer ChainBuffer::slice(read_iterator begin,read_iterator end)
 
 void ChainBuffer::check_need_expand()
 {
-    if(!buf_slice_num()||get_tail_slice().writable_size()==0){
+    if(!buf_slice_num()||_buf_slice_list.back().writable_size()==0){
         BufferRaw::Ptr fixed_buf=BufferRaw::create<BufferFixed<>>();
         BufferSlice slice(fixed_buf);
         _buf_slice_list.emplace_back(std::move(slice));
@@ -215,6 +200,22 @@ ChainBuffer::read_iterator ChainBuffer::end()
     return read_iterator(this,_buf_slice_list.end(),nullptr);
 }
 
+
+size_t ChainBuffer::buf_slice_num() const
+{
+    return _buf_slice_list.size();
+}
+
+size_t ChainBuffer::readable_size()
+{
+    return end()-begin();
+}
+
+bool ChainBuffer::empty()
+{
+    return this->readable_size()==0;
+}
+
 ChainBuffer::buf_slice_iterator ChainBuffer::slice_begin()
 {
     return _buf_slice_list.begin();
@@ -225,12 +226,3 @@ ChainBuffer::buf_slice_iterator ChainBuffer::slice_end()
     return _buf_slice_list.end();
 }
 
-BufferSlice& ChainBuffer::get_head_slice()
-{
-    return _buf_slice_list.front();
-}
-
-BufferSlice& ChainBuffer::get_tail_slice()
-{
-    return _buf_slice_list.back();
-}

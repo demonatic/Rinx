@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <vector>
 #include <functional>
+#include "../Util/Noncopyable.h"
 #include "FD.h"
 
 enum RxEventType:uint8_t{
@@ -24,9 +25,7 @@ struct RxEvent{
 
 using EventHandler=std::function<bool(const RxEvent &event_data)>;
 
-
-class RxEventLoop;
-class RxEventPoller
+class RxEventPoller:public RxNoncopyable
 {
 public:
     static constexpr int Epoll_Timeout=0,Epoll_Interrupted=-1,Epoll_Error=-2;
@@ -34,8 +33,6 @@ public:
 public:
     RxEventPoller();
     ~RxEventPoller();
-    RxEventPoller(const RxEventPoller&)=delete;
-    RxEventPoller& operator=(const RxEventPoller&)=delete;
 
     bool create(int max_event_num);
     bool is_initialized() const noexcept;

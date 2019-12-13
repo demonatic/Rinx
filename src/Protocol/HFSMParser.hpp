@@ -134,9 +134,7 @@ public:
                 //we assume that a complete request has got if the _curr_state go back to the initial super state
                 parse_res.got_complete_request=_curr_state->get_id()==0?true:false;
             }
-            if(consume_ctx.n_step_over){
-                cur+=consume_ctx.n_step_over;
-            }
+            cur+=consume_ctx.n_step_over;
         }
         parse_res.n_remaining=end-cur;
         return parse_res;
