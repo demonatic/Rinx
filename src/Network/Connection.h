@@ -18,7 +18,8 @@ public:
     RxConnection();
     ~RxConnection();
 
-    bool init(const RxFD fd,RxEventLoop &eventloop,RxProtocolFactory &factory);
+    void init(const RxFD fd,RxEventLoop &eventloop);
+    bool activate();
 
     /// @brief read as much data as possible in input_buf
     /// @return the read status and the number of bytes been read

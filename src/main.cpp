@@ -77,7 +77,7 @@ int main(){
     });
 
     RxServer server;
-    uint16_t port=7777;
+    uint16_t port=7778;
 
     bool listen_ok=false;
     do{

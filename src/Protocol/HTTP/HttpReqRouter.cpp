@@ -32,10 +32,10 @@ void HttpRouter::install_filters(HttpReqImpl &req, HttpRespImpl &resp) const
     if(!filter_hb_list)
         return;
 
-    HttpRespData::ChainFilter<HeadFilter> head_filters(req,filter_hb_list->head_filter_list);
+    HttpRespData::FilterChain<HeadFilter> head_filters(req,filter_hb_list->head_filter_list);
     resp.install_head_filters(head_filters);
 
-    HttpRespData::ChainFilter<BodyFilter> body_filters(req,filter_hb_list->body_filter_list);
+    HttpRespData::FilterChain<BodyFilter> body_filters(req,filter_hb_list->body_filter_list);
     resp.install_body_filters(body_filters);
 }
 

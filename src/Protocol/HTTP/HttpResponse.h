@@ -22,9 +22,9 @@ struct HttpRespData{
     HttpRespData(RxConnection *conn):head{{HttpStatusCode::OK,HttpVersion::VERSION_1_1},{}},generator(nullptr),conn_belongs(conn){}
 
     template<typename Filter>
-    struct ChainFilter{
-        ChainFilter():_filters(nullptr){}
-        ChainFilter(HttpRequest &req,const std::list<Filter> &filters):_req(&req),_filters(&filters){}
+    struct FilterChain{  //TODO add append interface
+        FilterChain():_filters(nullptr){}
+        FilterChain(HttpRequest &req,const std::list<Filter> &filters):_req(&req),_filters(&filters){}
 
         /// @brief execute the filters in sequence and return true if all filters are executed successfully
         template<typename ...FilterArgs>
@@ -89,8 +89,8 @@ struct HttpRespData{
     HttpResponseBody body;
 
     std::shared_ptr<ContentGenerator> generator;
-    ChainFilter<HeadFilter> header_filters;
-    ChainFilter<BodyFilter> body_filters;
+    FilterChain<HeadFilter> header_filters;
+    FilterChain<BodyFilter> body_filters;
 
     RxConnection *conn_belongs; //TODO owner
 };
@@ -109,11 +109,11 @@ public:
         return _data->generator&&!_data->generator->is_done();
     }
 
-    void install_head_filters(const HttpRespData::ChainFilter<HeadFilter> &filters){
+    void install_head_filters(const HttpRespData::FilterChain<HeadFilter> &filters){
         _data->header_filters=filters;
     }
 
-    void install_body_filters(const HttpRespData::ChainFilter<BodyFilter> &filters){
+    void install_body_filters(const HttpRespData::FilterChain<BodyFilter> &filters){
         _data->body_filters=filters;
     }
 

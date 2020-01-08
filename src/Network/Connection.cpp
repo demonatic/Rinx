@@ -13,17 +13,19 @@ RxConnection::~RxConnection()
     }
 }
 
-bool RxConnection::init(const RxFD fd,RxEventLoop &eventloop,RxProtocolFactory &factory)
+void RxConnection::init(const RxFD fd,RxEventLoop &eventloop)
 {
     _rx_fd=fd;
     _input_buf=RxChainBuffer::create_chain_buffer();
     _output_buf=RxChainBuffer::create_chain_buffer();
     _eventloop_belongs=&eventloop;
-    set_proto_processor(factory.new_proto_processor(this));
+}
 
-    if(!eventloop.monitor_fd(fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR})){
+bool RxConnection::activate()
+{
+    if(!_eventloop_belongs->monitor_fd(_rx_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR})){
+        LOG_WARN<<"monitor fd "<<_rx_fd.raw<<" failed";
         this->close();
-        LOG_WARN<<"monitor fd "<<fd.raw<<" failed";
         return false;
     }
     return true;

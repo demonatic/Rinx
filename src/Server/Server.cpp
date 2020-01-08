@@ -111,27 +111,16 @@ bool RxServer::on_acceptable(const RxEvent &event)
             return false;
         }
 
-//        int snd_size = 4096;
-//        socklen_t optlen = sizeof(snd_size);
-//        int err = setsockopt(client_fd.raw, SOL_SOCKET, SO_SNDBUF, &snd_size, optlen);
-//        if(err<0){
-//            printf("设置发送缓冲区大小错误\n");
-//        }
-
-//        optlen = sizeof(snd_size);
-//        err = getsockopt(client_fd.raw, SOL_SOCKET, SO_SNDBUF,(char *)&snd_size, &optlen);
-//        if(err<0){
-//            printf("获取接收缓冲区大小错误\n");
-//        }
-//        std::cout<<"发送缓冲区大小设置为"<<snd_size<<std::endl;
-
         size_t worker_index=client_fd.raw%_sub_eventloop_threads.get_thread_num();
         RxEventLoop &sub_eventloop=_sub_eventloop_threads.get_eventloop(worker_index);
+        conn->init(client_fd,sub_eventloop);
 
-        auto it_proto_proc_factory=std::find_if(_listen_ports.begin(),_listen_ports.end(),[&event](auto &ls_port){
+        auto proto_proc_factory_it=std::find_if(_listen_ports.begin(),_listen_ports.end(),[&event](auto &ls_port){
             return ls_port.first.serv_fd==event.Fd;
         });
-        conn->init(client_fd,sub_eventloop,*it_proto_proc_factory->second);
+        RxProtocolFactory &factory=*proto_proc_factory_it->second;
+        conn->set_proto_processor(factory.new_proto_processor(conn));
+        conn->activate();
     }
 
     return true;
@@ -156,7 +145,6 @@ bool RxServer::on_stream_readable(const RxEvent &event)
         case RxReadRc::OK:
         case RxReadRc::SOCK_RD_BUFF_EMPTY:
             if(!conn->get_proto_processor().process_read_data(conn,conn->get_input_buf())){
-//                assert(false);
                 conn->close();
                 return false;
             }
@@ -165,7 +153,6 @@ bool RxServer::on_stream_readable(const RxEvent &event)
         case RxReadRc::ERROR:
             LOG_WARN<<"encounter error when read from fd "<<event.Fd.raw
                     <<" errno="<<errno<<" description: "<<strerror(errno);
-             assert(false);
             conn->close();
             return false;
 
