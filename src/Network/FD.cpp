@@ -57,8 +57,6 @@ bool Stream::bind(RxFD fd,const char *host,const int port) noexcept
     if(host&&1!=inet_pton(AF_INET,host,&(sock_addr.sin_addr))){
         return false;
     }
-//    bool dont_linger=true;
-//    ::setsockopt(fd,SOL_SOCKET,SO_LINGER,&(dont_linger),sizeof(dont_linger));
     return 0==::bind(fd.raw,reinterpret_cast<const ::sockaddr*>(&sock_addr),sizeof(::sockaddr_in));
 }
 
@@ -231,9 +229,23 @@ File::File(const std::string &path,bool create):_file_fd(RxInvalidFD)
 }
 
 File::~File(){
-    if(_file_fd!=RxInvalidFD){
-        RxFDHelper::close(_file_fd);
+    RxFDHelper::close(_file_fd);
+}
+
+File::File(File &&other) noexcept
+{
+    this->_file_fd=other._file_fd;
+    other._file_fd=RxInvalidFD;
+}
+
+File &File::operator==(File &&other) noexcept
+{
+    if(this!=&other){
+        RxFDHelper::close(this->_file_fd);
+        this->_file_fd=other._file_fd;
+        other._file_fd=RxInvalidFD;
     }
+    return *this;
 }
 
 long File::get_len() const

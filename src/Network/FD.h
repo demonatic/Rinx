@@ -7,6 +7,7 @@
 #include <sys/eventfd.h>
 #include <vector>
 #include <string>
+#include "../Util/Noncopyable.h"
 
 enum RxFDType:uint8_t{
     FD_LISTEN=0,
@@ -23,15 +24,15 @@ struct RxFD{
     RxFDType type;
     int raw;
 
-    constexpr RxFD(RxFDType type,int fd):raw(fd),type(type){}
-    constexpr RxFD():raw(-1),type(RxFDType::FD_INVALID){}
+    RxFD(RxFDType type,int fd):type(type),raw(fd){}
+    RxFD():type(RxFDType::FD_INVALID),raw(-1){}
 
-    constexpr operator int() const{return raw;}
-    constexpr bool operator==(const RxFD &other) const {return this->type==other.type&&this->raw==other.raw;}
-    constexpr bool operator!=(const RxFD &other) const {return !((*this)==other);}
+    operator int() const{return raw;}
+    bool operator==(const RxFD &other) const {return this->type==other.type&&this->raw==other.raw;}
+    bool operator!=(const RxFD &other) const {return !((*this)==other);}
 };
 
-constexpr static RxFD RxInvalidFD={RxFDType::FD_INVALID,-1};
+const static RxFD RxInvalidFD={RxFDType::FD_INVALID,-1};
 
 enum class RxAcceptRc:uint8_t{
     ACCEPTING,
@@ -98,10 +99,12 @@ namespace RxFDHelper{
         long get_file_length(RxFD fd);
     }
 
-    class File{
+    class File:RxNoncopyable{
     public:
         File(const std::string &path,bool create=false);
         ~File();
+        File(File &&other) noexcept;
+        File& operator==(File &&other) noexcept;
 
         long get_len() const;
         RxFD get_fd() const;
