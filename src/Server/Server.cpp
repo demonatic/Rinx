@@ -1,5 +1,5 @@
-#include "Server.h"
-#include "Signal.h"
+#include "Server/Server.h"
+#include "Server/Signal.h"
 #include <iostream>
 RxServer::RxServer():_start(false),_max_connection(MaxConnectionNum),_max_once_accept_count(128),
     _main_eventloop(0),_sub_eventloop_threads(IOWorkerNum),_connection_list(_max_connection)

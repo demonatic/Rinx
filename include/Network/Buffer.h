@@ -8,8 +8,8 @@
 #include <cstring>
 #include "FD.h"
 #include "../Util/ObjectAllocator.hpp"
-#include "../RinxDefines.h"
-#include "../3rd/NanoLog/NanoLog.h"
+#include "RinxDefines.h"
+#include "3rd/NanoLog/NanoLog.h"
 
 class BufferRaw{
 public:
@@ -163,9 +163,6 @@ public:
     /// @brief slice [it,it+length)
     ChainBuffer slice(read_iterator begin,read_iterator end);
 
-    //TODO
-//    void insert(read_iterator dst_begin,read_iterator src_begin,read_iterator src_end)
-
     ///** functions for append data to the buffer **///
     //TODO merge peices
     void append(const char *data,size_t length);
@@ -207,7 +204,6 @@ public:
         return *this;
     }
 
-    //TODO char
 private:
     void check_need_expand();
 };

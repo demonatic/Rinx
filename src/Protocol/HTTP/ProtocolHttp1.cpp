@@ -1,7 +1,7 @@
-#include "ProtocolHttp1.h"
-#include "../../Network/Connection.h"
-#include "../../Protocol/HTTP/HttpDefines.h"
-#include "../../3rd/NanoLog/NanoLog.h"
+#include "Protocol/HTTP/ProtocolHttp1.h"
+#include "Network/Connection.h"
+#include "Protocol/HTTP/HttpDefines.h"
+#include "3rd/NanoLog/NanoLog.h"
 
 
 #define HTTP_ROUTE_FUNC_DEFINE(Method) \

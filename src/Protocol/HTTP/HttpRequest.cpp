@@ -1,4 +1,4 @@
-#include "HttpRequest.h"
+#include "Protocol/HTTP/HttpRequest.h"
 #include <iostream>
 
 void HttpReqInternal::clear()

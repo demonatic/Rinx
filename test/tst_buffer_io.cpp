@@ -4,7 +4,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 #include <fstream>
-#include "../../../src/Network/Buffer.h"
+#include "Network/Buffer.h"
+#include <sys/fcntl.h>
 
 using namespace testing;
 
@@ -12,6 +13,7 @@ TEST(sock_rw_test, testset)
 {
     std::unique_ptr<ChainBuffer> buf=ChainBuffer::create_chain_buffer();
     RxReadRc read_res;
+
     ssize_t read_bytes=buf->read_from_fd(RxFD{RxFDType::FD_REGULAR_FILE,STDIN_FILENO},read_res);
     EXPECT_EQ(read_res, RxReadRc::OK);
     std::cout<<"begin-end distance="<<buf->end()-buf->begin()<<std::endl;
@@ -104,21 +106,22 @@ TEST(file_rw_test,testset){
         EXPECT_EQ(*it,join_str[i++]);
     }
 
-    RxFD file_write;
-    RxFDHelper::RegFile::open("./write_file.txt",file_write,true);
-    RxWriteRc rc;
-    buf->write_to_fd(file_write,rc);
-    EXPECT_EQ(rc,RxWriteRc::OK);
-    RxFDHelper::close(file_write);
+//    RxFD file_write;
+//    file_write.raw=::open("./write_file.txt",O_RDWR|O_CREAT,0777);
+//    file_write.type=RxFDType::FD_REGULAR_FILE;
+//    RxWriteRc rc;
+//    buf->write_to_fd(file_write,rc);
+//    EXPECT_EQ(rc,RxWriteRc::OK);
+//    RxFDHelper::close(file_write);
 
-    RxFD file_write_check;
-    EXPECT_EQ(RxFDHelper::RegFile::open("./write_file.txt",file_write_check),true);
-    buf->read_from_regular_file(file_write_check,RxFDHelper::RegFile::get_file_length(file_write_check));
-    size_t j=0;
-    for(auto it=buf->begin();it!=buf->end();++it){
-        std::cout<<*it;
-        EXPECT_EQ(*it,join_str[j++]);
-    }
+//    RxFD file_write_check;
+//    EXPECT_EQ(RxFDHelper::RegFile::open("./write_file.txt",file_write_check),true);
+//    buf->read_from_regular_file(file_write_check,RxFDHelper::RegFile::get_file_length(file_write_check));
+//    size_t j=0;
+//    for(auto it=buf->begin();it!=buf->end();++it){
+//        std::cout<<*it;
+//        EXPECT_EQ(*it,join_str[j++]);
+//    }
 }
 
 TEST(write_data_test,testset){

@@ -5,7 +5,7 @@
 #include <gmock/gmock-matchers.h>
 #include <math.h>
 #include <chrono>
-#include "../../../src/Util/ThreadPool.h"
+#include "Util/ThreadPool.h"
 
 using namespace testing;
 using namespace std::chrono;
@@ -83,7 +83,7 @@ TEST(threadpool, dataset)
     for(size_t i=0;i<loop;i++){
         auto expect=std::sqrt((i*60+6666)%250);
         auto diff=std::abs(expect-res[i]);
-        std::cout<<"i="<<i<<" expect="<<expect<<"  actual="<<res[i]<<"  diff="<<diff<<std::endl;
+//        std::cout<<"i="<<i<<" expect="<<expect<<"  actual="<<res[i]<<"  diff="<<diff<<std::endl;
         EXPECT_EQ(diff,0);
     }
 

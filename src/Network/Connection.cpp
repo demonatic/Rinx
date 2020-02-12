@@ -1,5 +1,5 @@
-#include "Connection.h"
-#include "../3rd/NanoLog/NanoLog.h"
+#include "Network/Connection.h"
+#include "3rd/NanoLog/NanoLog.h"
 #include <iostream>
 RxConnection::RxConnection():_rx_fd(RxInvalidFD),_eventloop_belongs(nullptr),_sock_writable_flag(true)
 {

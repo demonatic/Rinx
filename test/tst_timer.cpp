@@ -7,8 +7,8 @@
 #include <iostream>
 #include <chrono>
 #include <cmath>
-#include "../../../src/Network/TimerHeap.h"
-#include "../../../src/Network/EventLoop.h"
+#include "Network/TimerHeap.h"
+#include "Network/EventLoop.h"
 
 
 
@@ -69,11 +69,11 @@ public:
 TEST(timer_callback_and_accuracy, dataset)
 {
     MocTimerTest moc_test;
+    EXPECT_CALL(moc_test,timer_cb_1()).Times(1);
+    EXPECT_CALL(moc_test,timer_cb_2()).Times(1);
+    EXPECT_CALL(moc_test,timer_cb_3()).Times(1);
+    EXPECT_CALL(moc_test,timer_cb_4()).Times(1);
     moc_test.start_test();
-//    EXPECT_CALL(moc_test,timer_cb_1()).Times(1);
-//    EXPECT_CALL(moc_test,timer_cb_2()).Times(1);
-//    EXPECT_CALL(moc_test,timer_cb_3()).Times(1);
-//    EXPECT_CALL(moc_test,timer_cb_4()).Times(1);
     ASSERT_LE(abs(duration_cast<milliseconds>(moc_test.t0_expired-moc_test.t_start).count()-1000),1);
     ASSERT_LE(abs(duration_cast<milliseconds>(moc_test.t1_expired-moc_test.t_start).count()-2000),1);
     ASSERT_LE(abs(duration_cast<milliseconds>(moc_test.t2_expired-moc_test.t_start).count()-3000),1);

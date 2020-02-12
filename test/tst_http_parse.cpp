@@ -4,9 +4,9 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 #include <gmock/gmock.h>
-#include "../../../src/Protocol/HTTP/HttpParser.h"
-#include "../../../src/Protocol/HTTP/HttpRequest.h"
-#include "../../../src/Protocol/HTTP/HttpDefines.h"
+#include "Protocol/HTTP/HttpParser.h"
+#include "Protocol/HTTP/HttpRequest.h"
+#include "Protocol/HTTP/HttpDefines.h"
 
 using namespace testing;
 using HttpParse::HttpParser;
@@ -17,9 +17,9 @@ public:
 
     virtual ~ParserCallback()=default;
 
-    virtual void recv_header_callback(HttpReqImpl &request){(void)request;}
-
-    virtual void parse_error_callback(HttpReqImpl &request){(void)request;}
+    virtual void recv_header_callback(HttpReqImpl &request)=0;
+    virtual void recv_request_callback(HttpReqImpl &request)=0;
+    virtual void parse_error_callback(HttpReqImpl &request)=0;
 
     void parse(std::vector<uint8_t> &buf){
 
@@ -31,6 +31,7 @@ public:
         });
         parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *http_request){
             std::cout<<"@recv whole request cb"<<std::endl;
+            this->recv_request_callback(*http_request);
         });
 
         parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *http_request){
@@ -69,6 +70,7 @@ public:
 class MockParserCallBack:public ParserCallback{
 public:
     MOCK_METHOD1(recv_header_callback,void(HttpReqImpl &request));
+    MOCK_METHOD1(recv_request_callback,void(HttpReqImpl &request));
     MOCK_METHOD1(parse_error_callback,void(HttpReqImpl &request));
 };
 
@@ -118,7 +120,11 @@ TEST(http_parse, dataset)
 
     std::vector<uint8_t> buf(request,request+sizeof(request)-1);
     MockParserCallBack moc_cb;
+    EXPECT_CALL(moc_cb,recv_header_callback(_)).Times(4);
+    EXPECT_CALL(moc_cb,recv_request_callback(_)).Times(4);
+    EXPECT_CALL(moc_cb,parse_error_callback(_)).Times(0);
     moc_cb.parse(buf);
+
 }
 
 #endif // TST_HTTP_PARSE_H

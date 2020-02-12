@@ -1,6 +1,6 @@
-#include "HttpResponse.h"
-#include "ProtocolHttp1.h"
-#include "HttpReqRouter.h"
+#include "Protocol/HTTP/HttpResponse.h"
+#include "Protocol/HTTP/ProtocolHttp1.h"
+#include "Protocol/HTTP/HttpReqRouter.h"
 #include <sys/sendfile.h>
 
 //void HttpResponse::header_filter()

@@ -1,6 +1,4 @@
-#include "ThreadPool.h"
-#include <iostream>
-#include <assert.h>
+#include "Util/ThreadPool.h"
 
 template class RxThreadPool::Queue<RxThreadPool::Task>;
 

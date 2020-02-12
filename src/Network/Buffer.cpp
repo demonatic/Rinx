@@ -1,5 +1,5 @@
-#include "Buffer.h"
-#include "../Util/Util.h"
+#include "Network/Buffer.h"
+#include "Util/Util.h"
 
 ssize_t ChainBuffer::read_from_fd(RxFD fd,RxReadRc &res)
 {

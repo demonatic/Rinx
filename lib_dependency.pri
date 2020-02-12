@@ -1,3 +1,0 @@
-LIBS += -lpthread
-LIBS += -lrt
-

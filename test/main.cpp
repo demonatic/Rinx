@@ -1,5 +1,3 @@
-#include "tst_buffer_io.h"
-
 #include <gtest/gtest.h>
 
 int main(int argc, char *argv[])
