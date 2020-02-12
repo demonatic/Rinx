@@ -8,7 +8,7 @@
 #include <cstring>
 #include "FD.h"
 #include "../Util/ObjectAllocator.hpp"
-#include "RinxDefines.h"
+#include "../RinxDefines.h"
 #include "3rd/NanoLog/NanoLog.h"
 
 class BufferRaw{
