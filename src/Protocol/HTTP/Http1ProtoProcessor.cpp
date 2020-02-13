@@ -1,5 +1,7 @@
 #include "Protocol/HTTP/Http1ProtoProcessor.h"
 
+namespace Rinx {
+
 RxProtoHttp1Processor::RxProtoHttp1Processor(RxConnection *conn,HttpRouter *router):
     RxProtoProcessor(conn),_router(router),_got_a_complete_req(false),_req(conn),_resp(conn),_read_timer(conn->get_eventloop())
 {
@@ -154,3 +156,4 @@ bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &outpu
     return _got_a_complete_req&&!_resp.has_block_operation();
 }
 
+} //namespace Rinx

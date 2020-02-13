@@ -2,6 +2,7 @@
 #include "Network/EventLoop.h"
 #include "Network/TimerHeap.h"
 
+namespace Rinx {
 
 RxTimer::RxTimer(RxEventLoop *eventloop):_id(std::numeric_limits<uint64_t>::max()),
     _heap_index(std::numeric_limits<size_t>::max()),_duration(0),
@@ -68,3 +69,5 @@ void RxTimer::set_active(bool active) noexcept
 {
     this->_is_active=active;
 }
+
+} //namespace Rinx

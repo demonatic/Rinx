@@ -1,5 +1,6 @@
 #include "Protocol/HTTP/HttpParser.h"
 
+namespace Rinx{
 namespace HttpParse{
 
 void StateRequestLine::consume(iterable_bytes iterable, void *request)
@@ -240,4 +241,5 @@ parse_error:
     });
 }
 
-}
+} //namespace HttpParse
+} //namespace Rinx

@@ -5,9 +5,11 @@
 #include <any>
 #include "FD.h"
 #include "Buffer.h"
-#include "../Util/Util.h"
-#include "../RinxDefines.h"
-#include "../Protocol/ProtocolProcessorFactory.h"
+#include "Util/Util.h"
+#include "RinxDefines.h"
+#include "Protocol/ProtocolProcessorFactory.h"
+
+namespace Rinx {
 
 class RxConnection:public RxNoncopyable
 {
@@ -57,6 +59,6 @@ private:
     bool _sock_writable_flag; //we assume socket buffer to be writable until write return EAGAIN
 };
 
-
+} //namespace Rinx
 
 #endif // CONNECTION_H

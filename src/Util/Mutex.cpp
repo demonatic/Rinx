@@ -1,5 +1,7 @@
 #include "Util/Mutex.h"
 
+namespace Rinx {
+
 RxMutex::RxMutex()
 {
     pthread_mutex_init(&_mutex,nullptr);
@@ -29,3 +31,5 @@ RxMutexLockGuard::~RxMutexLockGuard()
 {
     _mutex.unlock();
 }
+
+} //namespace Rinx

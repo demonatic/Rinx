@@ -7,6 +7,8 @@
 #include "HttpRequest.h"
 #include "HttpResponse.h"
 
+namespace Rinx {
+
 class RxProtoHttp1Processor;
 
 class HttpRouter
@@ -50,5 +52,7 @@ private:
     std::array<HandlerMap<Responder>::type,MethodCount> _responders; //use after receive a complete request
     HandlerMap<FilterHBList>::type _filters; // use on output the response
 };
+
+} //namespace Rinx
 
 #endif // HTTPREQHANDLERENGINE_H

@@ -7,9 +7,11 @@
 #include <memory>
 #include <map>
 #include <functional>
-#include "../Util/Util.h"
-#include "../Util/FunctionTraits.h"
+#include "Util/Util.h"
+#include "Util/FunctionTraits.h"
 #include <iostream>
+
+namespace Rinx {
 
 using Byte=uint8_t;
 
@@ -197,5 +199,6 @@ private:
     std::map<int,std::shared_ptr<void>> _event_map;
 };
 
+} //namespace Rinx
 
 #endif // HFSMPARSER_H

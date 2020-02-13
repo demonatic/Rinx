@@ -21,6 +21,7 @@
 #define unlikely(x) __builtin_expect(!!(x),0)
 #endif
 
+namespace Rinx {
 namespace Util {
 
 template<typename T,typename Tuple>
@@ -94,7 +95,7 @@ inline void to_upper(std::string &str) noexcept{
 //TODO template <typename E,std::enable_if_t<std::is_arithmetic_v<typename std::enable_if_t<std::is_enum_v<E>,std::underlying_type_t<E>>>>>
 template <typename E>
 constexpr auto to_index(E e) noexcept
-{    
+{
     return static_cast<std::underlying_type_t<E>>(e);
 }
 
@@ -125,6 +126,8 @@ inline std::optional<size_t> str_to_size_t(const std::string &str){
     }
     return val;
 }
-
 }
+
+
+} //namespace Rinx
 #endif // UTIL_H

@@ -1,6 +1,8 @@
 #include "Network/Connection.h"
 #include "3rd/NanoLog/NanoLog.h"
 #include <iostream>
+
+namespace Rinx {
 RxConnection::RxConnection():_rx_fd(RxInvalidFD),_eventloop_belongs(nullptr),_sock_writable_flag(true)
 {
 
@@ -56,7 +58,6 @@ RxConnection::SendRes RxConnection::send()
 
     if(res.code==RxWriteRc::SOCK_SD_BUFF_FULL){
         _sock_writable_flag=false;
-        std::cout<<"@buffer full"<<std::endl;
     }
     return res;
 }
@@ -71,7 +72,7 @@ void RxConnection::close()
         _proto_processor.reset();
         //must put close at the end, or it would cause race condition
         std::cout<<"@RxConnection::close()"<<std::endl;
-        if(!RxFDHelper::close(this->_rx_fd)){
+        if(!FDHelper::close(this->_rx_fd)){
             LOG_WARN<<"fd "<<_rx_fd.raw<<" close failed, errno "<<errno<<' '<<strerror(errno);
         }
     }
@@ -79,7 +80,7 @@ void RxConnection::close()
 
 bool RxConnection::is_open() const
 {
-    return RxFDHelper::is_open(_rx_fd);
+    return FDHelper::is_open(_rx_fd);
 }
 
 bool RxConnection::sock_writable() const
@@ -121,3 +122,4 @@ RxChainBuffer& RxConnection::get_output_buf() const
 {
     return *_output_buf;
 }
+} //namespace Rinx

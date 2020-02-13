@@ -9,11 +9,13 @@
 #include <atomic>
 #include "EventPoller.h"
 #include "TimerHeap.h"
-#include "../RinxDefines.h"
-#include "../Util/Mutex.h"
-#include "../Util/ThreadPool.h"
-#include "../Util/Singeleton.h"
-#include "../Server/Signal.h"
+#include "RinxDefines.h"
+#include "Util/Mutex.h"
+#include "Util/ThreadPool.h"
+#include "Util/Singeleton.h"
+#include "Server/Signal.h"
+
+namespace Rinx {
 
 using g_threadpool=RxSingeleton<RxThreadPool>;
 ///
@@ -115,5 +117,5 @@ private:
 
 };
 
-
+} //namespace Rinx
 #endif // EVENTLOOP_H

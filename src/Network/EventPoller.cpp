@@ -4,6 +4,8 @@
 #include "Network/EventLoop.h"
 #include "3rd/NanoLog/NanoLog.h"
 
+namespace Rinx {
+
 RxEventPoller::RxEventPoller():_epoll_fd(),_ep_events(nullptr),_max_event_num(0)
 {
 
@@ -39,13 +41,13 @@ bool RxEventPoller::create(int max_event_num)
 
 bool RxEventPoller::is_initialized() const noexcept
 {
-    return RxFDHelper::is_open(_epoll_fd)&&_ep_events!=nullptr;
+    return FDHelper::is_open(_epoll_fd)&&_ep_events!=nullptr;
 }
 
 void RxEventPoller::destroy() noexcept
 {
-    if(RxFDHelper::is_open(_epoll_fd)){
-        RxFDHelper::close(_epoll_fd);
+    if(FDHelper::is_open(_epoll_fd)){
+        FDHelper::close(_epoll_fd);
     }
     if(_ep_events!=nullptr){
         free(_ep_events);
@@ -136,3 +138,5 @@ void RxEventPoller::set_ep_event(epoll_event &ep_event,const std::vector<RxEvent
     }
 
 }
+
+} //namespace Rinx

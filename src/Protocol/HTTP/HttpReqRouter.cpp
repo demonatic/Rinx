@@ -1,6 +1,8 @@
 #include "Protocol/HTTP/HttpReqRouter.h"
 #include <filesystem>
 
+namespace Rinx {
+
 template<typename T>
 const T* HttpRouter::route(const typename HandlerMap<T>::type &map, const HttpReqImpl &req)
 {
@@ -98,3 +100,5 @@ void HttpRouter::set_body_filter_route(const HttpRouter::Route::RoutableURI uri,
         _filters[uri].body_filter_list.emplace_back(std::move(filter));
     }
 }
+
+} //namespace Rinx

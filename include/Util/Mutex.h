@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include "Noncopyable.h"
 
+namespace Rinx {
+
 class RxMutex:public RxNoncopyable
 {
 public:
@@ -25,4 +27,5 @@ private:
     RxMutex &_mutex;
 };
 
+} //namespace Rinx
 #endif // MUTEX_H

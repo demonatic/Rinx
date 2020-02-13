@@ -6,6 +6,7 @@
 #include <iostream>
 #include <atomic>
 
+namespace Rinx {
 namespace RxAllocator {
 
 template<typename T>
@@ -84,5 +85,6 @@ inline auto rx_pool_make_shared(Args&&... args){
     return std::allocate_shared<T,RxAllocator::ObjectAllocator<T>>(RxAllocator::allocator<T>,std::forward<Args>(args)...);
 }
 
+} //namespace Rinx
 
 #endif // OBJECTALLOCATOR_H

@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include "Timer.h"
 
+namespace Rinx {
+
 class RxTimerHeap
 {
     friend RxTimer;
@@ -51,5 +53,7 @@ private:
     std::unordered_map<TimerID,RxTimer *> _timer_id_map;
 
 };
+
+} //namespace Rinx
 
 #endif // TIMERQUEUE_H

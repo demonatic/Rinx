@@ -1,6 +1,7 @@
 #include "Server/Signal.h"
 #include "Network/EventLoop.h"
 
+namespace Rinx {
 
 RxSignal RxSignalManager::_signals[SignoMax];
 volatile sig_atomic_t RxSignalManager::_signo=0;
@@ -56,3 +57,5 @@ void RxSignalManager::async_sig_handler(int signo)
 {
     RxSignalManager::_signo=signo;
 }
+
+} //namespace Rinx

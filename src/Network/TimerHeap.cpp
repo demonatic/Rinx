@@ -1,6 +1,8 @@
 #include "Network/TimerHeap.h"
 #include <iostream>
 
+namespace Rinx {
+
 RxTimerHeap::RxTimerHeap():_next_timer_id(0)
 {
     heap_init();
@@ -159,3 +161,5 @@ void RxTimerHeap::swap_heap_entry(RxTimerHeap::heap_entry &entry_a, RxTimerHeap:
     std::swap(entry_a.timer->_heap_index,entry_b.timer->_heap_index);
     std::swap(entry_a,entry_b);
 }
+
+} //namespace Rinx

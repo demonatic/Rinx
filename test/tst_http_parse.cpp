@@ -9,6 +9,7 @@
 #include "Protocol/HTTP/HttpDefines.h"
 
 using namespace testing;
+using namespace Rinx;
 using HttpParse::HttpParser;
 
 class ParserCallback{

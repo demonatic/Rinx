@@ -9,6 +9,7 @@
 
 using namespace testing;
 using namespace std::chrono;
+using namespace Rinx;
 
 TEST(threadpool, dataset)
 {

@@ -1,6 +1,8 @@
 #include "Network/Buffer.h"
 #include "Util/Util.h"
 
+namespace Rinx {
+
 ssize_t ChainBuffer::read_from_fd(RxFD fd,RxReadRc &res)
 {
     this->check_need_expand();
@@ -13,7 +15,7 @@ ssize_t ChainBuffer::read_from_fd(RxFD fd,RxReadRc &res)
     io_vecs[1].iov_base=extra_buff;
     io_vecs[1].iov_len=sizeof extra_buff;
 
-    ssize_t read_bytes=RxFDHelper::Stream::readv(fd,io_vecs,res);
+    ssize_t read_bytes=FDHelper::Stream::readv(fd,io_vecs,res);
     if(read_bytes>0){
         size_t bytes=read_bytes;
         if(bytes<tail.writable_size()){
@@ -56,7 +58,7 @@ ssize_t ChainBuffer::write_to_fd(RxFD fd,RxWriteRc &res)
         io_vecs.emplace_back(std::move(vec));
     }
 
-    ssize_t bytes=RxFDHelper::Stream::writev(fd,io_vecs,res);
+    ssize_t bytes=FDHelper::Stream::writev(fd,io_vecs,res);
     if(bytes>0){
         this->commit_consume(bytes);
     }
@@ -225,3 +227,13 @@ ChainBuffer::buf_slice_iterator ChainBuffer::slice_end()
     return _buf_slice_list.end();
 }
 
+std::vector<std::pair<uint8_t*,size_t>> ChainBuffer::get_data()
+{
+    std::vector<std::pair<uint8_t *,size_t>> buf_data;
+    for(auto slice_it=this->slice_begin();slice_it!=this->slice_end();++slice_it){
+        buf_data.emplace_back(slice_it->read_pos(),slice_it->readable_size());
+    }
+    return buf_data;
+}
+
+}//namespace Rinx

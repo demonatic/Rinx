@@ -10,7 +10,8 @@
 #include <assert.h>
 #include "Util/Util.h"
 
-namespace RxFDHelper {
+namespace Rinx {
+namespace FDHelper {
 
 RxFD Stream::create_client_stream() noexcept
 {
@@ -229,7 +230,7 @@ File::File(const std::string &path,bool create):_file_fd(RxInvalidFD)
 }
 
 File::~File(){
-    RxFDHelper::close(_file_fd);
+    FDHelper::close(_file_fd);
 }
 
 File::File(File &&other) noexcept
@@ -241,7 +242,7 @@ File::File(File &&other) noexcept
 File &File::operator==(File &&other) noexcept
 {
     if(this!=&other){
-        RxFDHelper::close(this->_file_fd);
+        FDHelper::close(this->_file_fd);
         this->_file_fd=other._file_fd;
         other._file_fd=RxInvalidFD;
     }
@@ -257,4 +258,5 @@ RxFD File::get_fd() const{
     return _file_fd;
 }
 
+} //namespace Rinx
 }

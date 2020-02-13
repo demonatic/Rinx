@@ -1,12 +1,14 @@
 #ifndef HTTPDEFINES_H
 #define HTTPDEFINES_H
 
-#include "../../Util/Util.h"
-#include "../../Network/Buffer.h"
+#include "Util/Util.h"
+#include "Network/Buffer.h"
 #include <unordered_map>
 #include <string_view>
 #include <algorithm>
 #include <mutex>
+
+namespace Rinx {
 
 #define HTTP_STATUS_MAP(XX)                                                    \
   XX(100, CONTINUE, Continue)                                                  \
@@ -246,5 +248,5 @@ inline std::string get_mimetype_by_filename(const std::string &filename)
     return it_mime==mime_types.end()?std::string("application/octet-stream"):it_mime->second;
 }
 
-
+} //namespace Rinx
 #endif // HTTPDEFINES_H

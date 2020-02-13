@@ -1,11 +1,11 @@
 #ifndef PROTOCOLHTTP1_H
 #define PROTOCOLHTTP1_H
 
-#include "../ProtocolProcessor.h"
-#include "../ProtocolProcessorFactory.h"
+#include "Protocol/ProtocolProcessor.h"
+#include "Protocol/ProtocolProcessorFactory.h"
 #include "Http1ProtoProcessor.h"
 
-
+namespace Rinx {
 /// 1.处理完一个HttpRequest后再处理下一个HttpRequest
 /// 2.当HttpParser发现一个HttpRequest到来后先截断剩余input_buffer内的数据，即每次最多提取出一个完整的HttpRequest，
 /// 如果一次无法响应完则先不继续读input_buffer内的数据进行处理(EventLoop在socket有read事件时仍然会把数据append到input_buffer)，
@@ -37,5 +37,7 @@ public:
 private:
     HttpRouter _router;
 };
+
+} //namespace Rinx
 
 #endif // PROTOCOLHTTP1_H

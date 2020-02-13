@@ -3,6 +3,8 @@
 #include "Protocol/HTTP/HttpReqRouter.h"
 #include <sys/sendfile.h>
 
+namespace Rinx {
+
 //void HttpResponse::header_filter()
 //{
 //    this->headers("server",ServerName);
@@ -11,7 +13,7 @@
 bool HttpResponse::send_file(const std::string &filename,size_t offset)
 {
     try {
-        RxFDHelper::File file(filename);
+        FDHelper::File file(filename);
 
         long send_length=file.get_len()-offset;
         if(send_length<=0)
@@ -31,7 +33,7 @@ bool HttpResponse::send_file(const std::string &filename,size_t offset)
 bool HttpResponse::send_file_direct(RxConnection *conn,const std::string &filename, size_t offset)
 {
     try {
-        RxFDHelper::File file(filename);
+        FDHelper::File file(filename);
 
         long send_length=file.get_len()-offset;
         if(send_length<=0)
@@ -146,3 +148,5 @@ void HttpRespData::ContentGenerator::set_content_provider(HttpRespData::ContentG
     this->set_status(Status::Providing);
     this->_provide_action=provide_action;
 }
+
+} //namespace Rinx

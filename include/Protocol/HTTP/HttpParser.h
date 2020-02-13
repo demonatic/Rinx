@@ -4,10 +4,12 @@
 #include <string>
 #include "HttpRequest.h"
 #include "HttpDefines.h"
-#include "../HFSMParser.hpp"
+#include "Protocol/HFSMParser.hpp"
 #include <iostream>
 
+namespace Rinx {
 namespace HttpParse{
+
 enum ParseEvent{
     ParseError, //TODO
     HeaderReceived,
@@ -119,5 +121,7 @@ private:
 using HttpParser=HFSMParser<StateRequestLine,StateHeader,StateContentLength,StateChunk>;
 #define GET_ID(StateType)  HttpParser::get_state_id<StateType>()
 
-} //namespace HttpParser
+} //namespace HttpParse
+} //namespace Rinx
+
 #endif // HTTPPARSER_H

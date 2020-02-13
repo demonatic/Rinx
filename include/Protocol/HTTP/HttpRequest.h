@@ -4,7 +4,9 @@
 #include <string>
 #include <optional>
 #include "HttpDefines.h"
-#include "../../Network/Connection.h"
+#include "Network/Connection.h"
+
+namespace Rinx {
 
 struct HttpReqData{
     HttpReqData(RxConnection *conn):_conn_belongs(conn){}
@@ -110,4 +112,5 @@ struct HttpRequestTemplate:protected HttpReqData,public T...{
 
 using HttpReqImpl=HttpRequestTemplate<HttpReqInternal,HttpRequest>;
 
+} //namespace Rinx
 #endif // HTTPREQUEST_H

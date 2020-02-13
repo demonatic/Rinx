@@ -6,11 +6,13 @@
 #include <list>
 #include <string>
 #include <assert.h>
-#include "../Network/Connection.h"
-#include "../Network/EventLoop.h"
-#include "../Network/Listener.h"
-#include "../Protocol/ProtocolProcessorFactory.h"
+#include "Network/Connection.h"
+#include "Network/EventLoop.h"
+#include "Network/Listener.h"
+#include "Protocol/ProtocolProcessorFactory.h"
 #include "WorkerThreadLoops.h"
+
+namespace Rinx {
 
 class RxServer
 {
@@ -79,4 +81,5 @@ private:
 
 };
 
+} //namespace Rinx
 #endif // SERVER_H

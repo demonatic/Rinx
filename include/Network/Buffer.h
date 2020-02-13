@@ -7,9 +7,11 @@
 #include <deque>
 #include <cstring>
 #include "FD.h"
-#include "../Util/ObjectAllocator.hpp"
-#include "../RinxDefines.h"
-#include "../3rd/NanoLog/NanoLog.h"
+#include "Util/ObjectAllocator.hpp"
+#include "RinxDefines.h"
+#include "3rd/NanoLog/NanoLog.h"
+
+namespace Rinx {
 
 class BufferRaw{
 public:
@@ -156,6 +158,8 @@ public:
 
     buf_slice_iterator slice_begin();
     buf_slice_iterator slice_end();
+
+    std::vector<std::pair<uint8_t*,size_t>> get_data();
 
     /// @brief commit that n_bytes has been consumed by the caller, and the corresponding space in buffer could be freed
     void commit_consume(size_t n_bytes);
@@ -406,4 +410,5 @@ private:
 
 };
 
+} //namespace Rinx
 #endif // BUFFERCHUNK_H

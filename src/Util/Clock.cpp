@@ -2,6 +2,8 @@
 #include "Util/Util.h"
 #include "3rd/NanoLog/NanoLog.h"
 
+namespace Rinx {
+
 uint64_t Clock::get_now_tick()
 {
     timespec time_spec;
@@ -10,3 +12,5 @@ uint64_t Clock::get_now_tick()
     }
     return time_spec.tv_sec*1000u+time_spec.tv_nsec/1000000u;
 }
+
+} //namespace Rinx

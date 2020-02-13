@@ -1,9 +1,11 @@
 #ifndef SERVERPROTOCOL_H
 #define SERVERPROTOCOL_H
 
-#include "../Network/Buffer.h"
-#include "../Network/EventLoop.h"
+#include "Network/Buffer.h"
+#include "Network/EventLoop.h"
 #include "HFSMParser.hpp"
+
+namespace Rinx {
 
 class RxConnection;
 
@@ -27,5 +29,5 @@ protected:
     RxConnection *_conn_belongs;
 };
 
-
+} //namespace Rinx
 #endif // SERVERPROTOCOL_H

@@ -3,7 +3,9 @@
 
 #include <sys/signal.h>
 #include <functional>
-#include "../RinxDefines.h"
+#include "RinxDefines.h"
+
+namespace Rinx {
 
 using RxSignalHandler=std::function<void(int)>;
 const RxSignalHandler RxSigHandlerIgnore=nullptr;
@@ -32,10 +34,8 @@ private:
 private:
     static volatile sig_atomic_t _signo;
     static RxSignal _signals[SignoMax];
-
-
 };
 
-
+} //namespace Rinx
 
 #endif // SIGNAL_H

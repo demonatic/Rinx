@@ -10,8 +10,9 @@
 #include <atomic>
 #include <iostream>
 #include <cassert>
-
 #include "Mutex.h"
+
+namespace Rinx {
 
 class RxThreadPool:public RxNoncopyable
 {
@@ -89,5 +90,7 @@ private:
     std::vector<std::unique_ptr<ThreadWorker>> _workers;
 
 };
+
+} //namespace Rinx
 
 #endif // THREADPOOL_H

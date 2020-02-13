@@ -1,5 +1,7 @@
 #include "Server/WorkerThreadLoops.h"
 
+namespace Rinx {
+
 RxWorkerThreadLoops::RxWorkerThreadLoops(size_t num):_eventloop_threads(num)
 {
     for(size_t i=0;i<_eventloop_threads.size();i++){
@@ -56,3 +58,5 @@ void RxWorkerThreadLoops::for_each(std::function<void(RxThreadID,RxEventLoop*)> 
 void *RxWorkerThreadLoops::eventloop_thread_loop(void *eventloop_obj){
     return (void*)((RxEventLoop*)(eventloop_obj))->start_event_loop();
 }
+
+} //namespace Rinx

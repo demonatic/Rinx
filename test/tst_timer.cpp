@@ -10,10 +10,9 @@
 #include "Network/TimerHeap.h"
 #include "Network/EventLoop.h"
 
-
-
 using namespace testing;
 using namespace std::chrono;
+using namespace Rinx;
 
 class TimerTest{
 public:

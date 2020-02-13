@@ -1,11 +1,13 @@
 #ifndef HTTPRESPONSEWRITER_H
 #define HTTPRESPONSEWRITER_H
 
-#include "../../Network/Buffer.h"
-#include "../../Network/Connection.h"
+#include "Network/Buffer.h"
+#include "Network/Connection.h"
 #include "HttpDefines.h"
 #include "HttpRequest.h"
 #include <queue>
+
+namespace Rinx {
 
 class HttpResponse;
 class RxProtoHttp1Processor;
@@ -197,5 +199,5 @@ struct HttpResponseTemplate:protected HttpRespData,public T...{
 
 using HttpRespImpl=HttpResponseTemplate<HttpRespInternal,HttpResponse>;
 
-
+} //namespace Rinx
 #endif // HTTPRESPONSEWRITER_H

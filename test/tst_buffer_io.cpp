@@ -8,6 +8,7 @@
 #include <sys/fcntl.h>
 
 using namespace testing;
+using namespace Rinx;
 
 TEST(sock_rw_test, testset)
 {
@@ -87,8 +88,8 @@ TEST(file_rw_test,testset){
     *buf<<prepend;
     EXPECT_EQ(prepend.size(),buf->readable_size());
     RxFD file_read;
-    RxFDHelper::RegFile::open("./test.txt",file_read);
-    long file_length=RxFDHelper::RegFile::get_file_length(file_read);
+    FDHelper::RegFile::open("./test.txt",file_read);
+    long file_length=FDHelper::RegFile::get_file_length(file_read);
     std::cout<<"read file length="<<file_length<<std::endl;
     int offset=3;
     bool res=buf->read_from_regular_file(file_read,file_length,offset);
@@ -112,11 +113,11 @@ TEST(file_rw_test,testset){
 //    RxWriteRc rc;
 //    buf->write_to_fd(file_write,rc);
 //    EXPECT_EQ(rc,RxWriteRc::OK);
-//    RxFDHelper::close(file_write);
+//    FDHelper::close(file_write);
 
 //    RxFD file_write_check;
-//    EXPECT_EQ(RxFDHelper::RegFile::open("./write_file.txt",file_write_check),true);
-//    buf->read_from_regular_file(file_write_check,RxFDHelper::RegFile::get_file_length(file_write_check));
+//    EXPECT_EQ(FDHelper::RegFile::open("./write_file.txt",file_write_check),true);
+//    buf->read_from_regular_file(file_write_check,FDHelper::RegFile::get_file_length(file_write_check));
 //    size_t j=0;
 //    for(auto it=buf->begin();it!=buf->end();++it){
 //        std::cout<<*it;

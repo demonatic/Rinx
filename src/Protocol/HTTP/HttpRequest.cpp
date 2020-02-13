@@ -1,6 +1,8 @@
 #include "Protocol/HTTP/HttpRequest.h"
 #include <iostream>
 
+namespace Rinx {
+
 void HttpReqInternal::clear()
 {
     _data->_version=HttpVersion::UNKNOWN;
@@ -39,3 +41,4 @@ bool HttpReqInternal::is_conn_mark_closed() const
     return static_cast<const HttpReqImpl*>(this)->_conn_mark_closed;
 }
 
+} //namespace Rinx

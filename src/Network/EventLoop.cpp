@@ -4,6 +4,8 @@
 #include "3rd/NanoLog/NanoLog.h"
 #include <string.h>
 
+namespace Rinx {
+
 RxEventLoop::RxEventLoop(uint8_t id):_id(id),_is_running(false),_handler_table{}
 {
 
@@ -15,7 +17,7 @@ bool RxEventLoop::init()
         return false;
     }
 
-    _event_fd=RxFDHelper::Event::create_event_fd();
+    _event_fd=FDHelper::Event::create_event_fd();
     if(_event_fd.raw==-1){
         LOG_WARN<<"create event fd failed";
         return false;
@@ -23,7 +25,7 @@ bool RxEventLoop::init()
 
     //register event fd read handler
     set_event_handler(_event_fd.type,Rx_EVENT_READ,[this](const RxEvent &event_data){
-        if(!RxFDHelper::Event::read_event_fd(event_data.Fd)){
+        if(!FDHelper::Event::read_event_fd(event_data.Fd)){
             LOG_WARN<<"read event fd failed, eventloop_id="<<_id;
             return false;
         }
@@ -69,7 +71,7 @@ void RxEventLoop::queue_work(RxEventLoop::DeferCallback cb)
 
 void RxEventLoop::wake_up_loop()
 {
-    if(!RxFDHelper::Event::write_event_fd(_event_fd)){
+    if(!FDHelper::Event::write_event_fd(_event_fd)){
         LOG_WARN<<"eventloop write event fd failed, eventloop_id="<<_id<<" Reason:"<<errno<<' '<<strerror(errno);
     }
 }
@@ -82,7 +84,7 @@ int RxEventLoop::get_poll_timeout()
 
 void RxEventLoop::quit()
 {
-    RxFDHelper::close(_event_fd);
+    FDHelper::close(_event_fd);
     _event_poller.destroy();
     LOG_INFO<<"QUIT EventLoop "<<get_id();
 }
@@ -193,3 +195,5 @@ RxTimerHeap &RxEventLoop::get_timer_heap() noexcept
 {
     return _timer_heap;
 }
+
+} //namespace Rinx

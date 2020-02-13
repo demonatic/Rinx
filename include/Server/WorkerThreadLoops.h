@@ -5,8 +5,10 @@
 #include <pthread.h>
 #include <vector>
 #include <memory>
-#include "../Network/EventLoop.h"
-#include "../3rd/NanoLog/NanoLog.h"
+#include "Network/EventLoop.h"
+#include "3rd/NanoLog/NanoLog.h"
+
+namespace Rinx {
 
 using RxThreadID=pthread_t;
 
@@ -34,4 +36,5 @@ private:
     std::vector<RxEventLoopThread> _eventloop_threads;
 };
 
+} //namespace Rinx
 #endif // REACTORTHREADS_H

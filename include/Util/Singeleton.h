@@ -4,6 +4,8 @@
 #include <memory>
 #include "Noncopyable.h"
 
+namespace Rinx {
+
 template<typename T>
 class RxSingeleton:public RxNoncopyable
 {
@@ -29,5 +31,7 @@ private:
 };
 
 template<typename T> T* RxSingeleton<T>::_instance=nullptr;
+
+} //namespace Rinx
 
 #endif // SINGELETON_H

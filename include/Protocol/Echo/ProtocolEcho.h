@@ -2,8 +2,9 @@
 #define PROTOCOLECHO_H
 
 #include "Network/Connection.h"
-#include "../ProtocolProcessorFactory.h"
+#include "Protocol/ProtocolProcessorFactory.h"
 
+namespace Rinx {
 class RxProtoEchoProcessor:public RxProtoProcessor
 {
 public:
@@ -32,6 +33,8 @@ public:
         return std::make_unique<RxProtoEchoProcessor>(conn);
     }
 };
+
+} //namespace Rinx
 
 #endif // PROTOCOLECHO_H
 

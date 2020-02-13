@@ -4,6 +4,8 @@
 #include <memory>
 #include "ProtocolProcessor.h"
 
+namespace Rinx {
+
 class RxProtocolFactory
 {
 public:
@@ -12,4 +14,5 @@ public:
     virtual ~RxProtocolFactory();
 };
 
+} //namespace Rinx
 #endif // PROTOCOLPROCESSORFACTORY_H

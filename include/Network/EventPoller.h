@@ -5,8 +5,10 @@
 #include <sys/time.h>
 #include <vector>
 #include <functional>
-#include "../Util/Noncopyable.h"
+#include "Util/Noncopyable.h"
 #include "FD.h"
+
+namespace Rinx {
 
 enum RxEventType:uint8_t{
     Rx_EVENT_READ=0,
@@ -56,5 +58,5 @@ private:
     int _max_event_num;
 };
 
-
+} //namespace Rinx
 #endif // REACTOREPOLL_H

@@ -1,5 +1,7 @@
 #include "Util/ThreadPool.h"
 
+namespace Rinx {
+
 template class RxThreadPool::Queue<RxThreadPool::Task>;
 
 template<class T>
@@ -104,3 +106,4 @@ void RxThreadPool::stop()
     }
 }
 
+} //namespace Rinx

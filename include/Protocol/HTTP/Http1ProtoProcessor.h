@@ -5,6 +5,7 @@
 #include "HttpReqRouter.h"
 #include "HttpResponse.h"
 
+namespace Rinx {
 using HttpParse::HttpParser;
 
 class RxProtoHttp1Processor:public RxProtoProcessor
@@ -66,4 +67,6 @@ private:
 
     RxTimer _read_timer;
 };
+
+} //namespace Rinx
 #endif // HTTP1PROTOPROCESSOR_H

@@ -3,6 +3,7 @@
 #include "Protocol/HTTP/HttpDefines.h"
 #include "3rd/NanoLog/NanoLog.h"
 
+namespace Rinx {
 
 #define HTTP_ROUTE_FUNC_DEFINE(Method) \
 void RxProtocolHttp1Factory::Method(HttpRouter::Route::RoutableURI uri,Responder req_handler){\
@@ -36,3 +37,5 @@ RxProtocolHttp1Factory &RxProtocolHttp1Factory::body_filter(const HttpRouter::Ro
     _router.set_body_filter_route(uri,filter);
     return *this;
 }
+
+} //namespace Rinx

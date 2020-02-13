@@ -2,8 +2,10 @@
 #define TIMER_H
 
 #include <functional>
-#include "../Util/Clock.h"
-#include "../Util/Noncopyable.h"
+#include "Util/Clock.h"
+#include "Util/Noncopyable.h"
+
+namespace Rinx {
 
 class RxEventLoop;
 
@@ -46,4 +48,5 @@ private:
     RxEventLoop *_eventloop_belongs;
 };
 
+} //namespace Rinx
 #endif // TIMER_H

@@ -1,6 +1,9 @@
 #include "Server/Server.h"
 #include "Server/Signal.h"
 #include <iostream>
+
+namespace Rinx {
+
 RxServer::RxServer():_start(false),_max_connection(MaxConnectionNum),_max_once_accept_count(128),
     _main_eventloop(0),_sub_eventloop_threads(IOWorkerNum),_connection_list(_max_connection)
 {
@@ -84,7 +87,7 @@ bool RxServer::on_acceptable(const RxEvent &event)
 {
     for(int i=0;i<_max_once_accept_count;i++){
         RxAcceptRc accept_res;
-        RxFD client_fd=RxFDHelper::Stream::accept(event.Fd,accept_res);
+        RxFD client_fd=FDHelper::Stream::accept(event.Fd,accept_res);
 
         switch (accept_res){
             case RxAcceptRc::ALL_ACCEPTED:
@@ -102,8 +105,8 @@ bool RxServer::on_acceptable(const RxEvent &event)
             break;
         }
 
-        RxFDHelper::Stream::set_nonblock(client_fd,true);
-        RxFDHelper::Stream::set_tcp_nodelay(client_fd,true);
+        FDHelper::Stream::set_nonblock(client_fd,true);
+        FDHelper::Stream::set_tcp_nodelay(client_fd,true);
 
         RxConnection *conn=this->get_connection(client_fd);
         if(!conn){
@@ -181,3 +184,5 @@ bool RxServer::on_stream_error(const RxEvent &event)
     this->get_connection(event.Fd)->close();
     return false;
 }
+
+} //namespace Rinx

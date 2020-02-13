@@ -7,7 +7,9 @@
 #include <sys/eventfd.h>
 #include <vector>
 #include <string>
-#include "../Util/Noncopyable.h"
+#include "Util/Noncopyable.h"
+
+namespace Rinx {
 
 enum RxFDType:uint8_t{
     FD_LISTEN=0,
@@ -55,7 +57,7 @@ enum class RxWriteRc:uint8_t{
 };
 
 // TODO change int fd to RxFD
-namespace RxFDHelper{
+namespace FDHelper{
 
     /// @brief close the fd and reset fd to InvalidFD
     /// @return whether the close operation is executed successfully
@@ -115,6 +117,6 @@ namespace RxFDHelper{
 
 }
 
-
+} //namespace Rinx
 
 #endif // SOCKET_H

@@ -26,6 +26,8 @@
 
 #include <functional>
 
+namespace Rinx {
+
 template<typename T>
 struct function_traits;
 
@@ -70,6 +72,6 @@ FUNCTION_TRAITS(const volatile)
 template<typename Callable>
 struct function_traits : function_traits<decltype(&Callable::operator())>{};
 
-
+} //namespace Rinx
 
 #endif // FUNCTIONTRAITS_H
