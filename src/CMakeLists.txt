@@ -27,7 +27,7 @@ file(GLOB rinx_sources
     main.cpp
 )
 
-set(ALL_SRCS ${ALL_SRCS} ${rinx_sources} CACHE INTERNAL "all_soucres")
+set(ALL_SRCS ${ALL_SRCS} ${rinx_sources} CACHE INTERNAL "")
 
 include_directories(../include)
 add_library(Rinx SHARED ${rinx_sources})
