@@ -14,6 +14,7 @@ void StateRequestLine::consume(iterable_bytes iterable, void *request)
                 else{
                    _stored_method.push_back(c);
                 }
+                ctx.add_event(ParseEvent::StartRecvingHeader);
             }break;
 
             case S_EXPECT_URI:{
@@ -45,6 +46,7 @@ void StateRequestLine::consume(iterable_bytes iterable, void *request)
                     ctx.transit_super_state(GET_ID(StateHeader));
                 }
                 else{
+                    ctx.set_error();
                     ctx.add_event(ParseEvent::ParseError);
                 }
             }
@@ -129,6 +131,7 @@ void StateHeader::consume(iterable_bytes iterable, void *request)
             }
             break;
 parse_error:
+            ctx.set_error();
             ctx.add_event(ParseEvent::ParseError);
         }
 
@@ -236,6 +239,7 @@ void StateChunk::consume(iterable_bytes iterable, void *request)
             break;
 
 parse_error:
+            ctx.set_error();
             ctx.add_event(ParseEvent::ParseError);
         }
     });

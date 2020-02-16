@@ -11,7 +11,8 @@ namespace Rinx {
 namespace HttpParse{
 
 enum ParseEvent{
-    ParseError, //TODO
+    ParseError,
+    StartRecvingHeader,
     HeaderReceived,
     OnPartofBody,
     RequestReceived, //the whole reqeust has received

@@ -5,22 +5,8 @@ namespace Rinx {
 RxProtoHttp1Processor::RxProtoHttp1Processor(RxConnection *conn,HttpRouter *router):
     RxProtoProcessor(conn),_router(router),_got_a_complete_req(false),_req(conn),_resp(conn),_read_timer(conn->get_eventloop())
 {
-    _request_parser.on_event(HttpParse::HeaderReceived,[this](HttpReqImpl *req){
-        on_header_recv(req);
-    });
-
-    _request_parser.on_event(HttpParse::OnPartofBody,[this](HttpReqImpl *req,SkippedRange data){
-        on_part_of_body(req,data);
-    });
-
-    _request_parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *req){
-        on_request_recv(req);
-    });
-
-    _request_parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *req){
-        on_parse_error(req);
-    });
-//    this->set_timeout(ReadHeaderTimeout); //not ok
+    set_parser_callbacks();
+    prepare_for_next_req();
 }
 
 bool RxProtoHttp1Processor::process_read_data(RxConnection *conn,RxChainBuffer &input_buf)
@@ -72,48 +58,8 @@ bool RxProtoHttp1Processor::handle_write_prepared(RxConnection *conn, RxChainBuf
     }
 
     bool err;
-    this->send_respond(*conn,output_buf,err);
+    send_respond(*conn,output_buf,err);
     return err;
-}
-
-void RxProtoHttp1Processor::on_header_recv(HttpReqImpl *http_request)
-{
-//    std::cout<<"HeaderReceived"<<std::endl;
-    http_request->debug_print_header();
-
-//    this->set_timeout(ReadBodyTimeout); //TODO has body?
-
-}
-
-void RxProtoHttp1Processor::on_part_of_body(HttpReqImpl *http_request,SkippedRange data)
-{
-
-    auto body_data=http_request->get_input_buf().slice(data.first,data.second);
-
-    http_request->body().append(std::move(body_data));
-    http_request->debug_print_body();
-}
-
-void RxProtoHttp1Processor::on_request_recv(HttpReqImpl *http_request)
-{
-//    std::cout<<"RequestReceived uri="<<http_request->uri()<<std::endl;
-
-    _router->route_to_responder(*http_request,_resp);
-
-    if(_resp.empty()){
-        _router->default_static_file_handler(_req,_resp);
-    }
-    else{
-        _router->install_filters(*http_request,_resp);
-    }
-    this->set_timeout(KeepAliveTimeout);
-}
-
-void RxProtoHttp1Processor::on_parse_error(HttpReqImpl *http_request)
-{
-    LOG_INFO<<"parse request error, closing connection..";
-    _resp.send_status(HttpStatusCode::BAD_REQUEST);
-    http_request->close_connection();
 }
 
 void RxProtoHttp1Processor::prepare_for_next_req()
@@ -121,8 +67,50 @@ void RxProtoHttp1Processor::prepare_for_next_req()
     _req.clear();
     _resp.clear();
     _got_a_complete_req=false;
+    this->set_timeout(KeepAliveTimeout);
     req_count++;
     std::cout<<"req count="<<req_count<<std::endl;
+}
+
+void RxProtoHttp1Processor::set_parser_callbacks()
+{
+    _request_parser.on_event(HttpParse::StartRecvingHeader,[this](HttpReqImpl *){
+        this->set_timeout(ReadHeaderTimeout);
+    });
+
+    /// callback when get http header on socket stream
+    _request_parser.on_event(HttpParse::HeaderReceived,[this](HttpReqImpl *req){
+        //    std::cout<<"HeaderReceived"<<std::endl;
+        this->set_timeout(ReadBodyTimeout);
+        req->debug_print_header();
+    });
+
+    /// callback when get part of http body on socket stream
+    _request_parser.on_event(HttpParse::OnPartofBody,[](HttpReqImpl *req,SkippedRange data){
+        auto body_data=req->get_input_buf().slice(data.first,data.second);
+        req->body().append(std::move(body_data));
+        req->debug_print_body();
+    });
+
+    /// callback when a complete request has received
+    _request_parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *req){
+        //    std::cout<<"RequestReceived uri="<<http_request->uri()<<std::endl;
+
+        _router->route_to_responder(*req,_resp); //generate response to HttpResponse Object
+        if(_resp.empty()){
+            _router->default_static_file_handler(_req,_resp);
+        }
+        else{
+            _router->install_filters(*req,_resp);
+        }
+    });
+
+    /// callback when an http protocol parse error occurs
+    _request_parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *req){
+        LOG_INFO<<"parse request error, closing connection..";
+        _resp.send_status(HttpStatusCode::BAD_REQUEST);
+        req->close_connection();
+    });
 }
 
 bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &output_buf,bool &err)

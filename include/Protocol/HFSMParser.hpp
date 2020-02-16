@@ -9,7 +9,6 @@
 #include <functional>
 #include "Util/Util.h"
 #include "Util/FunctionTraits.h"
-#include <iostream>
 
 namespace Rinx {
 
@@ -31,6 +30,11 @@ public:
             else this->events={event};
             interrupt_iteartion=true;
         }
+
+        void set_error(){
+            err=true;
+        }
+
         /// @brief set number of bytes going to be stepped over in iteration
         void iteration_step_over(size_t step){this->n_step_over=step; interrupt_iteartion=true;}
 
@@ -43,11 +47,11 @@ public:
         size_t n_left;
 
     private:
+        bool err=false;
+        bool interrupt_iteartion=false;
         size_t n_step_over=0;
         std::optional<std::vector<int>> events;
         std::optional<std::pair<SuperStateID,Context>> next_super_state;
-
-        bool interrupt_iteartion=false;
     };
 
 public:
@@ -77,10 +81,10 @@ protected:
     char padding[6];
 };
 
-//TODO handle parse error
 /**
  *  @class The HFSMParser employs a hierarchy state machine to extract a request each time from a sequence designated by iterator
  */
+//TODO jump outof error
 template<typename... SuperStateTypes>
 class HFSMParser
 {
@@ -89,6 +93,7 @@ public:
     using SkippedRange=std::pair<IteratorType,IteratorType>;
 
     struct ProcessStat{
+        bool parse_err=false;
         bool got_complete_request=false;
         size_t n_remaining;
     };
@@ -97,13 +102,13 @@ public:
         _curr_state->on_entry();
     }
 
-    /// @brief try to extract one request in each call
+    /// @brief try to extract one request and emit events on the fly
     template<typename InputIterator>
     ProcessStat parse(InputIterator begin,InputIterator end,void *request){
         ProcessStat parse_res;
         InputIterator cur=begin;
 
-        while(cur!=end&&!parse_res.got_complete_request){
+        while(cur!=end&&!parse_res.got_complete_request&&!parse_res.parse_err){
             SuperState::ConsumeCtx consume_ctx;
             consume_ctx.n_left=end-cur;
             _curr_state->consume([&](SuperState::elm_handler<Byte> f){
@@ -137,6 +142,7 @@ public:
                 parse_res.got_complete_request=_curr_state->get_id()==0?true:false;
             }
             cur+=consume_ctx.n_step_over;
+            parse_res.parse_err=consume_ctx.err;
         }
         parse_res.n_remaining=end-cur;
         return parse_res;

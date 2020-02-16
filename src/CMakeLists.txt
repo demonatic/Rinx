@@ -24,7 +24,6 @@ file(GLOB rinx_sources
     Util/Mutex.cpp
     Util/ThreadPool.cpp
     Util/Util.cpp
-    main.cpp
 )
 
 set(ALL_SRCS ${ALL_SRCS} ${rinx_sources} CACHE INTERNAL "")

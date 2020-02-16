@@ -22,8 +22,8 @@ const std::string ServerName="Rinx";
 //const std::string DefaultWebPage="short.txt";
 
 constexpr uint64_t ReadHeaderTimeout=5; //sec
-constexpr uint64_t ReadBodyTimeout=8; //sec
-constexpr uint64_t KeepAliveTimeout=15000; //sec
+constexpr uint64_t ReadBodyTimeout=10; //sec
+constexpr uint64_t KeepAliveTimeout=30; //sec
 
 } //namespace Rinx
 #endif // RINXDEFINES_H

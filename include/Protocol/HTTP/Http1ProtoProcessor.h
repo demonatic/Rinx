@@ -21,25 +21,13 @@ public:
 
     void prepare_for_next_req();
 
-protected:
+private:
     using SkippedRange=HttpParser::SkippedRange<RxChainBuffer::read_iterator>;
-
-    /// callback when get http header on socket stream
-    void on_header_recv(HttpReqImpl *http_request);
-
-    /// callback when get part of http body on socket stream
-    void on_part_of_body(HttpReqImpl *http_request,SkippedRange data);
-
-    /// callback when a complete request has received
-    void on_request_recv(HttpReqImpl *http_request);
-
-    /// callback when an http protocol parse error occurs
-    void on_parse_error(HttpReqImpl *http_request);
+    void set_parser_callbacks();
 
 private:
 
     void set_timeout(uint64_t sec){
-
         this->cancel_read_timer();
         _read_timer.start_timer(sec*1000,[this](){
             printf("time out %ld",_read_timer.get_duration());

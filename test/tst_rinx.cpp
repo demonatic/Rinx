@@ -1,8 +1,12 @@
+#include <gtest/gtest.h>
+#include <gmock/gmock-matchers.h>
 #include "Server/Server.h"
 #include "Protocol/HTTP/ProtocolHttp1.h"
 #include "Protocol/Echo/ProtocolEcho.h"
 
+using namespace testing;
 using namespace Rinx;
+
 int main(){
     RxSignalManager::disable_current_thread_signal();
     nanolog::initialize(nanolog::GuaranteedLogger(),"/tmp/","rinx_log",20);
