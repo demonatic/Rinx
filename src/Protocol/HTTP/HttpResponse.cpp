@@ -55,34 +55,46 @@ bool HttpResponse::send_file_direct(RxConnection *conn,const std::string &filena
 
 void HttpResponse::clear()
 {
-    _data->stat.status_line=Status::NOT_SET;
+    _data->send_flags.status_line=Status::NOT_SET;
     _data->head.header_fields.clear();
-    _data->stat.header_fields=Status::NOT_SET;
+    _data->send_flags.header_fields=Status::NOT_SET;
     _data->body.clear();
     if(_data->generator){
-        _data->generator=std::make_shared<ContentGenerator>(_data->conn_belongs);
+        _data->generator=std::make_shared<ContentGenerator>(this->_data);
     }
 
 }
 
 bool HttpRespInternal::flush(RxChainBuffer &output_buf)
 {
-    if(_data->stat.status_line==Status::SET){
+    const HttpHeaderFields &headers=_data->head.header_fields;
+
+    if(_data->send_flags.status_line==Status::SET){
         const HttpStatusLine &status_line=_data->head.status_line;
         output_buf<<to_http_version_str(status_line.version)<<' '<<to_http_status_code_str(status_line.status_code)<<CRLF;
-        _data->stat.status_line=Status::SENT;
+        _data->send_flags.status_line=Status::SENT;
+
+        if(!headers.contains("content-length")&&!headers.contains("Content-Length")){
+            _data->send_flags.header_fields=Status::SET; //in case user didn't set headers
+            std::cout<<"@append fileters"<<std::endl;
+            _data->header_filters.append(ChunkHeadFilter);
+            _data->body_filters.append(ChunkBodyFilter);
+        }
     }
 
-    if(_data->stat.header_fields==Status::SET){
+    if(_data->send_flags.header_fields==Status::SET){
         if(!(_data->header_filters)(_data->head)){ // fail to exec all filters
             return false;
         }
-        for(const auto &[field_name,field_val]:_data->head.header_fields){
+        std::cout<<"send header="<<std::endl;
+        for(const auto &[field_name,field_val]:headers){
             output_buf<<field_name<<": "<<field_val<<CRLF;
-        }
+            std::cout<<field_name<<": "<<field_val<<std::endl;
+        }   
+        this->_data->send_flags.header_fields=Status::SENT;
         output_buf<<CRLF;
-        this->_data->stat.header_fields=Status::SENT;
     }
+
 
     if(_data->generator){
         _data->generator->try_provide_once(_data->body);
@@ -92,6 +104,14 @@ bool HttpRespInternal::flush(RxChainBuffer &output_buf)
         if(!(_data->body_filters)(_data->body)){
             return false;
         }
+        output_buf.append(std::move(_data->body));
+    }
+
+    if(_data->status==HttpRespData::Status::FinishWait){
+        if(!(_data->body_filters)(_data->body)){
+            return false;
+        }
+        _data->status=HttpRespData::Status::Done;
         output_buf.append(std::move(_data->body));
     }
 
@@ -105,7 +125,7 @@ bool HttpRespInternal::flush(RxChainBuffer &output_buf)
 
 void HttpRespData::ContentGenerator::try_provide_once(HttpResponseBody &body)
 {
-    if(_status==Status::Providing&&body.buf_slice_num()<OutputBufSliceThresh){
+    if(_resp_data->status==Status::Providing&&body.buf_slice_num()<OutputBufSliceThresh){
         BufAllocator allocator=[&](size_t length_expect)->uint8_t*{
             auto buf_ptr=BufferRaw::create<BufferMalloc>(length_expect);
             BufferSlice slice(buf_ptr,0,buf_ptr->length());
@@ -113,7 +133,7 @@ void HttpRespData::ContentGenerator::try_provide_once(HttpResponseBody &body)
             return buf_ptr->data();
         };
         ProvideDone done=[this](){
-            _status=Status::Done;
+            this->set_resp_status(HttpRespData::Status::FinishWait);
         };
         _provide_action(allocator,done);
     }
@@ -121,31 +141,33 @@ void HttpRespData::ContentGenerator::try_provide_once(HttpResponseBody &body)
 
 void HttpRespData::ContentGenerator::set_async_content_provider(HttpRespData::ContentGenerator::AsyncTask async_task, HttpRespData::ContentGenerator::ProvideAction provide_action)
 {
-    this->set_status(Status::ExecAsyncTask);
+    this->set_resp_status(Status::ExecAsyncTask);
     this->_provide_action=provide_action;
 
     std::weak_ptr<ContentGenerator> weak_this(shared_from_this());
-    _conn_belongs->get_eventloop()->async([weak_this,async_task](){
+    RxConnection *conn=_resp_data->conn_belongs;
+    conn->get_eventloop()->async([weak_this,async_task](){
         if(!weak_this.expired()){
             async_task();
         }
     },
-    [this,weak_this](){
+    [this,weak_this,conn](){
         if(weak_this.expired())
             return;
 
-        this->set_status(Status::Providing);
-        RxProtoHttp1Processor &proto_proc=static_cast<RxProtoHttp1Processor&>(_conn_belongs->get_proto_processor());
-        bool err;
-        if(proto_proc.send_respond(*_conn_belongs,_conn_belongs->get_output_buf(),err)){
-           err?_conn_belongs->close():proto_proc.prepare_for_next_req(); //TODO 读Input buf
+        this->set_resp_status(Status::Providing);
+        RxProtoHttp1Processor &proto_proc=static_cast<RxProtoHttp1Processor&>(conn->get_proto_processor());
+        bool err=false;
+        proto_proc.resume(err);
+        if(err){
+            conn->close();
         }
     });
 }
 
 void HttpRespData::ContentGenerator::set_content_provider(HttpRespData::ContentGenerator::ProvideAction provide_action)
 {
-    this->set_status(Status::Providing);
+    this->set_resp_status(Status::Providing);
     this->_provide_action=provide_action;
 }
 

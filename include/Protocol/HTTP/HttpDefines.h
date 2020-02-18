@@ -7,6 +7,7 @@
 #include <string_view>
 #include <algorithm>
 #include <mutex>
+#include <boost/mpl/contains.hpp>
 
 namespace Rinx {
 
@@ -151,6 +152,10 @@ public:
         return it!=_headers.end()?std::make_optional<std::string>((*it).second):std::nullopt;
     }
 
+    bool contains(const std::string &key) const{
+        return _headers.count(key)!=0;
+    }
+
     void remove(const std::string &key){
          _headers.erase(key);
     }
@@ -159,12 +164,12 @@ public:
         _headers.clear();
     }
 
-    HeaderMap::iterator begin(){
-        return _headers.begin();
+    HeaderMap::const_iterator begin() const{
+        return _headers.cbegin();
     }
 
-    HeaderMap::iterator end(){
-        return _headers.end();
+    HeaderMap::const_iterator end() const{
+        return _headers.cend();
     }
 
 private:

@@ -16,7 +16,20 @@ bool RxProtoHttp1Processor::process_read_data(RxConnection *conn,RxChainBuffer &
     /// Http1.1处理完一个请求后再处理下一个
     /// 只有defer_content_provider结束后才能进行后续处理
     bool err=false;
+    this->extract_and_handle_request(conn,input_buf,err);
+    return !err;
+}
 
+bool RxProtoHttp1Processor::handle_write_prepared(RxConnection *conn, RxChainBuffer &output_buf)
+{
+    std::cout<<"@handle_write_prepared"<<std::endl;
+    bool err=false;
+    this->resume(err);
+    return err;
+}
+
+void RxProtoHttp1Processor::extract_and_handle_request(RxConnection *conn,RxChainBuffer &input_buf,bool &err)
+{
     size_t n_left=input_buf.end()-input_buf.begin();
     std::cout<<"n_left="<<n_left<<" request_complete"<<_got_a_complete_req<<std::endl;
 
@@ -29,37 +42,13 @@ bool RxProtoHttp1Processor::process_read_data(RxConnection *conn,RxChainBuffer &
         n_left=proc_stat.n_remaining;
         this->_got_a_complete_req=proc_stat.got_complete_request;
 
-        if(this->send_respond(*conn,conn->get_output_buf(),err)&&!err){
+        if(this->send_response(*conn,conn->get_output_buf(),err)&&!err){
            std::cout<<"prepare_for_next_req"<<std::endl;
            this->prepare_for_next_req();
         }
     }
     std::cout<<"process read return: "<<!err<<std::endl;
-
 //    assert(!err==1);
-    return !err;
-}
-
-bool RxProtoHttp1Processor::handle_write_prepared(RxConnection *conn, RxChainBuffer &output_buf)
-{
-    //send data that already in the output buffer first
-    std::cout<<"@handle_write_prepared"<<std::endl;
-    while(!output_buf.empty()){
-        RxConnection::SendRes res=conn->send();
-        std::cout<<"write_prepar send="<<res.send_len<<std::endl;
-        if(res.code==RxWriteRc::ERROR){
-            LOG_WARN<<"errno when send on fd "<<conn->get_rx_fd().raw<<" errno:"<<errno<<' '<<strerror(errno);
-            return false;
-        }
-        if(res.code==RxWriteRc::SOCK_SD_BUFF_FULL){
-            //continue to send in next writable events
-            return true;
-        }
-    }
-
-    bool err;
-    send_respond(*conn,output_buf,err);
-    return err;
 }
 
 void RxProtoHttp1Processor::prepare_for_next_req()
@@ -94,27 +83,27 @@ void RxProtoHttp1Processor::set_parser_callbacks()
 
     /// callback when a complete request has received
     _request_parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *req){
+        this->cancel_read_timer();
         //    std::cout<<"RequestReceived uri="<<http_request->uri()<<std::endl;
-
-        _router->route_to_responder(*req,_resp); //generate response to HttpResponse Object
-        if(_resp.empty()){
-            _router->default_static_file_handler(_req,_resp);
+        if(_router->route_to_responder(*req,_resp)){  //try generate response to HttpResponse Object
+            _router->install_filters(*req,_resp);
         }
         else{
-            _router->install_filters(*req,_resp);
+            _router->default_static_file_handler(_req,_resp);
         }
     });
 
     /// callback when an http protocol parse error occurs
     _request_parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *req){
-        LOG_INFO<<"parse request error, closing connection..";
+        LOG_INFO<<"parse request error, about to closing connection..";
         _resp.send_status(HttpStatusCode::BAD_REQUEST);
         req->close_connection();
     });
 }
 
-bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &output_buf,bool &err)
+bool RxProtoHttp1Processor::send_response(RxConnection &conn,RxChainBuffer &output_buf,bool &err)
 {
+    static size_t send_len=0;
     err=false;
     for(;;){
         if(!_resp.flush(output_buf)){
@@ -128,7 +117,11 @@ bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &outpu
         }
 
         auto send_res=conn.send();
-        std::cout<<"n_send="<<send_res.send_len<<std::endl;
+
+        send_len+=send_res.send_len;
+        std::cout<<"round send="<<send_res.send_len<<std::endl;
+        std::cout<<"send length="<<send_len<<std::endl;
+
         if(send_res.code==RxWriteRc::SOCK_SD_BUFF_FULL){
             std::cout<<"buff full"<<std::endl;
             break;
@@ -141,7 +134,38 @@ bool RxProtoHttp1Processor::send_respond(RxConnection &conn,RxChainBuffer &outpu
        }
     }
     std::cout<<"has blocking oepration "<<_resp.has_block_operation()<<std::endl;
+    //when we recv a complete request and response has no blocking operation, we can move on to the next request,
+    //despite the content yet not sent in output buf
     return _got_a_complete_req&&!_resp.has_block_operation();
+}
+
+void RxProtoHttp1Processor::resume(bool &err)
+{
+    //send data that already in the output buffer first
+    RxConnection *conn=this->get_connection();
+    RxChainBuffer &output_buf=conn->get_output_buf();
+
+    while(!output_buf.empty()){
+        RxConnection::SendRes res=conn->send();
+        std::cout<<"write_prepar send="<<res.send_len<<std::endl;
+        if(res.code==RxWriteRc::ERROR){
+            LOG_WARN<<"errno when send on fd "<<conn->get_rx_fd().raw<<" errno:"<<errno<<' '<<strerror(errno);
+            err=true;
+            return;
+        }
+        if(res.code==RxWriteRc::SOCK_SD_BUFF_FULL){
+            //continue to send in next writable events
+            return;
+        }
+    }
+
+    bool can_move_on=send_response(*conn,output_buf,err);
+    if(err) return;
+
+    if(can_move_on){
+        prepare_for_next_req();
+        extract_and_handle_request(conn,conn->get_input_buf(),err);
+    }
 }
 
 } //namespace Rinx

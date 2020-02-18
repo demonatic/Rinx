@@ -59,9 +59,7 @@ ssize_t ChainBuffer::write_to_fd(RxFD fd,RxWriteRc &res)
     }
 
     ssize_t bytes=FDHelper::Stream::writev(fd,io_vecs,res);
-    if(bytes>0){
-        this->commit_consume(bytes);
-    }
+    this->commit_consume(bytes);
     return bytes;
 }
 
@@ -120,6 +118,20 @@ void ChainBuffer::append(ChainBuffer &&buf)
 void ChainBuffer::append(BufferSlice slice)
 {
     this->_buf_slice_list.emplace_back(std::move(slice));
+}
+
+void ChainBuffer::prepend(BufferSlice slice)
+{
+    this->_buf_slice_list.emplace_front(std::move(slice));
+}
+
+void ChainBuffer::prepend(const std::string &data)
+{
+    size_t data_len=data.length();
+    auto buf_ptr=BufferRaw::create<BufferMalloc>(data_len);
+    std::memcpy(buf_ptr->data(),data.data(),data_len);
+    BufferSlice slice(buf_ptr,0,data_len);
+    this->prepend(slice);
 }
 
 std::unique_ptr<ChainBuffer> ChainBuffer::create_chain_buffer()

@@ -17,15 +17,15 @@ const T* HttpRouter::route(const typename HandlerMap<T>::type &map, const HttpRe
     return t;
 }
 
-void HttpRouter::route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const
+bool HttpRouter::route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const
 {
     size_t array_index=Util::to_index(req.method());
-
     const Responder *responder=route<Responder>(_responders[array_index],req);
     if(!responder)
-        return;
+        return false;
 
     (*responder)(req,resp);
+    return true;
 }
 
 void HttpRouter::install_filters(HttpReqImpl &req, HttpRespImpl &resp) const
@@ -43,6 +43,7 @@ void HttpRouter::install_filters(HttpReqImpl &req, HttpRespImpl &resp) const
 
 void HttpRouter::default_static_file_handler(HttpReqImpl &req,HttpRespImpl &resp) const
 {
+    std::cout<<"@default_static_file_handler"<<std::endl;
     static const std::filesystem::path web_root_path=WebRootPath;
     static const std::filesystem::path default_web_page=DefaultWebPage;
 

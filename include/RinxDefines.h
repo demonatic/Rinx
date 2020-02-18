@@ -7,7 +7,7 @@ namespace Rinx {
 
 ///Server
 constexpr size_t SignoMax=128;
-constexpr size_t IOWorkerNum=8;
+constexpr size_t IOWorkerNum=1;
 constexpr size_t ThreadPoolWorkerNum=8;
 constexpr size_t MaxConnectionNum=65535;
 

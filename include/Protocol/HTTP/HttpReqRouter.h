@@ -33,7 +33,9 @@ public:
 
 public:
     /// Getters
-    void route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const;
+    /// @return true if hit a responder
+    bool route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const;
+
     void install_filters(HttpReqImpl &req,HttpRespImpl &resp) const;
 
     void default_static_file_handler(HttpReqImpl &req,HttpRespImpl &resp) const;

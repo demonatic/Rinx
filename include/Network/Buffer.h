@@ -179,8 +179,17 @@ public:
 
     void append(BufferSlice slice);
 
+    void prepend(BufferSlice slice);
+    void prepend(const std::string &data);
+
     ChainBuffer& operator<<(const char c);
     ChainBuffer& operator<<(const std::string &arg);
+
+    template<size_t N>
+    ChainBuffer &operator<<(const char (&arg)[N]){
+        append(arg,N-1);
+        return *this;
+    }
 
     template<typename Arg>
     typename std::enable_if_t<
@@ -188,12 +197,6 @@ public:
     {
         std::string str=std::to_string(arg);
         return *this<<str;
-    }
-
-    template<size_t N>
-    ChainBuffer &operator<<(const char (&arg)[N]){
-        append(arg,N-1);
-        return *this;
     }
 
     template<typename Arg>
