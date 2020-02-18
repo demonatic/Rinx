@@ -22,7 +22,7 @@ public:
 
     /// @brief send current request's response as much as possible
     /// @return true if current request's corresponding response has completed
-    bool send_response(RxConnection &conn,RxChainBuffer &output_buf,bool &err);
+    bool try_output_response(RxConnection &conn,RxChainBuffer &output_buf,bool &err);
 
     /// @brief resume the requests handle process
     /// steps: send existing outputbuf -> flush response to outputbuf -> handle next request

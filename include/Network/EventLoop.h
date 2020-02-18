@@ -65,10 +65,10 @@ public:
     template<typename F1,typename F2,typename ...Args>
     std::enable_if_t<false==std::is_same_v<void,std::invoke_result_t<F1,Args...>>>
     async(F1 &&task,F2 &&finish_callback,Args&& ...task_args){
-        g_threadpool::get_instance()->post([this,task,&task_args...,finish_callback](){
+        g_threadpool::get_instance()->post([this,task,&task_args...,finish_callback]() mutable{
             using task_ret_t=std::invoke_result_t<F1,Args...>;
             task_ret_t res=task(std::forward<Args>(task_args)...);
-            this->queue_work([=](){
+            this->queue_work([=]() mutable{
                 finish_callback(res);
             });
         });
@@ -78,9 +78,9 @@ public:
     template<typename F1,typename F2,typename ...Args>
     std::enable_if_t<true==std::is_same_v<void,std::invoke_result_t<F1,Args...>>>
     async(F1 &&task,F2 &&finish_callback,Args&& ...task_args){
-        g_threadpool::get_instance()->post([this,task,&task_args...,finish_callback](){
+        g_threadpool::get_instance()->post([this,task,&task_args...,finish_callback]() mutable{
             task(std::forward<Args>(task_args)...);
-            this->queue_work([=](){
+            this->queue_work([=]() mutable{
                 finish_callback();
             });
         });

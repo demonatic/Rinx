@@ -26,8 +26,8 @@ public:
     /// @brief read as much data as possible in input_buf
     /// @return the read status and the number of bytes been read
     RecvRes recv();
-    /// @brief write as much data as possible from output_buf
-    /// @return the write status and the number of bytes been written
+    /// @brief send as much data as possible from output_buf
+    /// @return the send status and the number of bytes been written
     /// either all data is sent or socket send buffer is full and status be SOCK_SD_BUFF_FULL
     SendRes send();
 

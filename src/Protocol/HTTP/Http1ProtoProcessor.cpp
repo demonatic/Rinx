@@ -7,6 +7,7 @@ RxProtoHttp1Processor::RxProtoHttp1Processor(RxConnection *conn,HttpRouter *rout
 {
     set_parser_callbacks();
     prepare_for_next_req();
+    std::cout<<"@RxProtoHttp1Processor tid="<<std::this_thread::get_id()<<std::endl;
 }
 
 bool RxProtoHttp1Processor::process_read_data(RxConnection *conn,RxChainBuffer &input_buf)
@@ -42,7 +43,7 @@ void RxProtoHttp1Processor::extract_and_handle_request(RxConnection *conn,RxChai
         n_left=proc_stat.n_remaining;
         this->_got_a_complete_req=proc_stat.got_complete_request;
 
-        if(this->send_response(*conn,conn->get_output_buf(),err)&&!err){
+        if(this->try_output_response(*conn,conn->get_output_buf(),err)&&!err){
            std::cout<<"prepare_for_next_req"<<std::endl;
            this->prepare_for_next_req();
         }
@@ -101,8 +102,12 @@ void RxProtoHttp1Processor::set_parser_callbacks()
     });
 }
 
-bool RxProtoHttp1Processor::send_response(RxConnection &conn,RxChainBuffer &output_buf,bool &err)
+bool RxProtoHttp1Processor::try_output_response(RxConnection &conn,RxChainBuffer &output_buf,bool &err)
 {
+    if(_resp.executing_async_task()){
+        return false;
+    }
+
     static size_t send_len=0;
     err=false;
     for(;;){
@@ -133,7 +138,6 @@ bool RxProtoHttp1Processor::send_response(RxConnection &conn,RxChainBuffer &outp
             break;
        }
     }
-    std::cout<<"has blocking oepration "<<_resp.has_block_operation()<<std::endl;
     //when we recv a complete request and response has no blocking operation, we can move on to the next request,
     //despite the content yet not sent in output buf
     return _got_a_complete_req&&!_resp.has_block_operation();
@@ -159,7 +163,7 @@ void RxProtoHttp1Processor::resume(bool &err)
         }
     }
 
-    bool can_move_on=send_response(*conn,output_buf,err);
+    bool can_move_on=try_output_response(*conn,output_buf,err);
     if(err) return;
 
     if(can_move_on){

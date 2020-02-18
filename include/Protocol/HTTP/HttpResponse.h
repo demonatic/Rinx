@@ -5,7 +5,7 @@
 #include "Network/Connection.h"
 #include "HttpDefines.h"
 #include "HttpRequest.h"
-#include <queue>
+#include <atomic>
 
 namespace Rinx {
 
@@ -22,7 +22,7 @@ using BodyFilter=std::function<void(HttpRequest &req,HttpResponseBody &body,Next
 
 struct HttpRespData{
     HttpRespData(RxConnection *conn):head{{HttpStatusCode::OK,HttpVersion::VERSION_1_1},{}},
-        generator(nullptr),status(Status::FinishWait),conn_belongs(conn){}
+        generator(std::nullopt),status(Status::FinishWait),conn_belongs(conn){}
 
     enum class Status{
         ExecAsyncTask,
@@ -66,21 +66,21 @@ struct HttpRespData{
         std::list<Filter> _filters;
     };
 
-    struct ContentGenerator:public std::enable_shared_from_this<ContentGenerator>{
+    struct ContentGenerator{
         ContentGenerator(HttpRespData *resp_data):_resp_data(resp_data){}
 
         using BufAllocator=std::function<uint8_t*(size_t length_expect)>;
-        using AsyncTask=std::function<void()>;
 
         using ProvideDone=std::function<void()>;
         using ProvideAction=std::function<void(BufAllocator allocator,ProvideDone is_done)>;
 
-        void set_content_provider(ProvideAction provide_action);
-        void set_async_content_provider(AsyncTask async_task,ProvideAction provide_action);
+        void set_content_generator(ProvideAction provide_action);
 
-        void set_resp_status(HttpRespData::Status status) noexcept{ this->_resp_data->status=status; }
+        void set_resp_status(HttpRespData::Status status) noexcept{
+            this->_resp_data->status.store(status,std::memory_order_release);
+        }
 
-        void try_provide_once(HttpResponseBody &body);
+        void try_generate_once(HttpResponseBody &body);
 
     private:
         ProvideAction _provide_action;
@@ -97,11 +97,11 @@ struct HttpRespData{
     HttpResponseHead head;
     HttpResponseBody body;
 
-    std::shared_ptr<ContentGenerator> generator;
+    std::optional<ContentGenerator> generator;
     FilterChain<HeadFilter> header_filters;
     FilterChain<BodyFilter> body_filters;
 
-    Status status;
+    std::atomic<Status> status;
 
     RxConnection *conn_belongs;
 
@@ -109,7 +109,9 @@ struct HttpRespData{
 
 /// Internal use API
 class HttpRespInternal{
-     using Status=HttpRespData::SendFlag;
+    using Status=HttpRespData::Status;
+    using SendFlag=HttpRespData::SendFlag;
+
 public:
     HttpRespInternal(HttpRespData *data):_data(data){}
 
@@ -118,7 +120,17 @@ public:
     bool flush(RxChainBuffer &output_buf);
 
     bool has_block_operation(){
-        return _data->generator&&!(_data->status==HttpRespData::Status::FinishWait);
+        Status status=_data->status.load(std::memory_order_acquire);
+        return status==HttpRespData::Status::ExecAsyncTask||status==HttpRespData::Status::Providing;
+    }
+
+    bool has_content_generator(){
+        return _data->generator.has_value();
+    }
+
+    bool executing_async_task(){
+        Status status=_data->status.load(std::memory_order_acquire);
+        return status==HttpRespData::Status::ExecAsyncTask;
     }
 
     void install_head_filters(const HttpRespData::FilterChain<HeadFilter> &filters){
@@ -127,6 +139,10 @@ public:
 
     void install_body_filters(const HttpRespData::FilterChain<BodyFilter> &filters){
         _data->body_filters=filters;
+    }
+
+    void set_status(HttpRespData::Status status){
+        _data->status=status;
     }
 
 private:
@@ -166,18 +182,11 @@ public:
         return _data->body;
     }
 
-    void content_provider(ContentGenerator::ProvideAction provide_action){
+    void content_generator(ContentGenerator::ProvideAction provide_action){
         if(!_data->generator){
-            _data->generator=std::make_shared<ContentGenerator>(this->_data);
+            _data->generator=std::make_optional<ContentGenerator>(this->_data);
         }
-        _data->generator->set_content_provider(provide_action);
-    }
-
-    void async_content_provider(ContentGenerator::AsyncTask async_task,ContentGenerator::ProvideAction provide_action){
-        if(!_data->generator){
-            _data->generator=std::make_shared<ContentGenerator>(this->_data);
-        }
-        _data->generator->set_async_content_provider(async_task,provide_action);
+        _data->generator->set_content_generator(provide_action);
     }
 
     /// @brief put http header and the file content as http body into outputbuf
@@ -214,25 +223,27 @@ struct HttpResponseTemplate:protected HttpRespData,public T...{
 
 using HttpRespImpl=HttpResponseTemplate<HttpRespInternal,HttpResponse>;
 
+struct MakeAsync{
+    MakeAsync(Responder responder):_responder(responder){}
+    void operator()(HttpRequest &req,HttpResponse &resp);
+    Responder _responder;
+};
+
 inline static constexpr auto ChunkHeadFilter=[](HttpRequest &,HttpResponseHead &head,Next next){
-    std::cout<<"@ChunkHeadFilter"<<std::endl;
     head.header_fields.add("Transfer-Encoding","chunked");
     next();
 };
 
-inline static constexpr auto ChunkBodyFilter=[](HttpRequest &req,HttpResponseBody &body,Next next){
-    std::cout<<"@ChunkBodyFilter"<<std::endl;
-    if(!body.empty()){ //end of http body
+inline static constexpr auto ChunkBodyFilter=[](HttpRequest &,HttpResponseBody &body,Next next){
+    if(!body.empty()){
         size_t chunk_size=body.readable_size();
         std::string hex_str=Util::int_to_hex(chunk_size);
         body.prepend(hex_str+"\r\n");
-        std::cout<<"readable 1="<<body.readable_size()<<std::endl;
         body<<"\r\n";
-        std::cout<<"readable 2="<<body.readable_size()<<std::endl;
     }
     else{
-        std::cout<<"@send 0 chunk"<<std::endl;
-        body<<"0\r\n\r\n";
+        std::cout<<"end of chunk"<<std::endl;
+        body<<"0\r\n\r\n"; //end of http body
     }
     next();
 };
