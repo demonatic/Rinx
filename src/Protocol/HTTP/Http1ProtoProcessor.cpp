@@ -51,24 +51,24 @@ void RxProtoHttp1Processor::prepare_for_next_req()
 
 void RxProtoHttp1Processor::set_parser_callbacks()
 {
-    _request_parser.on_event(HttpParse::StartRecvingHeader,[this](HttpReqImpl *){
+    _request_parser.on_event(HttpParse::StartRecvingHeader,[this](detail::HttpReqImpl *){
         this->set_timeout(ReadHeaderTimeout);
     });
 
     /// callback when get http header on socket stream
-    _request_parser.on_event(HttpParse::HeaderReceived,[this](HttpReqImpl *req){
+    _request_parser.on_event(HttpParse::HeaderReceived,[this](detail::HttpReqImpl *req){
         this->set_timeout(ReadBodyTimeout); //actually we don't need to care about whether body exists
         req->debug_print_header();
     });
 
     /// callback when get part of http body on socket stream
-    _request_parser.on_event(HttpParse::OnPartofBody,[](HttpReqImpl *req,SkippedRange data){
+    _request_parser.on_event(HttpParse::OnPartofBody,[](detail::HttpReqImpl *req,SkippedRange data){
         auto body_data=req->get_input_buf().slice(data.first,data.second);
         req->body().append(std::move(body_data));
     });
 
     /// callback when a complete request has received
-    _request_parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *req){
+    _request_parser.on_event(HttpParse::RequestReceived,[this](detail::HttpReqImpl *req){
         this->cancel_read_timer();
         bool find_route=_router->route_to_responder(*req,_resp);
         if(find_route){  //try generate response to HttpResponse Object
@@ -80,7 +80,7 @@ void RxProtoHttp1Processor::set_parser_callbacks()
     });
 
     /// callback when an http protocol parse error occurs
-    _request_parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *req){
+    _request_parser.on_event(HttpParse::ParseError,[this](detail::HttpReqImpl *req){
         LOG_INFO<<"parse request error, about to closing connection..";
         _resp.send_status(HttpStatusCode::BAD_REQUEST);
         req->close_connection();

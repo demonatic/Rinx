@@ -79,22 +79,6 @@ enum class HttpStatusCode:uint16_t
 #undef EnumDeclare
 };
 
-static std::string s_http_status_table[512];
-
-static void init_http_status_table(){
-#define TABLE_ENTRY_INSERT(num,name,string) s_http_status_table[num]=#num " " #string;
-    HTTP_STATUS_MAP(TABLE_ENTRY_INSERT)
-#undef TABLE_ENTRY_INSERT
-}
-
-inline std::string to_http_status_code_str(HttpStatusCode status_code){
-    static std::once_flag init_flag;
-    std::call_once(init_flag,[](){
-        init_http_status_table();
-    });
-    return s_http_status_table[Util::to_index(status_code)];
-}
-
 enum class HttpMethod:uint8_t{
     GET=0,
     POST,
@@ -116,14 +100,6 @@ enum class HttpVersion:uint8_t{
     UNKNOWN,
 
     __HttpVersionCount
-};
-
-///Http request lifetime stage
-enum HttpReqStage:uint8_t{
-    WaitingForHeader,
-    HeaderReceived,
-    RequestReceived, //the whole reqeust has received
-    RequestCompleted, //reponse is fully sent
 };
 
 struct HttpStatusLine{
@@ -176,13 +152,31 @@ private:
     HeaderMap _headers;
 };
 
+using HttpRequestBody=RxChainBuffer;
+using HttpResponseBody=RxChainBuffer;
+
 struct HttpResponseHead{
     HttpStatusLine status_line;
     HttpHeaderFields header_fields;
 };
 
-using HttpRequestBody=RxChainBuffer;
-using HttpResponseBody=RxChainBuffer;
+namespace detail{
+
+static std::string s_http_status_table[512];
+
+static void init_http_status_table(){
+#define TABLE_ENTRY_INSERT(num,name,string) s_http_status_table[num]=#num " " #string;
+    HTTP_STATUS_MAP(TABLE_ENTRY_INSERT)
+#undef TABLE_ENTRY_INSERT
+}
+
+inline std::string to_http_status_code_str(HttpStatusCode status_code){
+    static std::once_flag init_flag;
+    std::call_once(init_flag,[](){
+        detail::init_http_status_table();
+    });
+    return detail::s_http_status_table[Util::to_index(status_code)];
+}
 
 static constexpr size_t MethodCount=Util::to_index(HttpMethod::__HttpMethodCount);
 static const std::array<std::string,MethodCount> str_methods{"GET","POST","HEAD","PUT","PATCH","DELETE","OPTIONS","ANY","UNDEFINED"};
@@ -253,5 +247,6 @@ inline std::string get_mimetype_by_filename(const std::string &filename)
     return it_mime==mime_types.end()?std::string("application/octet-stream"):it_mime->second;
 }
 
+} //namespace detail
 } //namespace Rinx
 #endif // HTTPDEFINES_H

@@ -16,7 +16,7 @@ bool HttpResponse::send_file(const std::string &filename,size_t offset)
 
         this->status_code(HttpStatusCode::OK)
              .headers("Content-Length",std::to_string(send_length))
-             .headers("Content-Type",get_mimetype_by_filename(filename));
+             .headers("Content-Type",detail::get_mimetype_by_filename(filename));
 
         return this->body().read_from_regular_file(file.get_fd(),send_length,offset); //TODO changed
     }catch (std::runtime_error &e) {
@@ -36,9 +36,9 @@ bool HttpResponse::send_file_direct(RxConnection *conn,const std::string &filena
 
         this->status_code(HttpStatusCode::OK)
              .headers("Content-Length",std::to_string(send_length))
-             .headers("Content-Type",get_mimetype_by_filename(filename));
+             .headers("Content-Type",detail::get_mimetype_by_filename(filename));
 
-        static_cast<HttpRespImpl*>(this)->flush(conn->get_output_buf());
+        static_cast<detail::HttpRespImpl*>(this)->flush(conn->get_output_buf());
 
         return conn->send().code==RxWriteRc::OK&&
                 ::sendfile(conn->get_rx_fd().raw,file.get_fd().raw,(off64_t*)&offset,send_length)!=-1;
@@ -59,7 +59,7 @@ void HttpResponse::clear()
     _data->generator.reset();
 }
 
-bool HttpRespInternal::flush(RxChainBuffer &output_buf)
+bool detail::HttpRespInternal::flush(RxChainBuffer &output_buf)
 {
     const HttpHeaderFields &headers=_data->head.header_fields;
 
@@ -108,7 +108,7 @@ bool HttpRespInternal::flush(RxChainBuffer &output_buf)
     return true;
 }
 
-void HttpRespData::ContentGenerator::try_generate_once(HttpResponseBody &body)
+void detail::HttpRespData::ContentGenerator::try_generate_once(HttpResponseBody &body)
 {
     if(_resp_data->status==Status::Providing&&body.buf_slice_num()<OutputBufSliceThresh){
         BufAllocator allocator=[&](size_t length_expect)->uint8_t*{
@@ -124,7 +124,7 @@ void HttpRespData::ContentGenerator::try_generate_once(HttpResponseBody &body)
     }
 }
 
-void HttpRespData::ContentGenerator::set_content_generator(HttpRespData::ContentGenerator::ProvideAction provide_action)
+void detail::HttpRespData::ContentGenerator::set_content_generator(HttpRespData::ContentGenerator::ProvideAction provide_action)
 {
     this->set_resp_status(Status::Providing);
     this->_provide_action=provide_action;
@@ -133,8 +133,8 @@ void HttpRespData::ContentGenerator::set_content_generator(HttpRespData::Content
 void MakeAsync::operator()(HttpRequest &req, HttpResponse &resp)
 {
     RxConnection *conn=req.get_conn();
-    HttpRespImpl *resp_impl=static_cast<HttpRespImpl*>(&resp);
-    using Status=HttpRespData::Status;
+    detail::HttpRespImpl *resp_impl=static_cast<detail::HttpRespImpl*>(&resp);
+    using Status=detail::HttpRespData::Status;
     resp_impl->set_status(Status::ExecAsyncTask);
     conn->get_eventloop()->async([=](HttpRequest &req, HttpResponse &resp) mutable{
         _responder(req,resp);

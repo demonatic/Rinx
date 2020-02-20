@@ -60,8 +60,8 @@ private:
 
     const HttpRouter *_router;
 
-    HttpReqImpl _req;
-    HttpRespImpl _resp;
+    detail::HttpReqImpl _req;
+    detail::HttpRespImpl _resp;
 
     RxTimer _read_timer;
 };

@@ -3,7 +3,7 @@
 namespace Rinx {
 
 template<typename T>
-const T* HttpRouter::route(const typename HandlerMap<T>::type &map, const HttpReqImpl &req)
+const T* HttpRouter::route(const typename HandlerMap<T>::type &map, const detail::HttpReqImpl &req)
 {
     const T *t=nullptr;
     for(const auto &[regex,handler]:map){
@@ -16,7 +16,7 @@ const T* HttpRouter::route(const typename HandlerMap<T>::type &map, const HttpRe
     return t;
 }
 
-bool HttpRouter::route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const
+bool HttpRouter::route_to_responder(detail::HttpReqImpl &req,detail::HttpRespImpl &resp) const
 {
     size_t array_index=Util::to_index(req.method());
     const Responder *responder=route<Responder>(_responders[array_index],req);
@@ -27,16 +27,16 @@ bool HttpRouter::route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const
     return true;
 }
 
-void HttpRouter::install_filters(HttpReqImpl &req, HttpRespImpl &resp) const
+void HttpRouter::install_filters(detail::HttpReqImpl &req, detail::HttpRespImpl &resp) const
 {
     const FilterHBList *filter_hb_list=route<FilterHBList>(_filters,req);
     if(!filter_hb_list)
         return;
 
-    HttpRespData::FilterChain<HeadFilter> head_filters(req,filter_hb_list->head_filter_list);
+    detail::HttpRespData::FilterChain<HeadFilter> head_filters(req,filter_hb_list->head_filter_list);
     resp.install_head_filters(head_filters);
 
-    HttpRespData::FilterChain<BodyFilter> body_filters(req,filter_hb_list->body_filter_list);
+    detail::HttpRespData::FilterChain<BodyFilter> body_filters(req,filter_hb_list->body_filter_list);
     resp.install_body_filters(body_filters);
 }
 
@@ -61,7 +61,7 @@ void HttpRouter::set_body_filter_route(const HttpRouter::Route::RoutableURI uri,
     }
 }
 
-void HttpRouter::use_default_handler(HttpReqImpl &req, HttpRespImpl &resp) const
+void HttpRouter::use_default_handler(detail::HttpReqImpl &req, detail::HttpRespImpl &resp) const
 {
     this->_default_handler(req,resp);
 }

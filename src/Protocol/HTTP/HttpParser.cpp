@@ -40,11 +40,11 @@ void StateRequestLine::consume(iterable_bytes iterable, void *request)
 
             case S_EXPECT_CRLF:{
                 if(likely(c=='\n')){
-                    HttpReqImpl *http_request=static_cast<HttpReqImpl*>(request);
+                    detail::HttpReqImpl *http_request=static_cast<detail::HttpReqImpl*>(request);
                     Util::to_upper(_stored_method);
-                    http_request->set_method(to_http_method(_stored_method));
+                    http_request->set_method(detail::to_http_method(_stored_method));
                     Util::to_upper(_stored_version);
-                    http_request->set_version(to_http_version(_stored_version));
+                    http_request->set_version(detail::to_http_version(_stored_version));
                     http_request->set_uri(std::move(_stored_uri));
                     ctx.transit_super_state(GET_ID(StateHeader));
                 }
@@ -59,7 +59,7 @@ void StateRequestLine::consume(iterable_bytes iterable, void *request)
 
 void StateHeader::consume(iterable_bytes iterable, void *request)
 {
-    HttpReqImpl *http_request=static_cast<HttpReqImpl*>(request);
+    detail::HttpReqImpl *http_request=static_cast<detail::HttpReqImpl*>(request);
     iterable([=](const char c,ConsumeCtx &ctx){
         switch(this->_sub_state) {
             case S_EXPECT_FIELD_KEY:{

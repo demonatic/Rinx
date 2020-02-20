@@ -18,30 +18,30 @@ public:
 
     virtual ~ParserCallback()=default;
 
-    virtual void recv_header_callback(HttpReqImpl &request)=0;
-    virtual void recv_request_callback(HttpReqImpl &request)=0;
-    virtual void parse_error_callback(HttpReqImpl &request)=0;
+    virtual void recv_header_callback(detail::HttpReqImpl &request)=0;
+    virtual void recv_request_callback(detail::HttpReqImpl &request)=0;
+    virtual void parse_error_callback(detail::HttpReqImpl &request)=0;
 
     void parse(std::vector<uint8_t> &buf){
 
-        parser.on_event(HttpParse::HeaderReceived,[this](HttpReqImpl *http_request){
+        parser.on_event(HttpParse::HeaderReceived,[this](detail::HttpReqImpl *http_request){
             std::cout<<"@recv header cb"<<std::endl;
             http_request->debug_print_header();
             this->recv_header_callback(*http_request);
             http_request->clear();
         });
-        parser.on_event(HttpParse::RequestReceived,[this](HttpReqImpl *http_request){
+        parser.on_event(HttpParse::RequestReceived,[this](detail::HttpReqImpl *http_request){
             std::cout<<"@recv whole request cb"<<std::endl;
             this->recv_request_callback(*http_request);
         });
 
-        parser.on_event(HttpParse::ParseError,[this](HttpReqImpl *http_request){
+        parser.on_event(HttpParse::ParseError,[this](detail::HttpReqImpl *http_request){
             std::cout<<"@parse error cb"<<std::endl;
             this->parse_error_callback(*http_request);
             exit(-1);
         });
 
-        parser.on_event(HttpParse::OnPartofBody,[](HttpReqImpl *http_request,SkippedRange data){
+        parser.on_event(HttpParse::OnPartofBody,[](detail::HttpReqImpl *http_request,SkippedRange data){
              size_t body_length=data.second-data.first;
              std::cout<<"body length ="<<body_length<<std::endl;
              for(auto it=data.first;it!=data.second;++it){
@@ -50,7 +50,7 @@ public:
              std::cout<<std::endl;
         });
 
-        HttpReqImpl req{nullptr};
+        detail::HttpReqImpl req{nullptr};
         long total=std::distance(buf.begin(),buf.end());
         long n_left=total;
         do{
@@ -70,9 +70,9 @@ public:
 
 class MockParserCallBack:public ParserCallback{
 public:
-    MOCK_METHOD1(recv_header_callback,void(HttpReqImpl &request));
-    MOCK_METHOD1(recv_request_callback,void(HttpReqImpl &request));
-    MOCK_METHOD1(parse_error_callback,void(HttpReqImpl &request));
+    MOCK_METHOD1(recv_header_callback,void(detail::HttpReqImpl &request));
+    MOCK_METHOD1(recv_request_callback,void(detail::HttpReqImpl &request));
+    MOCK_METHOD1(parse_error_callback,void(detail::HttpReqImpl &request));
 };
 
 TEST(http_parse, dataset)

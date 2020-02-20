@@ -35,25 +35,25 @@ public:
 
 public:
     /// @return true if hit a responder
-    bool route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const;
+    bool route_to_responder(detail::HttpReqImpl &req,detail::HttpRespImpl &resp) const;
 
-    void install_filters(HttpReqImpl &req,HttpRespImpl &resp) const;
+    void install_filters(detail::HttpReqImpl &req,detail::HttpRespImpl &resp) const;
 
-    void use_default_handler(HttpReqImpl &req,HttpRespImpl &resp) const;
+    void use_default_handler(detail::HttpReqImpl &req,detail::HttpRespImpl &resp) const;
 
 private:
     template<typename T> struct HandlerMap{
         using type=std::map<Route::RoutableURI,T>;
     };
     template<typename T>
-    const static T* route(const typename HandlerMap<T>::type &map,const HttpReqImpl &req);
+    const static T* route(const typename HandlerMap<T>::type &map,const detail::HttpReqImpl &req);
 
     struct FilterHBList{
         std::list<HeadFilter> head_filter_list;
         std::list<BodyFilter> body_filter_list;
     };
     Responder _default_handler;
-    std::array<HandlerMap<Responder>::type,MethodCount> _responders; //use after receive a complete request
+    std::array<HandlerMap<Responder>::type,detail::MethodCount> _responders; //use after receive a complete request
     HandlerMap<FilterHBList>::type _filters; // use on output the response
 };
 

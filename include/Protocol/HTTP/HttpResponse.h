@@ -20,6 +20,8 @@ using Next=std::function<void()>;
 using HeadFilter=std::function<void(HttpRequest &req,HttpResponseHead &head,Next next)>;
 using BodyFilter=std::function<void(HttpRequest &req,HttpResponseBody &body,Next next)>;
 
+namespace detail{
+
 struct HttpRespData{
     HttpRespData(RxConnection *conn):head{{HttpStatusCode::OK,HttpVersion::VERSION_1_1},{}},
         generator(std::nullopt),status(Status::FinishWait),conn_belongs(conn){}
@@ -154,15 +156,17 @@ private:
     HttpRespData *_data;
 };
 
+}
+
 /// External use API
 class HttpResponse{
 public:
-    using ContentGenerator=HttpRespData::ContentGenerator;
+    using ContentGenerator=detail::HttpRespData::ContentGenerator;
     using BufAllocator=ContentGenerator::BufAllocator;
     using ProvideDone=ContentGenerator::ProvideDone;
 
 public:
-    HttpResponse(HttpRespData *data):_data(data){}
+    HttpResponse(detail::HttpRespData *data):_data(data){}
 
     HttpResponse& status_code(HttpStatusCode stat_code){
         _data->head.status_line.status_code=stat_code;
@@ -200,7 +204,7 @@ public:
     bool send_file_direct(RxConnection *conn,const std::string &filename,size_t offset=0);
 
     void send_status(HttpStatusCode code){
-        const std::string &content=to_http_status_code_str(code);
+        const std::string &content=detail::to_http_status_code_str(code);
         this->status_code(code).headers("Content-Length",std::to_string(content.size())).body()<<content;
     }
 
@@ -215,18 +219,21 @@ public:
     }
 
 private:
-    using Status=HttpRespData::SendFlag;
+    using Status=detail::HttpRespData::SendFlag;
 
 private:
-    HttpRespData *_data;
+    detail::HttpRespData *_data;
 };
 
+namespace detail {
 template<typename ...T>
 struct HttpResponseTemplate:protected HttpRespData,public T...{
     HttpResponseTemplate(RxConnection *conn):HttpRespData(conn),T(this)...{}
 };
 
 using HttpRespImpl=HttpResponseTemplate<HttpRespInternal,HttpResponse>;
+}
+
 
 struct MakeAsync{
     MakeAsync(Responder responder):_responder(responder){}

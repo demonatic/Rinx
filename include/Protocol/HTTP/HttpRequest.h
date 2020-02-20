@@ -8,6 +8,8 @@
 
 namespace Rinx {
 
+namespace detail{
+
 struct HttpReqData{
     HttpReqData(RxConnection *conn):_conn_belongs(conn){}
 
@@ -58,12 +60,14 @@ private:
     HttpReqData *_data;
 };
 
+}
+
 /// External use API
 class HttpRequest
 {
-    friend HttpReqInternal;
+    friend detail::HttpReqInternal;
 public:
-    HttpRequest(HttpReqData *data):_data(data),_conn_mark_closed(false){}
+    HttpRequest(detail::HttpReqData *data):_data(data),_conn_mark_closed(false){}
 
     HttpMethod method() const{
         return _data->_method;
@@ -101,9 +105,11 @@ public:
     void debug_print_body();
 
 private:
-    HttpReqData *_data;
     bool _conn_mark_closed;
+    detail::HttpReqData *_data;
 };
+
+namespace detail {
 
 template<typename ...T>
 struct HttpRequestTemplate:protected HttpReqData,public T...{
@@ -111,6 +117,8 @@ struct HttpRequestTemplate:protected HttpReqData,public T...{
 };
 
 using HttpReqImpl=HttpRequestTemplate<HttpReqInternal,HttpRequest>;
+
+}
 
 } //namespace Rinx
 #endif // HTTPREQUEST_H
