@@ -54,10 +54,9 @@ void HttpResponse::clear()
     _data->head.header_fields.clear();
     _data->send_flags.header_fields=Status::NOT_SET;
     _data->body.clear();
-    if(_data->generator){
-        _data->generator=std::make_optional<ContentGenerator>(this->_data);
-    }
-
+    _data->header_filters.reset();
+    _data->body_filters.reset();
+    _data->generator.reset();
 }
 
 bool HttpRespInternal::flush(RxChainBuffer &output_buf)
@@ -106,11 +105,6 @@ bool HttpRespInternal::flush(RxChainBuffer &output_buf)
         output_buf.append(std::move(_data->body));
     }
 
-    std::cout<<"@HttpResponse flush content:"<<std::endl;
-    for(auto it=output_buf.begin();it!=output_buf.end();it++){
-        std::cout<<*it;
-    }
-    std::cout<<std::endl;
     return true;
 }
 
@@ -141,8 +135,8 @@ void MakeAsync::operator()(HttpRequest &req, HttpResponse &resp)
     RxConnection *conn=req.get_conn();
     HttpRespImpl *resp_impl=static_cast<HttpRespImpl*>(&resp);
     using Status=HttpRespData::Status;
+    resp_impl->set_status(Status::ExecAsyncTask);
     conn->get_eventloop()->async([=](HttpRequest &req, HttpResponse &resp) mutable{
-        resp_impl->set_status(Status::ExecAsyncTask);
         _responder(req,resp);
     },
     [=]() mutable{

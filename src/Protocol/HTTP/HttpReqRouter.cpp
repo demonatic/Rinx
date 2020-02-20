@@ -1,5 +1,4 @@
 #include "Protocol/HTTP/HttpReqRouter.h"
-#include <filesystem>
 
 namespace Rinx {
 
@@ -41,46 +40,6 @@ void HttpRouter::install_filters(HttpReqImpl &req, HttpRespImpl &resp) const
     resp.install_body_filters(body_filters);
 }
 
-void HttpRouter::default_static_file_handler(HttpReqImpl &req,HttpRespImpl &resp) const
-{
-    std::cout<<"@default_static_file_handler"<<std::endl;
-    static const std::filesystem::path web_root_path=WebRootPath;
-    static const std::filesystem::path default_web_page=DefaultWebPage;
-
-    std::filesystem::path authentic_path;
-    try {
-        //remove prefix to concat path
-        std::string_view request_file(req.uri());
-        while(request_file.front()=='/'){
-            request_file.remove_prefix(1);
-        }
-        authentic_path=web_root_path/request_file;
-
-        //check weather authentic_path is in root path
-        if(std::distance(web_root_path.begin(),web_root_path.end())>std::distance(authentic_path.begin(),authentic_path.end()) //TO IMPROVE
-                ||!std::equal(web_root_path.begin(),web_root_path.end(),authentic_path.begin())){
-            throw std::invalid_argument("request uri must be in web root path");
-        }
-        if(std::filesystem::is_directory(authentic_path))
-            authentic_path/=default_web_page;
-
-        if(!std::filesystem::exists(authentic_path))
-            throw std::runtime_error("file not found");
-
-    }catch (std::exception &e) {
-         LOG_INFO<<"cannot serve file: "<<req.uri()<<" exception:"<<e.what()<<" with authentic path="<<authentic_path;
-         resp.send_status(HttpStatusCode::NOT_FOUND);
-         return;
-    }
-
-    if(!resp.send_file_direct(req.get_conn(),authentic_path)){ //WebRootPath+'/'+DefaultWebPage
-        LOG_WARN<<"send file direct failed "<<errno<<' '<<strerror(errno);
-        req.close_connection();
-        return;
-        //TODO 是否应该让request_handler 返回 bool
-    }
-}
-
 void HttpRouter::set_responder_route(const Route &route,const Responder responder)
 {
     if(responder){
@@ -100,6 +59,16 @@ void HttpRouter::set_body_filter_route(const HttpRouter::Route::RoutableURI uri,
     if(filter){
         _filters[uri].body_filter_list.emplace_back(std::move(filter));
     }
+}
+
+void HttpRouter::use_default_handler(HttpReqImpl &req, HttpRespImpl &resp) const
+{
+    this->_default_handler(req,resp);
+}
+
+void HttpRouter::set_default_responder(const Responder default_responder)
+{
+    this->_default_handler=default_responder;
 }
 
 } //namespace Rinx

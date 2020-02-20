@@ -107,16 +107,14 @@ std::vector<RxEventType> RxEventPoller::get_rx_event_types(const epoll_event &ep
     /// 2. if remote call shutdown(SHUT_RDWR), epoll will return EPOLLIN | EPOLLRDHUP | EPOLLHUP
     /// 3. if remote send RST, epoll will return EPOLLIN | EPOLLERR | EPOLLHUP
     /// 4. if remote only shutdown(SHUT_WR), epoll will return nothing
-    std::cout<<"get_rx_event_types"<<std::endl;
+
     if(evt&(EPOLLHUP|EPOLLERR|EPOLLRDHUP)){
        rx_event_types.emplace_back(Rx_EVENT_ERROR);
     }
     if(evt&EPOLLIN){
-        std::cout<<"read event"<<std::endl;
         rx_event_types.emplace_back(Rx_EVENT_READ);
     }
     if(evt&EPOLLOUT){
-        std::cout<<"write event"<<std::endl;
         rx_event_types.emplace_back(Rx_EVENT_WRITE);
     }
     return rx_event_types;

@@ -56,7 +56,10 @@ int RxEventLoop::start_event_loop()
 void RxEventLoop::stop_event_loop()
 {
     _is_running=false;
-    wake_up_loop();
+    usleep(100); //to see if loop has quited
+    if(_event_fd!=RxInvalidFD){
+        wake_up_loop();
+    }
 }
 
 

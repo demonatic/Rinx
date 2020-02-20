@@ -18,7 +18,7 @@ RxServer::~RxServer()
 void RxServer::stop()
 {
     if(_start){
-//        disable_accept();
+        disable_accept();
         _sub_eventloop_threads.stop();
         _main_eventloop.stop_event_loop();
         g_threadpool::get_instance()->stop();
@@ -160,7 +160,6 @@ bool RxServer::on_stream_readable(const RxEvent &event)
             return false;
 
         case RxReadRc::CLOSED:
-            std::cout<<"---------------------------remote closed----"<<std::endl;
             conn->close();
             return false;
     }
@@ -168,7 +167,6 @@ bool RxServer::on_stream_readable(const RxEvent &event)
 
 bool RxServer::on_stream_writable(const RxEvent &event)
 {
-    std::cout<<"@on stream writable"<<std::endl;
     RxConnection *conn=this->get_connection(event.Fd);
     if(!conn->sock_writable()){
         conn->set_sock_to_writable();
@@ -180,7 +178,6 @@ bool RxServer::on_stream_writable(const RxEvent &event)
 
 bool RxServer::on_stream_error(const RxEvent &event)
 {
-//    std::cout<<"@on_stream_error"<<std::endl;
     this->get_connection(event.Fd)->close();
     return false;
 }

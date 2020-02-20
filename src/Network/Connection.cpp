@@ -71,7 +71,6 @@ void RxConnection::close()
         _eventloop_belongs=nullptr;
         _proto_processor.reset();
         //must put close at the end, or it would cause race condition
-        std::cout<<"@RxConnection::close()"<<std::endl;
         if(!FDHelper::close(this->_rx_fd)){
             LOG_WARN<<"fd "<<_rx_fd.raw<<" close failed, errno "<<errno<<' '<<strerror(errno);
         }

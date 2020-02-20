@@ -7,7 +7,7 @@ namespace Rinx {
 
 ///Server
 constexpr size_t SignoMax=128;
-constexpr size_t IOWorkerNum=1;
+constexpr size_t IOWorkerNum=8;
 constexpr size_t ThreadPoolWorkerNum=8;
 constexpr size_t MaxConnectionNum=65535;
 
@@ -23,7 +23,7 @@ const std::string ServerName="Rinx";
 
 constexpr uint64_t ReadHeaderTimeout=5; //sec
 constexpr uint64_t ReadBodyTimeout=10; //sec
-constexpr uint64_t KeepAliveTimeout=30; //sec
+constexpr uint64_t KeepAliveTimeout=15; //sec
 
 } //namespace Rinx
 #endif // RINXDEFINES_H

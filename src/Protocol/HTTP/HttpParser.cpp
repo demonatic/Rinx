@@ -12,9 +12,12 @@ void StateRequestLine::consume(iterable_bytes iterable, void *request)
                     _sub_state=S_EXPECT_URI;
                 }
                 else{
+                    if(_stored_method.empty()){
+                        ctx.add_event(ParseEvent::StartRecvingHeader);
+                    }
                    _stored_method.push_back(c);
                 }
-                ctx.add_event(ParseEvent::StartRecvingHeader);
+
             }break;
 
             case S_EXPECT_URI:{

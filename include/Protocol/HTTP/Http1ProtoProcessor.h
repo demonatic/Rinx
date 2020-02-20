@@ -32,6 +32,8 @@ public:
 
     void prepare_for_next_req();
 
+    static void default_static_file_handler(HttpRequest &req,HttpResponse &resp);
+
 private:
     using SkippedRange=HttpParser::SkippedRange<RxChainBuffer::read_iterator>;
     void set_parser_callbacks();
@@ -40,29 +42,24 @@ private:
 
     void set_timeout(uint64_t sec){
         this->cancel_read_timer();
-        std::cout<<"set timeout "<<sec<<std::endl;
         _read_timer.start_timer(sec*1000,[this](){
-            printf("time out %ld",_read_timer.get_duration());
             RxConnection *conn=this->get_connection();
             conn->get_eventloop()->queue_work([=](){conn->close();}); //TODO run in loop
-            //TODO send timeout
         });
     }
 
     void cancel_read_timer(){
-        std::cout<<"cancel timer"<<std::endl;
         if(_read_timer.is_active()){
             _read_timer.stop();
         }
     }
 
-
 private:
+    bool _got_a_complete_req;
     HttpParser _request_parser;
-    long req_count=-1;
+
     const HttpRouter *_router;
 
-    bool _got_a_complete_req;
     HttpReqImpl _req;
     HttpRespImpl _resp;
 

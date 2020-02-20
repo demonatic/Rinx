@@ -20,10 +20,20 @@ HTTP_ROUTE_FUNC_DEFINE(OPTIONS)
 
 #undef HTTP_ROUTE_FUNC_DEFINE
 
+RxProtocolHttp1Factory::RxProtocolHttp1Factory()
+{
+    this->_router.set_default_responder(&RxProtoHttp1Processor::default_static_file_handler);
+}
+
 std::unique_ptr<RxProtoProcessor> RxProtocolHttp1Factory::new_proto_processor(RxConnection *conn)
 {
     std::unique_ptr<RxProtoProcessor> http1_processor=std::make_unique<RxProtoHttp1Processor>(conn,&_router);
     return http1_processor;
+}
+
+void RxProtocolHttp1Factory::default_handler(const Responder responder)
+{
+    this->_router.set_default_responder(responder);
 }
 
 RxProtocolHttp1Factory &RxProtocolHttp1Factory::head_filter(const HttpRouter::Route::RoutableURI &uri, const HeadFilter filter)

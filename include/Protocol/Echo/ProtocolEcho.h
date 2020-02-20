@@ -13,13 +13,11 @@ public:
     }
 
     virtual bool process_read_data(RxConnection *conn,RxChainBuffer &input_buf) override{
-        std::cout<<"process_read_data"<<std::endl;
         std::swap(input_buf,conn->get_output_buf());
         conn->send();
         return true;
     }
     virtual bool handle_write_prepared(RxConnection *conn,RxChainBuffer &output_buf) override{
-        std::cout<<"handle_write_prepared"<<std::endl;
         conn->send();
         return true;
     }

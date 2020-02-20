@@ -25,20 +25,21 @@ public:
             std::string _regex_expr;
         }uri;
     };
+
 public:
-    /// Setters
+    void set_default_responder(const Responder default_responder);
     void set_responder_route(const Route &route,const Responder responder);
+
     void set_head_filter_route(const Route::RoutableURI uri,const HeadFilter filter);
     void set_body_filter_route(const Route::RoutableURI uri,const BodyFilter filter);
 
 public:
-    /// Getters
     /// @return true if hit a responder
     bool route_to_responder(HttpReqImpl &req,HttpRespImpl &resp) const;
 
     void install_filters(HttpReqImpl &req,HttpRespImpl &resp) const;
 
-    void default_static_file_handler(HttpReqImpl &req,HttpRespImpl &resp) const;
+    void use_default_handler(HttpReqImpl &req,HttpRespImpl &resp) const;
 
 private:
     template<typename T> struct HandlerMap{
@@ -51,6 +52,7 @@ private:
         std::list<HeadFilter> head_filter_list;
         std::list<BodyFilter> body_filter_list;
     };
+    Responder _default_handler;
     std::array<HandlerMap<Responder>::type,MethodCount> _responders; //use after receive a complete request
     HandlerMap<FilterHBList>::type _filters; // use on output the response
 };

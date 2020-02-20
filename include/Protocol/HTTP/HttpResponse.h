@@ -61,6 +61,11 @@ struct HttpRespData{
             _filters.emplace_back(std::move(filter));
         }
 
+        void reset(){
+            _req=nullptr;
+            _filters.clear();
+        }
+
     private:
         HttpRequest *_req;
         std::list<Filter> _filters;
@@ -142,7 +147,7 @@ public:
     }
 
     void set_status(HttpRespData::Status status){
-        _data->status=status;
+        _data->status.store(status,std::memory_order_release);
     }
 
 private:
@@ -242,7 +247,6 @@ inline static constexpr auto ChunkBodyFilter=[](HttpRequest &,HttpResponseBody &
         body<<"\r\n";
     }
     else{
-        std::cout<<"end of chunk"<<std::endl;
         body<<"0\r\n\r\n"; //end of http body
     }
     next();

@@ -17,7 +17,7 @@ namespace Rinx {
 class RxProtocolHttp1Factory:public RxProtocolFactory
 {
 public:
-    RxProtocolHttp1Factory()=default;
+    RxProtocolHttp1Factory();
     virtual std::unique_ptr<RxProtoProcessor> new_proto_processor(RxConnection *conn) override;
 
 #define HTTP_ROUTE_FUNC_DECLARE(HttpMethod)\
@@ -32,6 +32,7 @@ public:
     HTTP_ROUTE_FUNC_DECLARE(OPTIONS);
 
 #undef HTTP_ROUTE_FUNC_DECLARE
+    void default_handler(const Responder responder);
 
     RxProtocolHttp1Factory& head_filter(const HttpRouter::Route::RoutableURI &uri,const HeadFilter filter);
     RxProtocolHttp1Factory& body_filter(const HttpRouter::Route::RoutableURI &uri,const BodyFilter filter);

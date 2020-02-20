@@ -59,7 +59,9 @@ ssize_t ChainBuffer::write_to_fd(RxFD fd,RxWriteRc &res)
     }
 
     ssize_t bytes=FDHelper::Stream::writev(fd,io_vecs,res);
-    this->commit_consume(bytes);
+    if(bytes>0){
+        this->commit_consume(bytes);
+    }
     return bytes;
 }
 

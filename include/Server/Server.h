@@ -23,7 +23,7 @@ public:
     template<typename ProtoFactory>
     bool listen(const std::string &address, uint16_t port,ProtoFactory factory)
     {
-        std::cout<<"try to listen on port "<<port<<std::endl;
+        LOG_INFO<<"binding on port "<<port;
         if(!_start){
             LOG_WARN<<"Fail to listen because server event loops init failed";
             return false;
@@ -67,7 +67,7 @@ private:
     bool init_eventloops();
 
 private:
-    bool _start;
+    std::atomic_bool _start;
 
     uint32_t _max_connection;
     uint16_t _max_once_accept_count;
