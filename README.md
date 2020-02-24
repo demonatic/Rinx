@@ -7,7 +7,7 @@ libRinx is a server-side HTTP library aims at equipping your program with HTTP s
 ## Implementation
 | 0x01                        | 0x02                                   | 0x03                                      | 0x04                                    |
 | --------------------------- | -------------------------------------- | ----------------------------------------- | --------------------------------------- |
-| [项目概览](./src/README.md) | [索引实现](./src/core/index/README.md) | [Schema实现](./src/core/schema/README.md) | [查询实现](./src/core/search/README.md) |
+| [项目概览](./include/README.md) | [索引实现](./src/core/index/README.md) | [Schema实现](./src/core/schema/README.md) | [查询实现](./src/core/search/README.md) |
 
 
 
@@ -47,7 +47,7 @@ We can use regex expression as route. Specifying a content_generator is also hel
     });
 ```
 
-Wrap your callback function with "MakeAsync", which would execute the callback in an internal thread pool. 
+Your handler by default runs in IO threads. If you want to do costly task, just wrapping your handler in "MakeAsync", which would execute the handler in an internal thread pool. 
 ```c++
  
     // solve sudoku in internal thread pool asynchronously
@@ -76,7 +76,7 @@ Wrap your callback function with "MakeAsync", which would execute the callback i
 
 ```
 
-
+Set default handler when no callback matches.
 ```c++
     http1.default_handler([](HttpRequest &req,HttpResponse &resp){
         resp.send_status(HttpStatusCode::FORBIDDEN);
@@ -85,9 +85,4 @@ Wrap your callback function with "MakeAsync", which would execute the callback i
 ```
 
 
-
-
-
-Brief: The server employs reactor pattern to register and dispatch io handlers. It has a main reactor mainly to accept client connections, using round robin to make client connections evenly distributed on several sub reactor threads. The reactor on the other hand supports timers using heap managemnt, as well as async task post using a global work steal thread pool singleton. The input and output buffer of each connection is a chain of fixed size chunk allocated by an object pool to increase flexibility and performance.
-  Each port of server is bound to a protocol processor factory. The factory will spawn a new protocol processor for each new incoming connection on this port. Since the protocol parse process is usually stateful, a hierarchy finite state machine is implemented to handle protocol parsing. 
 
