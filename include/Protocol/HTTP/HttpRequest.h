@@ -3,6 +3,7 @@
 
 #include <string>
 #include <optional>
+#include <regex>
 #include "HttpDefines.h"
 #include "Network/Connection.h"
 
@@ -17,9 +18,12 @@ struct HttpReqData{
     std::string _uri;
     HttpVersion _version;
 
+    std::smatch _uri_matches;
+
     HttpHeaderFields _headers;
     HttpRequestBody _body;
 
+    bool _conn_mark_closed=false;
     RxConnection *_conn_belongs;
 };
 
@@ -67,7 +71,7 @@ class HttpRequest
 {
     friend detail::HttpReqInternal;
 public:
-    HttpRequest(detail::HttpReqData *data):_data(data),_conn_mark_closed(false){}
+    HttpRequest(detail::HttpReqData *data):_data(data){}
 
     HttpMethod method() const{
         return _data->_method;
@@ -75,10 +79,6 @@ public:
 
     const std::string& uri() const{
         return _data->_uri;
-    }
-
-    std::string_view uri_view() const{
-        return std::string_view(_data->_uri);
     }
 
     HttpVersion version() const{
@@ -98,14 +98,15 @@ public:
     }
 
     void close_connection(){
-        this->_conn_mark_closed=true;
+        this->_data->_conn_mark_closed=true;
     }
 
     void debug_print_header();
     void debug_print_body();
 
+public:
+    std::smatch matches;
 private:
-    bool _conn_mark_closed;
     detail::HttpReqData *_data;
 };
 

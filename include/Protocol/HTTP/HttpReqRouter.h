@@ -46,7 +46,7 @@ private:
         using type=std::map<Route::RoutableURI,T>;
     };
     template<typename T>
-    const static T* route(const typename HandlerMap<T>::type &map,const detail::HttpReqImpl &req);
+    const static T* route(const typename HandlerMap<T>::type &map,detail::HttpReqImpl &req);
 
     struct FilterHBList{
         std::list<HeadFilter> head_filter_list;

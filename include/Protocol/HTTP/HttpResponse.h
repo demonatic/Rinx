@@ -79,7 +79,7 @@ struct HttpRespData{
         using BufAllocator=std::function<uint8_t*(size_t length_expect)>;
 
         using ProvideDone=std::function<void()>;
-        using ProvideAction=std::function<void(BufAllocator allocator,ProvideDone is_done)>;
+        using ProvideAction=std::function<void(ProvideDone is_done)>;
 
         void set_content_generator(ProvideAction provide_action);
 

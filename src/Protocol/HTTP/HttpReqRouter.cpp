@@ -3,12 +3,11 @@
 namespace Rinx {
 
 template<typename T>
-const T* HttpRouter::route(const typename HandlerMap<T>::type &map, const detail::HttpReqImpl &req)
+const T* HttpRouter::route(const typename HandlerMap<T>::type &map, detail::HttpReqImpl &req)
 {
     const T *t=nullptr;
     for(const auto &[regex,handler]:map){
-        std::smatch uri_match;
-        if(std::regex_match(req.uri(),uri_match,regex)){
+        if(std::regex_match(req.uri(),req.matches,regex)){
             t=&handler;
             break;
         }

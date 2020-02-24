@@ -111,16 +111,10 @@ bool detail::HttpRespInternal::flush(RxChainBuffer &output_buf)
 void detail::HttpRespData::ContentGenerator::try_generate_once(HttpResponseBody &body)
 {
     if(_resp_data->status==Status::Providing&&body.buf_slice_num()<OutputBufSliceThresh){
-        BufAllocator allocator=[&](size_t length_expect)->uint8_t*{
-            auto buf_ptr=BufferRaw::create<BufferMalloc>(length_expect);
-            BufferSlice slice(buf_ptr,0,buf_ptr->length());
-            body.append(slice);
-            return buf_ptr->data();
-        };
         ProvideDone done=[this](){
             this->set_resp_status(HttpRespData::Status::FinishWait);
         };
-        _provide_action(allocator,done);
+        _provide_action(done);
     }
 }
 

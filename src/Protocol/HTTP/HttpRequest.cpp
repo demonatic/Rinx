@@ -37,7 +37,7 @@ void detail::HttpReqInternal::clear()
 
 bool detail::HttpReqInternal::is_conn_mark_closed() const
 {
-    return static_cast<const HttpReqImpl*>(this)->_conn_mark_closed;
+    return _data->_conn_mark_closed;
 }
 
 } //namespace Rinx
