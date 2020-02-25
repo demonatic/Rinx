@@ -15,7 +15,7 @@ enum RxEventType:uint8_t{
     Rx_EVENT_WRITE,
     Rx_EVENT_ERROR,
 
-    __Rx_EVENT_TYPE_MAX
+    __Rx_EVENT_TYPE_COUNT
 };
 
 class RxEventLoop;
@@ -25,7 +25,7 @@ struct RxEvent{
     RxEventLoop *eventloop;
 };
 
-using EventHandler=std::function<bool(const RxEvent &event_data)>;
+using EventHandler=std::function<bool(const RxEvent &event)>;
 
 class RxEventPoller:public RxNoncopyable
 {

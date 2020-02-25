@@ -34,7 +34,7 @@ We can use regex expression as route. Specifying a content_generator is also hel
     std::string large_content="...";
     http1.GET(R"(/large/(\d+))",[&](HttpRequest &req,HttpResponse &resp){
         int times=stoi(req.matches[1]);
- 		//chunk-encoding automatically if doesn't specify content-length in header
+        //use chunk-encoding automatically if doesn't specify content-length in header
         resp.status_code(HttpStatusCode::OK);
         resp.content_generator([&,times](HttpResponse::ProvideDone done) mutable{
              if(times--){
@@ -47,14 +47,14 @@ We can use regex expression as route. Specifying a content_generator is also hel
     });
 ```
 
-Your handler by default runs in IO threads. If you want to do costly task, just wrapping your handler in "MakeAsync", which would execute the handler in an internal thread pool. 
+The handler by default runs in IO threads. If you want to do costly task, just wrapping the handler in "MakeAsync", which would execute your handler in an internal thread pool. 
 ```c++
  
     // solve sudoku in internal thread pool asynchronously
     http1.POST("/sudoku",MakeAsync([](HttpRequest &req,HttpResponse &resp){
 		// note:this function is called from a thread in thread pool
         vector<vector<char>> board(9,vector<char>(9,'\0'));
-		int count=0;
+        int count=0;
         //request body provides an iterator
         for(auto it=req.body().begin();it!=req.body().end();++it){
             board[count/9][count%9]=*it;

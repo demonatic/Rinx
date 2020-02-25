@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "Noncopyable.h"
-
+#include "Util.h"
 namespace Rinx {
 
 template<typename T>
@@ -20,7 +20,7 @@ public:
     }
 
     static T* get_instance(){
-        if(!_instance){
+        if(unlikely(!_instance)){
             throw std::runtime_error("Singeleton must be instantiated before use");
         }
         return _instance;

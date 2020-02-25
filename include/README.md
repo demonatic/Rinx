@@ -1,0 +1,14 @@
+# 项目概览
+
+Rinx整体运行在一个main eventloop和多个sub eventloop，以及一个线程池之上，绝大多数任务都由它们直接或间接调度，它们的主要作用分别如下:
+
+* main eventloop：主要用于服务器listen端口，accept客户端连接,以及异步信号处理。在接收到客户端连接后以round robin轮询的方式将client fd分配给不同的sub eventloop进行处理，一个客户端连接的所有IO只会固定在一个sub eventloop上进行。
+* sub eventloop：处理所有main eventloop分配给它的客户端连接上的IO事件、定时器任务、内部队列中的异步任务，并且可以根据需要将上层的IO callback绑定一个finish callback后投入线程池运行。
+* 线程池：不断处理其任务队列中存在的任务，如果没有任务则阻塞。队列中的任务可能包含finish callback，执行这样的任务时会把finish callback投递回eventloop中的任务队列中。
+
+![]([https://github.com/demonatic/Image-Hosting/blob/master/Rinx/Rinx%20Architecture.png](https://github.com/demonatic/Image-Hosting/blob/master/Rinx/Rinx Architecture.png))
+
+Rinx使用上述组件构建了一个通用的TcpServer，Server类维护了一个固定大小的Connection列表来让所有sub eventloop共同使用，即用client fd号作为下标获取Connection对象，由于一个客户端连接只由一个sub eventloop管理因此列表无需互斥。
+
+TcpServer与上层协议交互使用ProtocolProcessor接口，任何上层协议都需要实现process_read_data和handle_write_prepared接口，以此来处理读入input buffer中的数据，以及output buffer中的数据可再次写的情况。ProtocolProcessor由ProtocolFactory生成，Server维护了server fd到ProtocolFactory的映射；当某个监听端口有新的连接到来时，Server会查找相应的ProtocolFactory来生成一个新的ProtocolProcessor处理这个客户端连接上层协议，如HTTP。
+
