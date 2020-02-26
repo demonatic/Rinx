@@ -131,7 +131,7 @@ TEST(RxHttpTest,API_TST){
     });
 
     RxServer server;
-    uint16_t port=8080;
+    uint16_t port=8886;
 
     const int test_client_count=30;
     std::atomic_int finish_count=0;
@@ -158,8 +158,8 @@ TEST(RxHttpTest,API_TST){
 
 
 void test_client(uint16_t port,std::atomic_int &finish_count){
-    sleep(1);
-    size_t test_req_num=10000;
+    sleep(2);
+    size_t test_req_num=50;
     const char *serv_addr="127.0.0.1";
     constexpr int BUFSIZE=1024;
 
@@ -252,7 +252,7 @@ void test_client(uint16_t port,std::atomic_int &finish_count){
             memcpy(sendbuff,req,req_len);
 
             int n_send=send(sockfd, sendbuff, req_len, 0);
-//            printf("client send %d\n",n_send);
+            printf("client send %d\n",n_send);
 
             int read_total=0;
             int read_res=0;

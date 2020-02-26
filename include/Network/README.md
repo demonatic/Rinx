@@ -144,7 +144,7 @@ int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)
   }
   ```
   
-  EventLoop在分派完IO事件后即取得所有投递进来的DeferCallback依次执行。通过std::swap来在O(1)时间内执行完临界区，减小锁等待时间，尽量让线程在mutex spin期间即获得锁。
+  EventLoop在分派完IO事件后即取得所有投递进来的DeferCallback依次执行。通过std::swap来在O(1)时间内执行完临界区，减小锁等待时间，尽量让线程在mutex处于spin期间即获得锁。
   
   ```c++
   void RxEventLoop::run_defers()
@@ -305,7 +305,7 @@ int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)
 
   SignalManager开辟了一个数组来存储用户注册的信号，其中每个元素都包含signal号和handler，使用POSIX标准定义的sigaction调用将安装的signal号和信号处理程序。由于Linux信号处理程序与主程序并发运行，共享同样的全局变量，因此有可能会与主程序和其他处理程序互相干扰；当主程序因为某些原因如系统调用等进入内核，内核在中断处理完准备返回用户态之前会检查进程是否有信号抵达，如果有用户自定义的sighandler会进入用户态执行该sighandler，它与main函数属于两个独立的控制流，分别使用不同的堆栈空间；sighandler返回时再次进入内核态，此时如果没有新的信号要抵达则回到主程序的控制流中执行下一条指令。其过程如下图所示：
   
-  ![](https://github.com/demonatic/Image-Hosting/tree/master/Rinx/Linux_Signal.png)
+  ![](https://github.com/demonatic/Image-Hosting/blob/master/Rinx/Linux_Signal.png)
   
   因此我们的信号处理程序要足够简单其在里面只能调用异步信号安全的函数，我们可以只在处理函数内部把发生的signo号赋值给volatile sig_atomic_t类型的类静态成员\_signo。之所以使用volatile是因为信号处理程序更新\_signo，主程序周期性地读\_signo，编译器优化后可能认为主程序中的\_signo值从来没有变化过，因此使用缓存在寄存器中的副本来满足每次对它的引用，如果这样主程序可能永远无法看到信号处理程序更新后的值；使用volatile强迫编译器每次都从内存中读取它的值。使用sig_atomic_t保证对它的读和写是原子的。
   
@@ -316,8 +316,8 @@ int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)
   void RxSignalManager::check_and_handle_async_signal() 
   {
       if(_signo){
-          _signo=0;
           trigger_signal(_signo);
+          _signo=0;
       }
   }
   

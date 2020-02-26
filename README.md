@@ -52,7 +52,7 @@ The handler by default runs in IO threads. If you want to do costly task, just w
  
     // solve sudoku in internal thread pool asynchronously
     http1.POST("/sudoku",MakeAsync([](HttpRequest &req,HttpResponse &resp){
-		// note:this function is called from a thread in thread pool
+        // note:this function is called from a thread in thread pool
         vector<vector<char>> board(9,vector<char>(9,'\0'));
         int count=0;
         //request body provides an iterator
@@ -76,7 +76,7 @@ The handler by default runs in IO threads. If you want to do costly task, just w
 
 ```
 
-Set default handler when no callback matches.
+Set default handler when no route matches.
 ```c++
     http1.default_handler([](HttpRequest &req,HttpResponse &resp){
         resp.send_status(HttpStatusCode::FORBIDDEN);
@@ -86,6 +86,11 @@ Set default handler when no callback matches.
 
 
 
-* #### Reference
+##  Reference
+
+[Reactor模式详解](https://www.cnblogs.com/winner-0715/p/8733787.html"Title") 
+
+[An Introduction to libuv](http://nikhilm.github.io/uvbook/"Title") 
 
 [Linux信号处理机制——信号捕捉](https://blog.csdn.net/ypt523/article/details/80365108"Title") 
+

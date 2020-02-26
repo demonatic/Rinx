@@ -62,6 +62,7 @@ public:
     }
 
     void stop();
+    bool is_running() const;
 
     void set_log_dir(const std::string &log_dir);
 

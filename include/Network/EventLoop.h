@@ -25,7 +25,7 @@ using g_threadpool=RxSingeleton<RxThreadPool>;
 ///     3.Event handler: interface to handle events
 ///     4.Timers management
 ///     5.async task post
-class RxEventLoop
+class RxEventLoop:RxNoncopyable
 {
 public:
     using LoopCallback=std::function<void(RxEventLoop*)>;
@@ -33,6 +33,7 @@ public:
 
 public:
     RxEventLoop(uint8_t id);
+    ~RxEventLoop();
 
     uint8_t get_id() const noexcept;
     RxTimerHeap& get_timer_heap() noexcept;
@@ -96,11 +97,10 @@ private:
     void on_finish();
     int get_poll_timeout();
 
-    void quit();
-
 private:
     uint8_t _id;
     std::atomic_bool _is_running;
+    std::atomic_bool _stopped;
 
     LoopCallback _on_loop_finish;
 

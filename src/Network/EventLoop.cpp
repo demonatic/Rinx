@@ -11,6 +11,12 @@ RxEventLoop::RxEventLoop(uint8_t id):_id(id),_is_running(false),_handler_table{}
 
 }
 
+RxEventLoop::~RxEventLoop()
+{
+    FDHelper::close(_event_fd);
+    _event_poller.destroy();
+}
+
 bool RxEventLoop::init()
 {
     if(!_event_poller.create(512)){
@@ -49,17 +55,14 @@ int RxEventLoop::start_event_loop()
         run_defers();
         on_finish();
     }
-    quit();
     return 0;
 }
 
 void RxEventLoop::stop_event_loop()
 {
+    LOG_INFO<<"Stopping EventLoop..."<<get_id();
     _is_running=false;
-    usleep(100); //to see if loop has quited
-    if(_event_fd!=RxInvalidFD){
-        wake_up_loop();
-    }
+    wake_up_loop();
 }
 
 
@@ -83,13 +86,6 @@ int RxEventLoop::get_poll_timeout()
 {
     uint64_t timeout=_timer_heap.get_timeout_interval();
     return timeout!=0?static_cast<int>(timeout):-1;
-}
-
-void RxEventLoop::quit()
-{
-    FDHelper::close(_event_fd);
-    _event_poller.destroy();
-    LOG_INFO<<"QUIT EventLoop "<<get_id();
 }
 
 int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)

@@ -25,6 +25,12 @@ void RxServer::stop()
         g_threadpool::get_instance()->stop();
         _start=false;
     }
+    LOG_INFO<<"Server stopped";
+}
+
+bool RxServer::is_running() const
+{
+    return this->_start;
 }
 
 void RxServer::set_log_dir(const std::string &log_dir)
