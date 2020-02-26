@@ -30,7 +30,7 @@ int RxEventLoop::start_event_loop()
 
 EventLoop使用了常见的Reactor反应器模式来实现事件分发，平时常见的开源项目如Redis也使用了该模式。
 
-​	![](https://github.com/demonatic/Image-Hosting/tree/master/Rinx/Reactor.jpg)
+​	![](https://github.com/demonatic/Image-Hosting/blob/master/Rinx/Reactor.jpg)
 
 ​	Reactor核心为synchronous Event Demultiplexer同步事件多路分解器，主要依靠操作系统提供的系统调用，如select/epoll等，它允许使用一个线程来检查多个文件描述符fd（Socket等）的就绪状态（IO多路复用），例如是否可读可写，如果至少有一个fd就绪则返回。获得了事件后需要调用相应事件的回调函数进行分发，因此还需要提供一个接口让外部能够注册特定事件的处理逻辑。
 
@@ -224,7 +224,7 @@ int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)
           RxTimer *timer;
       };
   
-  	TimerID _next_timer_id;
+      TimerID _next_timer_id;
       std::vector<heap_entry> _timer_heap;
       std::unordered_map<TimerID,RxTimer *> _timer_id_map;
   }；
@@ -262,5 +262,8 @@ int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)
   }
   ```
   
-  之所以要使用hash表，是因为某个定时器可能没到超时时间即被用户取消了，因此要根据需要取消的TimerID查找hash表获得Timer对象，得到对象内部的heap_index，根据heap_index从堆中删除该元素。需要注意的是删除堆中任意下标的元素时，将末尾元素与被删除元素交换并让数组大小减一后，为了维持小顶堆的性质，需要让换上来的元素和父节点比较，如果没有父节点或者值比父节点小，则需要往下筛堆，否则往上筛堆。
+  之所以要使用hash表，是因为某个定时器可能没到超时时间即被用户取消了，因此要根据需要取消的TimerID查找hash表获得Timer对象，得到对象内部的heap_index，根据heap_index从堆中删除该下标处的元素。需要注意的是删除堆中任意下标的元素时，将末尾元素与被删除元素交换并让数组大小减一后，为了维持小顶堆的性质，需要让换上来的元素和父节点比较，如果没有父节点或者值比父节点小，则需要往下筛堆，否则往上筛堆。
 
+* #### 信号处理
+
+  网络编程中通常需要处理一些信号，如TCP通信中当通信双方的一方close连接时，若另一方接着发数据，会收到一个RST报文，若此时再发送数据时系统会发出一个SIGPIPE信号给进程，如果进程不处理该信号默认会导致进程结束。对于服务器来说我们不希望因为写操作导致异常退出，我们可以统一设置一个SignalManager来管理所有信号。

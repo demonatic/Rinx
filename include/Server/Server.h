@@ -14,7 +14,7 @@
 
 namespace Rinx {
 
-class RxServer
+class RxServer:RxNoncopyable
 {
 public:
     RxServer();
@@ -23,27 +23,41 @@ public:
     template<typename ProtoFactory>
     bool listen(const std::string &address, uint16_t port,ProtoFactory factory)
     {
-        LOG_INFO<<"binding on port "<<port;
-        if(!_start){
-            LOG_WARN<<"Fail to listen because server event loops init failed";
-            return false;
-        }
+        LOG_INFO<<"try binding on port "<<port;
         try {
-            RxListener listener(port);
-            listener.bind(address,port);
-            listener.listen();
-            _listen_ports.emplace_back(std::make_pair(listener,std::make_unique<ProtoFactory>(std::move(factory))));
+            RxSignalManager::disable_current_thread_signal();
 
-            enable_accept();
+            if(!init_eventloops()){
+                throw std::runtime_error("fail to init eventloops");
+            }
+            this->add_additional_protocol(address,port,factory);
+            for(auto &[listener,proto_factory]:this->_listen_ports){
+                listener.bind();
+                listener.listen();
+            }
+
+            if(!_sub_eventloop_threads.start()){
+                throw std::runtime_error("Fail to start worker eventloops");
+            }
+
+            signal_setup();
             RxSignalManager::enable_current_thread_signal();
 
-            _main_eventloop.start_event_loop();
+            _start=true;
+            enable_accept();
+            _main_eventloop.start_event_loop(); //block here
 
         }  catch (std::runtime_error &err){
-            LOG_WARN<<"fail to start server, "<<err.what();
+            LOG_CRIT<<"Fail to start server, reason: \""<<err.what()<<"\"";
             return false;
         }
         return true;
+    }
+
+    template<typename ProtoFactory>
+    void add_additional_protocol(const std::string &address,const uint16_t port, ProtoFactory &factory){
+        RxListener listener(port,address);
+        _listen_ports.emplace_back(std::make_pair(listener,std::make_unique<ProtoFactory>(std::move(factory))));
     }
 
     void stop();

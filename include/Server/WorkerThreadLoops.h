@@ -21,6 +21,9 @@ class RxWorkerThreadLoops
 {
 public:
     RxWorkerThreadLoops(size_t num);
+
+    bool init();
+
     bool start();
     void stop();
 

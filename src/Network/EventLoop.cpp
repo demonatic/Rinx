@@ -42,12 +42,12 @@ int RxEventLoop::start_event_loop()
     LOG_INFO<<"START EventLoop "<<get_id();
 
     while(_is_running){
-        do_prepare();
         check_timers();
-
         auto timeout=get_poll_timeout();
+
         poll_and_dispatch_io(timeout);
         run_defers();
+        do_prepare();
     }
     quit();
     return 0;

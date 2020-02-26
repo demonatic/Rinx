@@ -7,7 +7,7 @@ namespace Rinx {
 RxServer::RxServer():_start(false),_max_connection(MaxConnectionNum),_max_once_accept_count(128),
     _main_eventloop(0),_sub_eventloop_threads(IOWorkerNum),_connection_list(_max_connection)
 {
-   _start=this->init_eventloops();
+
 }
 
 RxServer::~RxServer()
@@ -17,6 +17,7 @@ RxServer::~RxServer()
 
 void RxServer::stop()
 {
+    LOG_INFO<<"Stopping server...";
     if(_start){
         disable_accept();
         _sub_eventloop_threads.stop();
@@ -29,7 +30,7 @@ void RxServer::stop()
 void RxServer::enable_accept()
 {
     for(const auto &[listener,proto_factory]:_listen_ports){
-        _main_eventloop.monitor_fd(listener.serv_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR});
+        _main_eventloop.monitor_fd(listener.serv_fd,{Rx_EVENT_READ});
         LOG_INFO<<"server enable listen on port "<<listener.port;
     }
 }
@@ -54,30 +55,27 @@ RxConnection *RxServer::get_connection(const RxFD fd)
 
 bool RxServer::init_eventloops()
 {
-    RxSignalManager::disable_current_thread_signal();
-    signal_setup();
     g_threadpool::instantiate(ThreadPoolWorkerNum);
 
-    if(!_main_eventloop.init()){
-        LOG_WARN<<"Fail to start main eventloop";
+    if(!_main_eventloop.init()||!_sub_eventloop_threads.init()){
+        LOG_WARN<<"Fail to init eventloops";
         return false;
     }
     _main_eventloop.set_event_handler(FD_LISTEN,Rx_EVENT_READ,std::bind(&RxServer::on_acceptable,this,std::placeholders::_1));
 
-    _sub_eventloop_threads.for_each([this](RxThreadID,RxEventLoop *eventloop){
-        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_READ,std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
-        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_ERROR,std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
-        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_WRITE,std::bind(&RxServer::on_stream_writable,this,std::placeholders::_1));
-    });
-    if(!_sub_eventloop_threads.start()){
-        LOG_WARN<<"Fail to start sub eventloops";
-        return false;
-    }
-
     /// only let the main eventloop thread handle signal asynchronously
     /// and let other threads block all signals
-    _main_eventloop.set_loop_prepare([](RxEventLoop *){
+    _main_eventloop.set_loop_finish([](RxEventLoop *){
         RxSignalManager::check_and_handle_async_signal();
+    });
+
+    _sub_eventloop_threads.for_each([this](RxThreadID,RxEventLoop *eventloop){
+        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_READ,
+            std::bind(&RxServer::on_stream_readable,this,std::placeholders::_1));
+        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_ERROR,
+            std::bind(&RxServer::on_stream_error,this,std::placeholders::_1));
+        eventloop->set_event_handler(FD_CLIENT_STREAM,Rx_EVENT_WRITE,
+            std::bind(&RxServer::on_stream_writable,this,std::placeholders::_1));
     });
     return true;
 }
@@ -167,18 +165,19 @@ bool RxServer::on_stream_readable(const RxEvent &event)
 
 bool RxServer::on_stream_writable(const RxEvent &event)
 {
+    bool ok=true;
     RxConnection *conn=this->get_connection(event.Fd);
     if(!conn->sock_writable()){
         conn->set_sock_to_writable();
         RxChainBuffer &outputbuf=conn->get_output_buf();
-        return conn->get_proto_processor().handle_write_prepared(conn,outputbuf);
+        ok=conn->get_proto_processor().handle_write_prepared(conn,outputbuf);
     }
-    return true;
+    return ok;
 }
 
 bool RxServer::on_stream_error(const RxEvent &event)
 {
-    this->get_connection(event.Fd)->close();
+    this->get_connection(event.Fd)->close(); //TODO let protocol handle it
     return false;
 }
 

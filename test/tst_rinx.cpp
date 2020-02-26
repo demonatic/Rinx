@@ -40,7 +40,6 @@ public:
 };
 
 TEST(RxHttpTest,API_TST){
-    RxSignalManager::disable_current_thread_signal();
     nanolog::initialize(nanolog::GuaranteedLogger(),"/tmp/","rinx_log",1000);
 
     using ProvideDone=HttpResponse::ProvideDone;
@@ -134,7 +133,7 @@ TEST(RxHttpTest,API_TST){
     });
 
     RxServer server;
-    uint16_t port=8887;
+    uint16_t port=8080;
 
     const int test_client_count=30;
     std::atomic_int finish_count=0;
@@ -162,7 +161,7 @@ TEST(RxHttpTest,API_TST){
 
 void test_client(uint16_t port,std::atomic_int &finish_count){
     sleep(1);
-    size_t test_req_num=10;
+    size_t test_req_num=1000;
     const char *serv_addr="127.0.0.1";
     constexpr int BUFSIZE=1024;
 
@@ -262,12 +261,13 @@ void test_client(uint16_t port,std::atomic_int &finish_count){
             std::string data;
             do{
                 read_res=recv(sockfd, recvbuff, sizeof(recvbuff), 0);
-                printf("client read %d\n",read_res);
+
                 if(read_res>0){
                     read_total+=read_res;
                     string content(recvbuff,recvbuff+read_res);
                     data+=content;
                 }
+                printf("client read %d  read total=%d \n",read_res,read_total);
                 memset(recvbuff, 0, sizeof(recvbuff));
             }while(read_total<response_len_expect[choice_num]);
 
@@ -299,6 +299,7 @@ void test_client(uint16_t port,std::atomic_int &finish_count){
                 }
             }
             memset(sendbuff, 0, sizeof(sendbuff));
+            printf("test round left=%d\n",test_req_num);
     }
     close(sockfd);
     finish_count++;

@@ -162,7 +162,6 @@ private:
 class HttpResponse{
 public:
     using ContentGenerator=detail::HttpRespData::ContentGenerator;
-    using BufAllocator=ContentGenerator::BufAllocator;
     using ProvideDone=ContentGenerator::ProvideDone;
 
 public:

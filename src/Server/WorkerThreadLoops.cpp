@@ -4,11 +4,21 @@ namespace Rinx {
 
 RxWorkerThreadLoops::RxWorkerThreadLoops(size_t num):_eventloop_threads(num)
 {
-    for(size_t i=0;i<_eventloop_threads.size();i++){
-        RxEventLoopThread &eventloop_thd=_eventloop_threads[i];
-        eventloop_thd.eventloop=std::make_unique<RxEventLoop>(i+1);
-        eventloop_thd.eventloop->init();
+
+}
+
+bool RxWorkerThreadLoops::init()
+{
+    bool init_ok=true;
+    size_t loop_id=0;
+    for(RxEventLoopThread &loop_thread:_eventloop_threads){
+        loop_thread.eventloop=std::make_unique<RxEventLoop>(++loop_id);
+        if(!loop_thread.eventloop->init()){
+            init_ok=false;
+            break;
+        }
     }
+    return init_ok;
 }
 
 bool RxWorkerThreadLoops::start()

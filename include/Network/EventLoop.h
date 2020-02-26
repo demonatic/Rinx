@@ -57,8 +57,8 @@ public:
     /// which will be executed after io handlers being dispatched
     void queue_work(DeferCallback cb);
 
-    /// @brief set the function being called
-    void set_loop_prepare(LoopCallback loop_prepare_cb) noexcept;
+    /// @brief set the callback each time a loop round finished
+    void set_loop_finish(LoopCallback loop_finish_cb) noexcept;
 
     /// @brief post the task_func into a thread pool with task paramater ...task_args
     /// upon thread pool finish execution, queue the finish_cb which accept the execution result of task as a parameter
@@ -93,7 +93,7 @@ private:
     int poll_and_dispatch_io(int timeout_millsec);
     int check_timers();
     void run_defers();
-    void do_prepare();
+    void on_finish();
     int get_poll_timeout();
 
     void quit();
@@ -102,11 +102,11 @@ private:
     uint8_t _id;
     std::atomic_bool _is_running;
 
-    LoopCallback _on_loop_prepare;
+    LoopCallback _on_loop_finish;
 
     RxEventPoller _event_poller;
     LoopCallback _on_timeout;
-    EventHandler _handler_table[RxEventType::__Rx_EVENT_TYPE_MAX][RxFDType::__RxFD_TYPE_COUNT];
+    EventHandler _handler_table[RxEventType::__Rx_EVENT_TYPE_COUNT][RxFDType::__RxFD_TYPE_COUNT];
 
     RxFD _event_fd;
 

@@ -6,7 +6,7 @@ Rinx整体运行在一个main eventloop和多个sub eventloop，以及一个线�
 * sub eventloop：处理所有main eventloop分配给它的客户端连接上的IO事件、定时器任务、内部队列中的异步任务，并且可以根据需要将上层的IO callback绑定一个finish callback后投入线程池运行。
 * 线程池：不断处理其任务队列中存在的任务，如果没有任务则阻塞。队列中的任务可能包含finish callback，执行这样的任务时会把finish callback投递回eventloop中的任务队列中。
 
-![]([https://github.com/demonatic/Image-Hosting/blob/master/Rinx/Rinx%20Architecture.png](https://github.com/demonatic/Image-Hosting/blob/master/Rinx/Rinx Architecture.png))
+![](https://github.com/demonatic/Image-Hosting/blob/master/Rinx/Rinx Architecture.png)
 
 Rinx使用上述组件构建了一个通用的TcpServer，Server类维护了一个固定大小的Connection列表来让所有sub eventloop共同使用，即用client fd号作为下标获取Connection对象，由于一个客户端连接只由一个sub eventloop管理因此列表无需互斥。
 
