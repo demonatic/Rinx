@@ -27,6 +27,11 @@ void RxServer::stop()
     }
 }
 
+void RxServer::set_log_dir(const std::string &log_dir)
+{
+    this->_log_dir=log_dir;
+}
+
 void RxServer::enable_accept()
 {
     for(const auto &[listener,proto_factory]:_listen_ports){
@@ -109,6 +114,7 @@ bool RxServer::on_acceptable(const RxEvent &event)
         RxConnection *conn=this->get_connection(client_fd);
         if(!conn){
             LOG_WARN<<"Server connections reach maximum limit "<<_max_connection;
+            FDHelper::close(client_fd);
             return false;
         }
 

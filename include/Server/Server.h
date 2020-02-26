@@ -5,7 +5,6 @@
 #include <vector>
 #include <list>
 #include <string>
-#include <assert.h>
 #include "Network/Connection.h"
 #include "Network/EventLoop.h"
 #include "Network/Listener.h"
@@ -23,7 +22,9 @@ public:
     template<typename ProtoFactory>
     bool listen(const std::string &address, uint16_t port,ProtoFactory factory)
     {
+        nanolog::initialize(nanolog::GuaranteedLogger(),_log_dir.empty()?"/tmp/":_log_dir,"rinx_log",10);
         LOG_INFO<<"try binding on port "<<port;
+
         try {
             RxSignalManager::disable_current_thread_signal();
 
@@ -62,6 +63,8 @@ public:
 
     void stop();
 
+    void set_log_dir(const std::string &log_dir);
+
     void enable_accept();
     void disable_accept();
 
@@ -86,6 +89,8 @@ private:
     uint32_t _max_connection;
     uint16_t _max_once_accept_count;
     uint16_t _eventloop_num;
+
+    std::string _log_dir;
 
     RxEventLoop _main_eventloop;
     RxWorkerThreadLoops _sub_eventloop_threads;

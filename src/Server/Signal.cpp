@@ -38,8 +38,8 @@ bool RxSignalManager::enable_current_thread_signal()
 void RxSignalManager::check_and_handle_async_signal()
 {
     if(_signo){
-        trigger_signal(_signo);
         _signo=0;
+        trigger_signal(_signo);
     }
 }
 

@@ -33,6 +33,7 @@ private:
 
 private:
     static volatile sig_atomic_t _signo;
+    inline static constexpr size_t SignoMax=128;
     static RxSignal _signals[SignoMax];
 };
 

@@ -4,23 +4,23 @@
 
 EventLoop在事件循环中会进行如下处理：
 
-1.  在每次循环开始时执行do_prepare()处理注册进来的callback，main eventloop在此处进行异步信号处理。
 2. 检查管理的定时器，对所有发生超时的定时器调用expire callback。
 3. 计算EventPoller超时时间，避免因为无限期阻塞在event poller上而使定时器得不到执行。
 4. EventPoller阻塞等待IO事件发生，并调用一系列注册进来的IO callback进行IO事件分派；可被信号中断。
 5. 执行其他线程post到本线程EventLoop异步任务队列中的任务。
+5.  每轮时执行on_finish()处理注册进来的callback，main eventloop在此处会进行异步信号处理。
 
 ```c++
 int RxEventLoop::start_event_loop()
 {
     _is_running=true;
     while(_is_running){
-        do_prepare(); //每次循环开始时处理的任务
         check_timers(); //检查超时的定时器
-
         auto timeout=get_poll_timeout(); //计算event poller超时时间
+        
         poll_and_dispatch_io(timeout); //分派IO事件
         run_defers(); //执行异步队列中pending的任务
+        on_finish(); //每轮循环开始时处理的任务
     }
     quit();
     return 0;
@@ -266,4 +266,68 @@ int RxEventLoop::poll_and_dispatch_io(int timeout_millsec)
 
 * #### 信号处理
 
-  网络编程中通常需要处理一些信号，如TCP通信中当通信双方的一方close连接时，若另一方接着发数据，会收到一个RST报文，若此时再发送数据时系统会发出一个SIGPIPE信号给进程，如果进程不处理该信号默认会导致进程结束。对于服务器来说我们不希望因为写操作导致异常退出，我们可以统一设置一个SignalManager来管理所有信号。
+  网络编程中通常需要处理一些信号，例如TCP通信中当通信双方的一方close连接时，若另一方接着发数据，会收到一个RST报文，若此时再发送数据时系统会发出一个SIGPIPE信号给进程，如果进程不处理该信号默认会导致进程结束。对于服务器来说我们不希望因为写操作导致异常退出，我们可以统一设置一个SignalManager来管理所有信号:
+
+  ```c++
+  using RxSignalHandler=std::function<void(int)>;
+  struct RxSignal
+  {
+      bool setted=false;
+      int signal_no=0;
+      RxSignalHandler handler=nullptr;
+  };
+  
+  class RxSignalManager{
+  public:
+      //注册信号handler
+      void RxSignalManager::on_signal(int signo, RxSignalHandler handler){
+          _signals[signo].signal_no=signo;
+          _signals[signo].handler=handler;
+  
+          struct sigaction act,old_act;
+          act.sa_handler=(handler==nullptr)?SIG_IGN:&async_sig_handler;
+          sigemptyset(&act.sa_mask);
+          act.sa_flags=0;
+          if(sigaction(signo,&act,&old_act)>=0){
+              _signals[signo].setted=true;
+          }
+      }
+      //OS调用的sig_handler
+      void RxSignalManager::async_sig_handler(int signo){
+          RxSignalManager::_signo=signo;
+      }
+  private:
+      static volatile sig_atomic_t _signo;
+      inline static constexpr size_t SignoMax=128;
+      static RxSignal _signals[SignoMax];
+  }
+  ```
+
+  SignalManager开辟了一个数组来存储用户注册的信号，其中每个元素都包含signal号和handler，使用POSIX标准定义的sigaction调用将安装的signal号和信号处理程序。由于Linux信号处理程序与主程序并发运行，共享同样的全局变量，因此有可能会与主程序和其他处理程序互相干扰；当主程序因为某些原因如系统调用等进入内核，内核在中断处理完准备返回用户态之前会检查进程是否有信号抵达，如果有用户自定义的sighandler会进入用户态执行该sighandler，它与main函数属于两个独立的控制流，分别使用不同的堆栈空间；sighandler返回时再次进入内核态，此时如果没有新的信号要抵达则回到主程序的控制流中执行下一条指令。其过程如下图所示：
+  
+  ![](https://github.com/demonatic/Image-Hosting/tree/master/Rinx/Linux_Signal.png)
+  
+  因此我们的信号处理程序要足够简单其在里面只能调用异步信号安全的函数，我们可以只在处理函数内部把发生的signo号赋值给volatile sig_atomic_t类型的类静态成员\_signo。之所以使用volatile是因为信号处理程序更新\_signo，主程序周期性地读\_signo，编译器优化后可能认为主程序中的\_signo值从来没有变化过，因此使用缓存在寄存器中的副本来满足每次对它的引用，如果这样主程序可能永远无法看到信号处理程序更新后的值；使用volatile强迫编译器每次都从内存中读取它的值。使用sig_atomic_t保证对它的读和写是原子的。
+  
+  设置该静态变量后在主程序中需要周期性地检查它，如果发现它被设置了则查询signal数组中的RxSignal对象，调用用户实际的handler。由于sub eventloop的工作负荷通常比较重，我们把检查信号的任务交给main eventloop去做，main eventloop会在每轮循环结束时调用on_finish()，它会调用check_and_handle_async_signal去做实际的工作。
+  
+  ```c++
+  //由main eventloop在on_finish中调用
+  void RxSignalManager::check_and_handle_async_signal() 
+  {
+      if(_signo){
+          _signo=0;
+          trigger_signal(_signo);
+      }
+  }
+  
+  void RxSignalManager::trigger_signal(int signo)
+  {
+      if(_signals[signo].setted){
+         RxSignalHandler sig_handler=_signals[signo].handler;
+         if(sig_handler){
+             sig_handler(signo);
+         }
+      }
+  }
+  ```

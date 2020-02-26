@@ -1,7 +1,7 @@
 #include "Network/EventLoop.h"
 #include "Network/FD.h"
 #include "Util/Util.h"
-#include "3rd/NanoLog/NanoLog.h"
+#include "3rd/NanoLog/NanoLog.hpp"
 #include <string.h>
 
 namespace Rinx {
@@ -47,7 +47,7 @@ int RxEventLoop::start_event_loop()
 
         poll_and_dispatch_io(timeout);
         run_defers();
-        do_prepare();
+        on_finish();
     }
     quit();
     return 0;
@@ -177,15 +177,15 @@ void RxEventLoop::remove_event_handler(RxFDType fd_type, RxEventType event_type)
     _handler_table[event_type][fd_type]=nullptr;
 }
 
-void RxEventLoop::set_loop_prepare(RxEventLoop::LoopCallback loop_prepare_cb) noexcept
+void RxEventLoop::set_loop_finish(RxEventLoop::LoopCallback loop_finish_cb) noexcept
 {
-    _on_loop_prepare=loop_prepare_cb;
+    _on_loop_finish=loop_finish_cb;
 }
 
-void RxEventLoop::do_prepare()
+void RxEventLoop::on_finish()
 {
-    if(_on_loop_prepare){
-        _on_loop_prepare(this);
+    if(_on_loop_finish){
+        _on_loop_finish(this);
     }
 }
 

@@ -1,6 +1,6 @@
 #include "Util/Clock.h"
 #include "Util/Util.h"
-#include "3rd/NanoLog/NanoLog.h"
+#include "3rd/NanoLog/NanoLog.hpp"
 
 namespace Rinx {
 

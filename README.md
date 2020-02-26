@@ -7,7 +7,7 @@ libRinx is a server-side HTTP library aims at equipping your program with HTTP s
 ## Implementation
 | 0x01                        | 0x02                                   | 0x03                                      | 0x04                                    |
 | --------------------------- | -------------------------------------- | ----------------------------------------- | --------------------------------------- |
-| [项目概览](./include/README.md) | [索引实现](./src/core/index/README.md) | [Schema实现](./src/core/schema/README.md) | [查询实现](./src/core/search/README.md) |
+| [项目概览](./include/README.md) | [EventLoop实现](./include/network/README.md) | [Buffer实现](./include/network/README2.md) | [HTTP实现](./src/core/search/README.md) |
 
 
 
@@ -86,3 +86,6 @@ Set default handler when no callback matches.
 
 
 
+* #### Reference
+
+[Linux信号处理机制——信号捕捉](https://blog.csdn.net/ypt523/article/details/80365108"Title") 

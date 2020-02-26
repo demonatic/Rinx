@@ -40,8 +40,6 @@ public:
 };
 
 TEST(RxHttpTest,API_TST){
-    nanolog::initialize(nanolog::GuaranteedLogger(),"/tmp/","rinx_log",1000);
-
     using ProvideDone=HttpResponse::ProvideDone;
 
     RxProtocolHttp1Factory http1;
@@ -161,7 +159,7 @@ TEST(RxHttpTest,API_TST){
 
 void test_client(uint16_t port,std::atomic_int &finish_count){
     sleep(1);
-    size_t test_req_num=1000;
+    size_t test_req_num=10000;
     const char *serv_addr="127.0.0.1";
     constexpr int BUFSIZE=1024;
 

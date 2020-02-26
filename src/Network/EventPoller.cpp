@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include "Network/EventPoller.h"
 #include "Network/EventLoop.h"
-#include "3rd/NanoLog/NanoLog.h"
+#include "3rd/NanoLog/NanoLog.hpp"
 
 namespace Rinx {
 
