@@ -199,17 +199,17 @@ public:
         return *this<<str;
     }
 
-    template<typename Arg>
-    typename std::enable_if_t<
-        std::is_same_v<char *,std::decay_t<Arg>>||
-        std::is_same_v<const char *,std::decay_t<Arg>>, ChainBuffer&>
-    operator<<(const Arg arg){
-        size_t str_len=strlen(arg);
-        if(str_len!=0){
-           append(arg,str_len);
-        }
-        return *this;
-    }
+//    template<typename Arg>
+//    typename std::enable_if_t<
+//        std::is_same_v<char *,std::decay_t<Arg>>||
+//        std::is_same_v<const char *,std::decay_t<Arg>>, ChainBuffer&>
+//    operator<<(const Arg arg){
+//        size_t str_len=strlen(arg);
+//        if(str_len!=0){
+//           append(arg,str_len);
+//        }
+//        return *this;
+//    }
 
 private:
     void check_need_expand();

@@ -131,7 +131,7 @@ TEST(RxHttpTest,API_TST){
     });
 
     RxServer server;
-    uint16_t port=8886;
+    uint16_t port=8889;
 
     const int test_client_count=30;
     std::atomic_int finish_count=0;
@@ -159,7 +159,7 @@ TEST(RxHttpTest,API_TST){
 
 void test_client(uint16_t port,std::atomic_int &finish_count){
     sleep(2);
-    size_t test_req_num=50;
+    size_t test_req_num=500;
     const char *serv_addr="127.0.0.1";
     constexpr int BUFSIZE=1024;
 
@@ -246,7 +246,11 @@ void test_client(uint16_t port,std::atomic_int &finish_count){
     int response_len_expect[3]={972,4201544,240};
 
     while(test_req_num--){
-            int choice_num=rand()%3;//rand()%3;
+            int choice_num=rand()%2;//rand()%3;
+            if(choice_num==1&&rand()%10==0){ //limit the number of soduku
+                choice_num=2;
+            }
+
             const char *req=requests[choice_num];
             int req_len=strlen(req);
             memcpy(sendbuff,req,req_len);

@@ -4,12 +4,13 @@
 #include "Network/Buffer.h"
 #include "Network/EventLoop.h"
 #include "HFSMParser.hpp"
+#include "Util/Noncopyable.h"
 
 namespace Rinx {
 
 class RxConnection;
 
-class RxProtoProcessor
+class RxProtoProcessor:RxNoncopyable
 {
 public:
     RxProtoProcessor(RxConnection *conn):_conn_belongs(conn){}

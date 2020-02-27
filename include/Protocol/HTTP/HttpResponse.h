@@ -84,7 +84,7 @@ struct HttpRespData{
         void set_content_generator(ProvideAction provide_action);
 
         void set_resp_status(HttpRespData::Status status) noexcept{
-            this->_resp_data->status.store(status,std::memory_order_release);
+            this->_resp_data->status=status;
         }
 
         void try_generate_once(HttpResponseBody &body);
@@ -127,7 +127,7 @@ public:
     bool flush(RxChainBuffer &output_buf);
 
     bool has_block_operation(){
-        Status status=_data->status.load(std::memory_order_acquire);
+        Status status=_data->status;
         return status==HttpRespData::Status::ExecAsyncTask||status==HttpRespData::Status::Providing;
     }
 
@@ -136,7 +136,7 @@ public:
     }
 
     bool executing_async_task(){
-        Status status=_data->status.load(std::memory_order_acquire);
+        Status status=_data->status;
         return status==HttpRespData::Status::ExecAsyncTask;
     }
 
@@ -149,7 +149,7 @@ public:
     }
 
     void set_status(HttpRespData::Status status){
-        _data->status.store(status,std::memory_order_release);
+        _data->status=status;
     }
 
 private:

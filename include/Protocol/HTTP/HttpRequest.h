@@ -18,8 +18,6 @@ struct HttpReqData{
     std::string _uri;
     HttpVersion _version;
 
-    std::smatch _uri_matches;
-
     HttpHeaderFields _headers;
     HttpRequestBody _body;
 
