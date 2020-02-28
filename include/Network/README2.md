@@ -68,7 +68,7 @@
       // write all data in buffer to fd(socket,file...)
       ssize_t write_to_fd(RxFD fd,RxWriteRc &res);
       // provide iterator to iterator over the content
-  	read_iterator begin();
+      read_iterator begin();
       read_iterator end();
   private:
       std::deque<BufferSlice> _buf_slice_list;

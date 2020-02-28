@@ -69,7 +69,6 @@ public:
     virtual ~SuperState()=default;
     uint8_t get_id() const{return _id;}
 
-    /// @param length: length of the iterable_bytes
     virtual void consume(iterable_bytes iterable,void *request)=0;
     virtual void on_entry([[maybe_unused]] const std::any &context={}){}
     virtual void on_exit(){}
@@ -84,7 +83,7 @@ protected:
 /**
  *  @class The HFSMParser employs a hierarchy state machine to extract a request each time from a sequence designated by iterator
  */
-//TODO jump outof error
+
 template<typename... SuperStateTypes>
 class HFSMParser
 {
@@ -184,24 +183,23 @@ private:
         });
     }
 
-    /// @return false if there is error occur on event handler
     template<typename ...Args>
-    bool emit_event(const int event,Args &&...args){
+    void emit_event(const int event,Args &&...args){
         auto it=_event_map.find(event);
         if(it==_event_map.end())
-            return true;
+            return;
 
-        typedef std::function<bool(decltype(std::forward<Args>(args))...)> fun_type;
+        typedef std::function<void(decltype(std::forward<Args>(args))...)> fun_type;
         fun_type &f=*static_cast<fun_type*>(it->second.get());
 
-        return f(std::forward<Args>(args)...);
+        f(std::forward<Args>(args)...);
     }
 
 private:
     std::tuple<std::unique_ptr<SuperStateTypes>...> _super_states;
     SuperState *_curr_state; //always points to an item in _super_states
 
-    ///<event,std::function>
+    ///<event,function>
     std::map<int,std::shared_ptr<void>> _event_map;
 };
 

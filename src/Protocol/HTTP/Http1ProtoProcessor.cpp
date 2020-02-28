@@ -56,9 +56,9 @@ void RxProtoHttp1Processor::set_parser_callbacks()
     });
 
     /// callback when get http header on socket stream
-    _request_parser.on_event(HttpParse::HeaderReceived,[this](detail::HttpReqImpl *req){
+    _request_parser.on_event(HttpParse::HeaderReceived,[this](detail::HttpReqImpl *){
         this->set_timeout(ReadBodyTimeout); //actually we don't need to care about whether body exists
-        req->debug_print_header();
+//        req->debug_print_header();
     });
 
     /// callback when get part of http body on socket stream
