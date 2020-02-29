@@ -1,5 +1,5 @@
-#include "Server/Signal.h"
-#include "Network/EventLoop.h"
+#include "Rinx/Server/Signal.h"
+#include "Rinx/Network/EventLoop.h"
 
 namespace Rinx {
 

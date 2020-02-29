@@ -1,6 +1,7 @@
-#include "Network/TimerHeap.h"
+#include "Rinx/Network/TimerHeap.h"
 #include <iostream>
-
+#include <assert.h>
+#include <thread>
 namespace Rinx {
 
 RxTimerHeap::RxTimerHeap():_next_timer_id(0)
@@ -10,15 +11,17 @@ RxTimerHeap::RxTimerHeap():_next_timer_id(0)
 
 TimerID RxTimerHeap::add_timer(uint64_t expiry_time,RxTimer *timer)
 {
-    timer->_heap_index=_timer_heap.size();
-    heap_entry entry{expiry_time,timer};
-
-    _timer_heap.push_back(entry);
-    this->heap_sift_up(timer->_heap_index);
-
-    timer->set_active(true);
     size_t id=_next_timer_id++;
     _timer_id_map[id]=timer;
+
+    timer->_heap_index=_timer_heap.size();
+    timer->_id=id;
+
+    heap_entry entry{expiry_time,timer};
+    _timer_heap.emplace_back(entry);
+
+    this->heap_sift_up(timer->_heap_index);
+
     return id;
 }
 
@@ -29,28 +32,27 @@ void RxTimerHeap::remove_timer(TimerID id)
         return;
     }
     RxTimer *target_timer=it->second;
+     _timer_id_map.erase(it);
     remove_timer(target_timer);
-    _timer_id_map.erase(it);
+
 }
 
 void RxTimerHeap::remove_timer(RxTimer *timer)
 {
-    timer->set_active(false);
     size_t timer_index=timer->_heap_index;
 
     if(timer_index==get_timer_num()){
-        timer->_heap_index=std::numeric_limits<size_t>::max();
         _timer_heap.pop_back();
     }
     else{
-        swap_heap_entry(_timer_heap[timer_index],_timer_heap[_timer_heap.size()-1]);
+        swap_heap_entry(_timer_heap[timer_index],_timer_heap.back());
         _timer_heap.pop_back();
         if(timer_index>1&&_timer_heap[timer_index].expire_time<_timer_heap[timer_index/2].expire_time)
             heap_sift_up(timer_index);
         else
             heap_sift_down(timer_index);
     }
-
+    timer->_heap_index=std::numeric_limits<size_t>::max();
 }
 
 int RxTimerHeap::check_timer_expiry()
@@ -127,20 +129,29 @@ void RxTimerHeap::heap_sift_down(size_t index)
 
 void RxTimerHeap::pop_heap_top()
 {
+    TimerID removed_id=TimerIDMax;
     if(get_timer_num()==1){
+        removed_id=_timer_heap.back().timer->get_id();
        _timer_heap.pop_back();
     }
     else{
-        heap_entry &last_entry=_timer_heap[_timer_heap.size()-1];
+        removed_id=get_heap_top()->timer->get_id();
+        heap_entry &last_entry=_timer_heap.back();
         swap_heap_entry(*get_heap_top(),last_entry);
+
         _timer_heap.pop_back();
         heap_sift_down(1);
     }
+
+    assert(removed_id!=TimerIDMax);
+    _timer_id_map.erase(removed_id);
+
 }
 
 void RxTimerHeap::heap_sift_up(size_t index)
 {
-    while(index!=1){
+    assert(index<_timer_heap.size());
+    while(index>1){
         heap_entry &parent=_timer_heap[index/2];
         heap_entry &self=_timer_heap[index];
         if(self.expire_time>parent.expire_time){
@@ -158,8 +169,8 @@ RxTimerHeap::heap_entry *RxTimerHeap::get_heap_top()
 
 void RxTimerHeap::swap_heap_entry(RxTimerHeap::heap_entry &entry_a, RxTimerHeap::heap_entry &entry_b)
 {
-    std::swap(entry_a.timer->_heap_index,entry_b.timer->_heap_index);
     std::swap(entry_a,entry_b);
+    std::swap(entry_a.timer->_heap_index,entry_b.timer->_heap_index);
 }
 
 } //namespace Rinx

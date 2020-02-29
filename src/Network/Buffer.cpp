@@ -1,5 +1,5 @@
-#include "Network/Buffer.h"
-#include "Util/Util.h"
+#include "Rinx/Network/Buffer.h"
+#include "Rinx/Util/Util.h"
 
 namespace Rinx {
 
@@ -228,7 +228,7 @@ size_t ChainBuffer::readable_size()
 
 bool ChainBuffer::empty()
 {
-    return this->readable_size()==0;
+    return this->_buf_slice_list.empty();
 }
 
 ChainBuffer::buf_slice_iterator ChainBuffer::slice_begin()

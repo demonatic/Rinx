@@ -1,4 +1,4 @@
-#include "Network/FD.h"
+#include "Rinx/Network/FD.h"
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <assert.h>
-#include "Util/Util.h"
+#include "Rinx/Util/Util.h"
 
 namespace Rinx {
 namespace FDHelper {

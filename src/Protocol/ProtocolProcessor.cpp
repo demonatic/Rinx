@@ -1,4 +1,5 @@
-#include "Protocol/ProtocolProcessor.h"
+#include "Rinx/Protocol/ProtocolProcessor.h"
+#include <assert.h>
 
 namespace Rinx {
 

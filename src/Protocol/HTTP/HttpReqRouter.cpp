@@ -1,4 +1,4 @@
-#include "Protocol/HTTP/HttpReqRouter.h"
+#include "Rinx/Protocol/HTTP/HttpReqRouter.h"
 
 namespace Rinx {
 
@@ -69,5 +69,22 @@ void HttpRouter::set_default_responder(const Responder default_responder)
 {
     this->_default_handler=default_responder;
 }
+
+void HttpRouter::set_www(const std::string &web_root_dir,const std::string &default_web_page)
+{
+    this->_www_dir=web_root_dir;
+    this->_default_web_page=default_web_page;
+}
+
+const std::string &HttpRouter::get_www_dir() const
+{
+    return this->_www_dir;
+}
+
+const std::string &HttpRouter::get_default_web_page() const
+{
+    return this->_default_web_page;
+}
+
 
 } //namespace Rinx

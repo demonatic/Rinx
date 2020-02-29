@@ -1,9 +1,9 @@
-#include "Network/Connection.h"
-#include "3rd/NanoLog/NanoLog.hpp"
+#include "Rinx/Network/Connection.h"
+#include "Rinx/3rd/NanoLog/NanoLog.hpp"
 #include <iostream>
 
 namespace Rinx {
-RxConnection::RxConnection():_rx_fd(RxInvalidFD),_eventloop_belongs(nullptr),_sock_writable_flag(true)
+RxConnection::RxConnection():_rx_fd(RxInvalidFD),_eventloop_belongs(nullptr),_sock_writable_flag(true),_seq_id(0)
 {
 
 }
@@ -17,20 +17,32 @@ RxConnection::~RxConnection()
 
 void RxConnection::init(const RxFD fd,RxEventLoop &eventloop)
 {
+//    std::cout<<"incoming connection "<<fd<<std::endl;
     _rx_fd=fd;
     _input_buf=RxChainBuffer::create_chain_buffer();
     _output_buf=RxChainBuffer::create_chain_buffer();
     _eventloop_belongs=&eventloop;
+    _seq_id++;
 }
 
 bool RxConnection::activate()
 {
     if(!_eventloop_belongs->monitor_fd(_rx_fd,{Rx_EVENT_READ,Rx_EVENT_WRITE,Rx_EVENT_ERROR})){
-        LOG_WARN<<"monitor fd "<<_rx_fd.raw<<" failed";
+        LOG_WARN<<"activate fd "<<_rx_fd.raw<<" failed";
         this->close();
         return false;
     }
     return true;
+}
+
+bool RxConnection::deactivate()
+{
+    if(!_eventloop_belongs->unmonitor_fd(_rx_fd)){
+        LOG_WARN<<"deactivate fd "<<_rx_fd.raw<<" failed";
+        this->close();
+        return false;
+    }
+    return false;
 }
 
 RxConnection::RecvRes RxConnection::recv()
@@ -55,7 +67,6 @@ RxConnection::SendRes RxConnection::send()
         }
     }
     while(!_output_buf->empty()&&res.code==RxWriteRc::OK);
-
     if(res.code==RxWriteRc::SOCK_SD_BUFF_FULL){
         _sock_writable_flag=false;
     }
@@ -65,6 +76,7 @@ RxConnection::SendRes RxConnection::send()
 void RxConnection::close()
 {
     if(_rx_fd!=RxInvalidFD){
+//        std::cout<<"close connection "<<_rx_fd.raw<<std::endl;
         _eventloop_belongs->unmonitor_fd(_rx_fd);
         _input_buf.reset();
         _output_buf.reset();
@@ -110,6 +122,11 @@ RxFD RxConnection::get_rx_fd() const
 void RxConnection::set_proto_processor(std::unique_ptr<RxProtoProcessor> processor) noexcept
 {
     _proto_processor.swap(processor);
+}
+
+size_t RxConnection::get_seq_id() const
+{
+    return _seq_id;
 }
 
 RxChainBuffer& RxConnection::get_input_buf() const

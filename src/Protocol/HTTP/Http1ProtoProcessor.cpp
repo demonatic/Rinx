@@ -1,10 +1,11 @@
-#include "Protocol/HTTP/Http1ProtoProcessor.h"
+#include "Rinx/Protocol/HTTP/Http1ProtoProcessor.h"
 #include <filesystem>
 
 namespace Rinx {
 
 RxProtoHttp1Processor::RxProtoHttp1Processor(RxConnection *conn,HttpRouter *router):
-    RxProtoProcessor(conn),_router(router),_got_a_complete_req(false),_req(conn),_resp(conn),_read_timer(conn->get_eventloop())
+    RxProtoProcessor(conn),_got_a_complete_req(false),_router(router),
+    _req(conn),_resp(conn),_read_timer(conn->get_eventloop())
 {
     set_parser_callbacks();
     prepare_for_next_req();
@@ -46,19 +47,18 @@ void RxProtoHttp1Processor::prepare_for_next_req()
     _req.clear();
     _resp.clear();
     _got_a_complete_req=false;
-    this->set_timeout(KeepAliveTimeout);
+//    this->set_timeout(KeepAliveTimeout);
 }
 
 void RxProtoHttp1Processor::set_parser_callbacks()
 {
     _request_parser.on_event(HttpParse::StartRecvingHeader,[this](detail::HttpReqImpl *){
-        this->set_timeout(ReadHeaderTimeout);
+//        this->set_timeout(ReadHeaderTimeout);
     });
 
     /// callback when get http header on socket stream
     _request_parser.on_event(HttpParse::HeaderReceived,[this](detail::HttpReqImpl *){
-        this->set_timeout(ReadBodyTimeout); //actually we don't need to care about whether body exists
-//        req->debug_print_header();
+//        this->set_timeout(ReadBodyTimeout); //actually we don't need to care about whether body exists
     });
 
     /// callback when get part of http body on socket stream
@@ -114,6 +114,7 @@ bool RxProtoHttp1Processor::try_output_response(RxConnection &conn,RxChainBuffer
             break;
        }
     }
+
     //when we recv a complete request and response has no blocking operation, we can move on to the next request,
     //despite the content yet not sent in output buf
     return _got_a_complete_req&&!_resp.has_block_operation();
@@ -148,10 +149,10 @@ void RxProtoHttp1Processor::resume(bool &err)
 }
 
 
-void RxProtoHttp1Processor::default_static_file_handler(HttpRequest &req,HttpResponse &resp)
+void RxProtoHttp1Processor::default_static_file_handler(HttpRequest &req,HttpResponse &resp,const std::string &web_root_dir,const std::string &default_page)
 {
-    static const std::filesystem::path web_root_path=WebRootPath;
-    static const std::filesystem::path default_web_page=DefaultWebPage;
+    const std::filesystem::path web_root_path=web_root_dir;
+    const std::filesystem::path default_web_page=default_page;
 
     std::filesystem::path authentic_path;
     try {
@@ -178,8 +179,7 @@ void RxProtoHttp1Processor::default_static_file_handler(HttpRequest &req,HttpRes
          resp.send_status(HttpStatusCode::NOT_FOUND);
          return;
     }
-
-    if(!resp.send_file_direct(req.get_conn(),authentic_path)){ //WebRootPath+'/'+DefaultWebPage
+    if(!resp.send_file_direct(req.get_conn(),authentic_path)){
         LOG_WARN<<"send file direct failed "<<errno<<' '<<strerror(errno);
         req.close_connection();
         return;

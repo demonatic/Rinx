@@ -1,6 +1,6 @@
-#include "Protocol/HTTP/HttpResponse.h"
-#include "Protocol/HTTP/ProtocolHttp1.h"
-#include "Protocol/HTTP/HttpReqRouter.h"
+#include "Rinx/Protocol/HTTP/HttpResponse.h"
+#include "Rinx/Protocol/HTTP/ProtocolHttp1.h"
+#include "Rinx/Protocol/HTTP/HttpReqRouter.h"
 #include <sys/sendfile.h>
 
 namespace Rinx {
@@ -86,7 +86,7 @@ bool detail::HttpRespInternal::flush(RxChainBuffer &output_buf)
         output_buf<<CRLF;
     }
 
-    if(_data->generator){
+    if(_data->generator.has_value()){
         _data->generator->try_generate_once(_data->body);
     }
 
@@ -104,17 +104,21 @@ bool detail::HttpRespInternal::flush(RxChainBuffer &output_buf)
         _data->status=HttpRespData::Status::Done;
         output_buf.append(std::move(_data->body));
     }
-
+//    std::cout<<"@flush content"<<std::endl;
+//    for(auto it=output_buf.begin();it!=output_buf.end();++it){
+//        std::cout<<*it;
+//    }
+//    std::cout<<std::endl;
     return true;
 }
 
 void detail::HttpRespData::ContentGenerator::try_generate_once(HttpResponseBody &body)
 {
-    if(_resp_data->status==Status::Providing&&body.buf_slice_num()<OutputBufSliceThresh){
+    if(_provide_action&&_resp_data->status==Status::Providing&&body.buf_slice_num()<OutputBufSliceThresh){
         ProvideDone done=[this](){
             this->set_resp_status(HttpRespData::Status::FinishWait);
         };
-        _provide_action(done);
+        this->_provide_action(done);
     }
 }
 
@@ -127,15 +131,23 @@ void detail::HttpRespData::ContentGenerator::set_content_generator(HttpRespData:
 void MakeAsync::operator()(HttpRequest &req, HttpResponse &resp)
 {
     RxConnection *conn=req.get_conn();
+    size_t origin_seq_id=conn->get_seq_id();
+
     detail::HttpRespImpl *resp_impl=static_cast<detail::HttpRespImpl*>(&resp);
     using Status=detail::HttpRespData::Status;
     resp_impl->set_status(Status::ExecAsyncTask);
+
     conn->get_eventloop()->async([=](HttpRequest &req, HttpResponse &resp) mutable{
         _responder(req,resp);
     },
     [=]() mutable{
+        if(!conn->is_open()||conn->get_seq_id()!=origin_seq_id){
+            conn->close();
+            return;
+        }
         Status next_stat=resp_impl->has_content_generator()?Status::Providing:Status::FinishWait;
         resp_impl->set_status(next_stat);
+
         RxProtoHttp1Processor &proto_proc=static_cast<RxProtoHttp1Processor&>(conn->get_proto_processor());
         bool err=false;
         proto_proc.resume(err);

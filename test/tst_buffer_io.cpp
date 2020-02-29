@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 #include <fstream>
-#include "Network/Buffer.h"
+#include "Rinx/Network/Buffer.h"
 #include <sys/fcntl.h>
 
 using namespace testing;

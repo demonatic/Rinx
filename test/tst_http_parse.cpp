@@ -4,9 +4,9 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 #include <gmock/gmock.h>
-#include "Protocol/HTTP/HttpParser.h"
-#include "Protocol/HTTP/HttpRequest.h"
-#include "Protocol/HTTP/HttpDefines.h"
+#include "Rinx/Protocol/HTTP/HttpParser.h"
+#include "Rinx/Protocol/HTTP/HttpRequest.h"
+#include "Rinx/Protocol/HTTP/HttpDefines.h"
 
 using namespace testing;
 using namespace Rinx;

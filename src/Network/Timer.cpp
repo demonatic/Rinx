@@ -1,6 +1,6 @@
-#include "Network/Timer.h"
-#include "Network/EventLoop.h"
-#include "Network/TimerHeap.h"
+#include "Rinx/Network/Timer.h"
+#include "Rinx/Network/EventLoop.h"
+#include "Rinx/Network/TimerHeap.h"
 
 namespace Rinx {
 
@@ -29,8 +29,8 @@ TimerID RxTimer::start_timer(uint64_t milliseconds, TimerCallback expiry_action,
     _is_repeat=repeat;
     _duration=milliseconds;
     _timeout_cb=expiry_action;
-    _id=timer_heap.add_timer(expire_time,this);
-
+    timer_heap.add_timer(expire_time,this);
+    this->set_active(true);
     return _id;
 }
 
@@ -38,6 +38,8 @@ void RxTimer::stop()
 {
     RxTimerHeap &timer_heap=_eventloop_belongs->get_timer_heap();
     timer_heap.remove_timer(this->_id);
+
+    this->set_active(false);
 }
 
 bool RxTimer::is_active() const noexcept

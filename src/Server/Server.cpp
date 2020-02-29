@@ -1,6 +1,5 @@
-#include "Server/Server.h"
-#include "Server/Signal.h"
-#include <iostream>
+#include "Rinx/Server/Server.h"
+#include "Rinx/Server/Signal.h"
 
 namespace Rinx {
 

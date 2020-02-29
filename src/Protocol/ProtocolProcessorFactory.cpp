@@ -1,4 +1,4 @@
-#include "Protocol/ProtocolProcessorFactory.h"
+#include "Rinx/Protocol/ProtocolProcessorFactory.h"
 
 namespace Rinx {
 

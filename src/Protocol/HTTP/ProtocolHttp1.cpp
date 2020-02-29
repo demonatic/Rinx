@@ -1,7 +1,7 @@
-#include "Protocol/HTTP/ProtocolHttp1.h"
-#include "Network/Connection.h"
-#include "Protocol/HTTP/HttpDefines.h"
-#include "3rd/NanoLog/NanoLog.hpp"
+#include "Rinx/Protocol/HTTP/ProtocolHttp1.h"
+#include "Rinx/Network/Connection.h"
+#include "Rinx/Protocol/HTTP/HttpDefines.h"
+#include "Rinx/3rd/NanoLog/NanoLog.hpp"
 
 namespace Rinx {
 
@@ -22,7 +22,10 @@ HTTP_ROUTE_FUNC_DEFINE(OPTIONS)
 
 RxProtocolHttp1Factory::RxProtocolHttp1Factory()
 {
-    this->_router.set_default_responder(&RxProtoHttp1Processor::default_static_file_handler);
+    this->_router.set_default_responder([](HttpRequest &req,HttpResponse &resp){
+        resp.send_status(HttpStatusCode::FORBIDDEN);
+        req.close_connection();
+    });
 }
 
 std::unique_ptr<RxProtoProcessor> RxProtocolHttp1Factory::new_proto_processor(RxConnection *conn)
@@ -46,6 +49,14 @@ RxProtocolHttp1Factory &RxProtocolHttp1Factory::body_filter(const HttpRouter::Ro
 {
     _router.set_body_filter_route(uri,filter);
     return *this;
+}
+
+void RxProtocolHttp1Factory::set_www(const std::string &web_root_dir,const std::string &default_web_page)
+{
+    this->_router.set_www(web_root_dir,default_web_page);
+    this->_router.set_default_responder(std::bind(
+        &RxProtoHttp1Processor::default_static_file_handler,std::placeholders::_1,
+            std::placeholders::_2,_router.get_www_dir(),_router.get_default_web_page()));
 }
 
 } //namespace Rinx
