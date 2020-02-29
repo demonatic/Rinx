@@ -2,7 +2,7 @@
 
 ###### USTC  软院  2019工程实践 子项目
 
-libRinx is a server-side HTTP library aims at equipping your program with HTTP service easily. It internally uses reactor model and non-blocking IO to handle concurrency.
+libRinx is a server-side HTTP library aims at equipping your program with HTTP service easily. It internally uses reactor model and non-blocking IO to handle concurrency. It only support **Linux** platform.
 
 ## Implementation
 | 0x01                        | 0x02                                   | 0x03                                      | 0x04                                    |
@@ -12,6 +12,8 @@ libRinx is a server-side HTTP library aims at equipping your program with HTTP s
 ## Usage Example
 
 ```c++
+#include "Rinx/Server/Server.h"
+#include "Rinx/Protocol/HTTP/ProtocolHttp1.h"
 int main(){
       RxServer server;
       RxProtocolHttp1Factory http1;
@@ -80,14 +82,25 @@ Set default handler when no route matches.
     });
 ```
 
+As web server:
 
+```c++
+http1.set_www("/home/www","index.html"); //index.html as default page
+```
 
 ##  Reference
 
 [Reactor模式详解](https://www.cnblogs.com/winner-0715/p/8733787.html"Title") 
+
+[Swoole](https://github.com/swoole/swoole-src"Title") 
 
 [An Introduction to libuv](http://nikhilm.github.io/uvbook/"Title") 
 
 [Linux信号处理机制——信号捕捉](https://blog.csdn.net/ypt523/article/details/80365108"Title") 
 
 [Hypertext Transfer Protocol -- HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html"Title") 
+
+[Linux 中的零拷贝技术](https://www.ibm.com/developerworks/cn/linux/l-cn-zerocopy2/index.html") 
+
+[Linux内核中网络数据包的接收- select/poll/epoll](
+https://blog.csdn.net/dog250/article/details/50528373") 
