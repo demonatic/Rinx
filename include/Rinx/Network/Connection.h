@@ -60,7 +60,7 @@ private:
     RxEventLoop *_eventloop_belongs;
 
     bool _sock_writable_flag; //we assume socket buffer to be writable until write return EAGAIN
-    size_t _seq_id; //increases when this connection is init
+    size_t _seq_id; //increases when this object is reused
 };
 
 } //namespace Rinx

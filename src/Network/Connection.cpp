@@ -23,6 +23,8 @@ void RxConnection::init(const RxFD fd,RxEventLoop &eventloop)
     _output_buf=RxChainBuffer::create_chain_buffer();
     _eventloop_belongs=&eventloop;
     _seq_id++;
+    RxChainBuffer buffer;
+    std::distance(buffer.begin(),buffer.end());
 }
 
 bool RxConnection::activate()
@@ -76,7 +78,6 @@ RxConnection::SendRes RxConnection::send()
 void RxConnection::close()
 {
     if(_rx_fd!=RxInvalidFD){
-//        std::cout<<"close connection "<<_rx_fd.raw<<std::endl;
         _eventloop_belongs->unmonitor_fd(_rx_fd);
         _input_buf.reset();
         _output_buf.reset();
