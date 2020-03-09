@@ -17,7 +17,6 @@ RxConnection::~RxConnection()
 
 void RxConnection::init(const RxFD fd,RxEventLoop &eventloop)
 {
-//    std::cout<<"incoming connection "<<fd<<std::endl;
     _rx_fd=fd;
     _input_buf=RxChainBuffer::create_chain_buffer();
     _output_buf=RxChainBuffer::create_chain_buffer();
