@@ -3,6 +3,13 @@
 
 namespace Rinx {
 
+std::string HttpRequest::decode_uri() const
+{
+    std::string decoded;
+    detail::uri_decode_impl(_data->_uri.begin(),_data->_uri.end(),std::back_inserter(decoded));
+    return decoded;
+}
+
 void HttpRequest::debug_print_header()
 {
     std::cout<<"----------------------"<<std::endl;
