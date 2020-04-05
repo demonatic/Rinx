@@ -323,7 +323,8 @@ public:
         }
         else if(step>0){
             do{
-                difference_type buf_slice_advance_room=_p_end-_p_cur-1;
+                difference_type buf_slice_advance_room=std::max(_p_end-_p_cur-1,0l);
+
                 if(step<=buf_slice_advance_room){
                     _p_cur+=step;
                     break;
@@ -350,7 +351,7 @@ public:
         }
         else if(step<0){
             do{
-                difference_type buf_slice_advance_room=_p_cur-_p_start;
+                difference_type buf_slice_advance_room=std::max(_p_cur-_p_start,0l);
                 if(-step<=buf_slice_advance_room){
                     _p_cur-=step;
                     step=0;
@@ -390,16 +391,18 @@ public:
         }
         self_type tmp=*this;
         bool flag=false;
-        if(this->_it_buf_slice<other._it_buf_slice||(this->_it_buf_slice==other._it_buf_slice&&this->_p_cur<other._p_cur)){
+        if(tmp._it_buf_slice<other._it_buf_slice||(tmp._it_buf_slice==other._it_buf_slice&&tmp._p_cur<other._p_cur)){
             std::swap(tmp,other);
             flag=true;
         }
+        //other<=tmp
         difference_type diff=-(other._p_cur-other._p_start);
-        while(other._it_buf_slice!=this->_it_buf_slice){
+        while(other._it_buf_slice!=tmp._it_buf_slice){
             diff+=other._p_end-other._p_start;
-            other+=other._p_end-other._p_cur;
+            difference_type advance=other._p_end-other._p_cur;
+            other+=(advance==0?1:advance);
         }
-        difference_type ret=diff+(this->_p_cur-other._p_cur);
+        difference_type ret=diff+(tmp._p_cur-other._p_cur);
         return flag?-ret:ret;
     }
 
