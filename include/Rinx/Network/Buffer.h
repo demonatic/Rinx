@@ -9,7 +9,7 @@
 #include "FD.h"
 #include "Rinx/Util/ObjectAllocator.hpp"
 #include "Rinx/RinxDefines.h"
-#include "Rinx/3rd/NanoLog/NanoLog.hpp"
+#include "3rd/NanoLog/NanoLog.hpp"
 
 namespace Rinx {
 

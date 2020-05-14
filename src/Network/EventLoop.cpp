@@ -1,7 +1,7 @@
 #include "Rinx/Network/EventLoop.h"
 #include "Rinx/Network/FD.h"
 #include "Rinx/Util/Util.h"
-#include "Rinx/3rd/NanoLog/NanoLog.hpp"
+#include "3rd/NanoLog/NanoLog.hpp"
 #include <string.h>
 
 namespace Rinx {

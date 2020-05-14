@@ -1,6 +1,7 @@
 #ifndef OBJECTALLOCATOR_H
 #define OBJECTALLOCATOR_H
-#include "Rinx/3rd/boost/pool/pool.hpp"
+#include "3rd/NanoLog/NanoLog.hpp"
+#include "3rd/boost/pool/pool.hpp"
 #include <memory>
 #include <thread>
 #include <iostream>

@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 #include "Rinx/Network/EventLoop.h"
-#include "Rinx/3rd/NanoLog/NanoLog.hpp"
+#include "3rd/NanoLog/NanoLog.hpp"
 
 namespace Rinx {
 

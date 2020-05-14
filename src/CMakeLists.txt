@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 file(GLOB rinx_sources
-    ../include/Rinx/3rd/NanoLog/NanoLog.cpp
+    ../include/3rd/NanoLog/NanoLog.cpp
     Network/Buffer.cpp
     Network/Connection.cpp
     Network/EventLoop.cpp
@@ -28,11 +28,11 @@ file(GLOB rinx_sources
 
 set(ALL_SRCS ${ALL_SRCS} ${rinx_sources} CACHE INTERNAL "")
 
-include_directories(../include)
 add_library(Rinx SHARED ${rinx_sources})
 
 set(EXECUTABLE_OUTPUT_PATH &{PROJECT_BINARY_DIR}/bin)
 
+MESSAGE("all src" ${ALL_SRCS})
 install(TARGETS Rinx
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib

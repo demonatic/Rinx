@@ -1,5 +1,5 @@
 #include "Rinx/Network/Connection.h"
-#include "Rinx/3rd/NanoLog/NanoLog.hpp"
+#include "3rd/NanoLog/NanoLog.hpp"
 #include <iostream>
 
 namespace Rinx {

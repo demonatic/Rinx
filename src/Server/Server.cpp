@@ -172,6 +172,7 @@ bool RxServer::on_stream_readable(const RxEvent &event)
             conn->close();
             return false;
     }
+    return true;
 }
 
 bool RxServer::on_stream_writable(const RxEvent &event)

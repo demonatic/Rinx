@@ -12,6 +12,8 @@ if(RINX_BUILD_TESTS)
     add_subdirectory(${PROJECT_SOURCE_DIR}/test)
 endif(RINX_BUILD_TESTS)
 
+include_directories(${PROJECT_SOURCE_DIR}/include/3rd ${PROJECT_SOURCE_DIR}/include/Rinx)
+
 set(ALL_SRCS CACHE INTERNAL "" FORCE)
 set(RINX_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE INTERNAL "")
 
