@@ -27,7 +27,7 @@ public:
 
         void add_event(int event){
             if(this->events.has_value()) events.value().push_back(event);
-            else this->events={event};
+            else this->events=std::make_optional<std::vector<int>>({event});
             interrupt_iteartion=true;
         }
 
