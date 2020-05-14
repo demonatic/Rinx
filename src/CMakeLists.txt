@@ -29,10 +29,11 @@ file(GLOB rinx_sources
 set(ALL_SRCS ${ALL_SRCS} ${rinx_sources} CACHE INTERNAL "")
 
 add_library(Rinx SHARED ${rinx_sources})
+target_link_libraries(Rinx stdc++fs)
 
 set(EXECUTABLE_OUTPUT_PATH &{PROJECT_BINARY_DIR}/bin)
 
-MESSAGE("all src" ${ALL_SRCS})
+#MESSAGE("all src" ${ALL_SRCS})
 install(TARGETS Rinx
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
