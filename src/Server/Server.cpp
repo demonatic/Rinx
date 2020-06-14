@@ -32,6 +32,11 @@ bool RxServer::is_running() const
     return this->_start;
 }
 
+void RxServer::on_signal(int signo, RxSignalHandler handler)
+{
+    RxSignalManager::on_signal(signo,handler);
+}
+
 void RxServer::set_log_dir(const std::string &log_dir)
 {
     this->_log_dir=log_dir;
@@ -142,10 +147,6 @@ void RxServer::signal_setup()
 {
     RxSignalManager::on_signal(SIGPIPE,RxSigHandlerIgnore);
     RxSignalManager::on_signal(SIGBUS,RxSigHandlerIgnore);
-    RxSignalManager::on_signal(SIGINT,[this](int signo){
-        LOG_WARN<<"Shutdown Server...";
-        this->stop();
-    });
 }
 
 bool RxServer::on_stream_readable(const RxEvent &event)

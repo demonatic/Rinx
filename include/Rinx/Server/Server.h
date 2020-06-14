@@ -64,6 +64,8 @@ public:
     void stop();
     bool is_running() const;
 
+    void on_signal(int signo, RxSignalHandler handler);
+
     void set_log_dir(const std::string &log_dir);
 
     void enable_accept();
