@@ -28,7 +28,7 @@ file(GLOB rinx_sources
 
 set(ALL_SRCS ${ALL_SRCS} ${rinx_sources} CACHE INTERNAL "")
 
-add_library(Rinx SHARED ${rinx_sources})
+add_library(Rinx STATIC ${rinx_sources})
 target_link_libraries(Rinx stdc++fs)
 
 set(EXECUTABLE_OUTPUT_PATH &{PROJECT_BINARY_DIR}/bin)

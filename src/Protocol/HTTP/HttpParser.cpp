@@ -115,10 +115,16 @@ void StateHeader::consume(iterable_bytes iterable, void *request)
 
                     if(auto content_len_str=http_request->headers().field_val("content-length")){
                         auto len=Util::str_to_size_t(*content_len_str);
-                        if(!len){
+                        if(unlikely(!len.has_value())){
                             goto parse_error;
                         }
-                        ctx.transit_super_state(GET_ID(StateContentLength),*len);
+                        if((*len)!=0){
+                             ctx.transit_super_state(GET_ID(StateContentLength),*len);
+                        }
+                        else{
+                            ctx.transit_super_state(GET_ID(StateRequestLine));
+                            ctx.add_event(ParseEvent::RequestReceived);
+                        }
                     }
                     else if(auto header_key=http_request->headers().field_val("transfer-encoding")){
                         ctx.transit_super_state(GET_ID(StateChunk));
