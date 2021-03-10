@@ -90,17 +90,17 @@ http1.set_www("/home/www","index.html"); //index.html as default page
 
 ##  Reference
 
-[Reactor模式详解](https://www.cnblogs.com/winner-0715/p/8733787.html"Title") 
+[Reactor模式详解](https://www.cnblogs.com/winner-0715/p/8733787.html) 
 
-[Swoole](https://github.com/swoole/swoole-src"Title") 
+[Swoole](https://github.com/swoole/swoole-src) 
 
-[An Introduction to libuv](http://nikhilm.github.io/uvbook/"Title") 
+[An Introduction to libuv](http://nikhilm.github.io/uvbook/) 
 
-[Linux信号处理机制——信号捕捉](https://blog.csdn.net/ypt523/article/details/80365108"Title") 
+[Linux信号处理机制——信号捕捉](https://blog.csdn.net/ypt523/article/details/80365108) 
 
-[Hypertext Transfer Protocol -- HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html"Title") 
+[Hypertext Transfer Protocol -- HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html) 
 
-[Linux 中的零拷贝技术](https://www.ibm.com/developerworks/cn/linux/l-cn-zerocopy2/index.html") 
+[Linux 中的零拷贝技术](https://www.ibm.com/developerworks/cn/linux/l-cn-zerocopy2/index.html) 
 
 [Linux内核中网络数据包的接收- select/poll/epoll](
 https://blog.csdn.net/dog250/article/details/50528373") 
